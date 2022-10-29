@@ -1,5 +1,5 @@
 /*
- * aurora-coriolis - WS281x multi-channel LED controller with MicroPython
+ * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
  * Copyright 2022  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,12 +21,14 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <uuid/console.h>
 #include <uuid/log.h>
 
 #include "aurcor/app.h"
+#include "aurcor/micropython.h"
 #include "app/config.h"
 #include "app/console.h"
 
@@ -39,6 +41,7 @@ using LogFacility = ::uuid::log::Facility;
 using ::app::CommandFlags;
 using ::app::Config;
 using ::app::ShellContext;
+using ::aurcor::MicroPythonShell;
 
 #define MAKE_PSTR(string_name, string_literal) static const char __pstr__##string_name[] __attribute__((__aligned__(sizeof(int)))) PROGMEM = string_literal;
 #define MAKE_PSTR_WORD(string_name) MAKE_PSTR(string_name, #string_name)
@@ -48,7 +51,7 @@ namespace aurcor {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic error "-Wunused-const-variable"
-//MAKE_PSTR_WORD(xxx)
+MAKE_PSTR_WORD(mpy)
 //MAKE_PSTR(xxx, "<xxx>")
 //MAKE_PSTR(xxx, "[xxx]")
 #pragma GCC diagnostic pop
@@ -59,6 +62,11 @@ static inline App &to_app(Shell &shell) {
 
 static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	#define NO_ARGUMENTS std::vector<std::string>{}
+
+	commands->add_command(ShellContext::MAIN, CommandFlags::USER, flash_string_vector{F_(mpy)},
+			[=] (Shell &shell __attribute__((unused)), const std::vector<std::string> &arguments __attribute__((unused))) {
+		std::make_shared<MicroPythonShell>()->start(shell);
+	});
 }
 
 } // namespace aurcor

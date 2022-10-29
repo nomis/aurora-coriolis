@@ -1,3 +1,7 @@
 [submodule "mcu-app"]
 	path = src/app
 	url = ../mcu-app
+[submodule "micropython"]
+	path = micropython
+	url = ../micropython
+	branch = instance-per-thread-1.19.1

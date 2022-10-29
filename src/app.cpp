@@ -1,5 +1,5 @@
 /*
- * aurora-coriolis - WS281x multi-channel LED controller with MicroPython
+ * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
  * Copyright 2022  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,6 +18,8 @@
 
 #include "aurcor/app.h"
 
+#include <esp_pthread.h>
+
 #include <initializer_list>
 #include <memory>
 #include <vector>
@@ -25,7 +27,6 @@
 #include <uuid/common.h>
 #include <uuid/console.h>
 #include <uuid/log.h>
-#include <uuid/modbus.h>
 #include <uuid/syslog.h>
 #include <uuid/telnet.h>
 
@@ -41,6 +42,12 @@ App::App() {
 
 void App::start() {
 	app::App::start();
+
+	auto cfg = esp_pthread_get_default_config();
+	cfg.stack_size = 5 * 1024;
+	cfg.prio = ESP_TASK_PRIO_MIN + 1;
+	cfg.inherit_cfg = true;
+	esp_pthread_set_cfg(&cfg);
 }
 
 void App::loop() {

@@ -5,6 +5,7 @@ all:
 
 clean:
 	platformio run -t clean
+	make -C lib/micropython/port clean
 	rm -rf .pio
 	rm -f data/certs.ar
 
