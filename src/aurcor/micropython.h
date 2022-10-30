@@ -29,7 +29,9 @@
 extern "C" {
 	#include <py/lexer.h>
 	#include <py/mphal.h>
+	#include <py/mpstate.h>
 	#include <py/nlr.h>
+	#include <shared/runtime/interrupt_char.h>
 }
 
 #include <uuid/console.h>
@@ -45,6 +47,19 @@ public:
 	virtual ~MicroPython();
 
 protected:
+	class AccessState {
+	public:
+		AccessState(MicroPython &mp);
+		bool enable();
+		void disable();
+		~AccessState();
+
+	private:
+		MicroPython &mp_;
+		std::lock_guard<std::mutex> lock_;
+	};
+	friend AccessState;
+
 	static uuid::log::Logger logger_;
 
 	MicroPython(const std::string &name);
@@ -57,6 +72,9 @@ protected:
 	inline bool heap_available() const { return heap_ != nullptr; }
 	inline bool running() const { return running_; }
 
+	virtual void state_copy();
+	virtual void state_reset();
+
 	friend int ::mp_hal_stdin_rx_chr(void);
 	virtual int mp_hal_stdin_rx_chr(void) = 0;
 
@@ -66,8 +84,7 @@ protected:
 	const std::string name_;
 
 private:
-	static __thread MicroPython *self_;
-
+	static thread_local MicroPython *self_;
 	void running_thread();
 
 	friend void ::nlr_jump_fail(void *val);
@@ -83,6 +100,9 @@ private:
 	bool stopped_ = false;
 	const __FlashStringHelper *where_;
 	jmp_buf abort_;
+
+	std::mutex state_mutex_;
+	mp_state_ctx_t *state_ctx_ = nullptr;
 };
 
 class MicroPythonShell: public MicroPython,
@@ -100,14 +120,20 @@ protected:
 	void main() override;
 	void shutdown() override;
 
+	void state_copy() override;
+	void state_reset() override;
+
 	int mp_hal_stdin_rx_chr(void) override;
 	void mp_hal_stdout_tx_strn(const uint8_t *str, size_t len) override;
 
 private:
 	bool shell_foreground(uuid::console::Shell &shell, bool stop);
+	bool interrupt_char(int c);
 
 	IOBuffer<uint_fast8_t,STDIN_LEN> stdin_;
 	IOBuffer<uint_fast8_t,STDOUT_LEN> stdout_;
+
+	int16_t *interrupt_char_ = nullptr;
 };
 
 } // namespace aurcor

@@ -35,6 +35,7 @@ extern "C" {
 	#include <py/lexer.h>
 	#include <py/mperrno.h>
 	#include <py/mphal.h>
+	#include <py/mpstate.h>
 	#include <py/nlr.h>
 	#include <py/runtime.h>
 	#include <py/stackctrl.h>
@@ -97,6 +98,11 @@ void MicroPython::running_thread() {
 		where_ = F("mp_init");
 		mp_init();
 
+		{
+			std::lock_guard<std::mutex> lock{state_mutex_};
+			state_copy();
+		}
+
 		if (!::setjmp(abort_)) {
 			logger_.trace(F("[%s/%p] MicroPython running"), name_.c_str(), this);
 
@@ -104,6 +110,11 @@ void MicroPython::running_thread() {
 			main();
 
 			logger_.trace(F("[%s/%p] MicroPython shutdown"), name_.c_str(), this);
+		}
+
+		{
+			std::lock_guard<std::mutex> lock{state_mutex_};
+			state_reset();
 		}
 
 		if (!::setjmp(abort_)) {
@@ -124,9 +135,18 @@ void MicroPython::running_thread() {
 
 done:
 	mp_state_free();
+
 	logger_.trace(F("[%s/%p] MicroPython finished"), name_.c_str(), this);
 	self_ = nullptr;
 	running_ = false;
+}
+
+void MicroPython::state_copy() {
+	state_ctx_ = mp_state_ctx;
+}
+
+void MicroPython::state_reset() {
+	state_ctx_ = nullptr;
 }
 
 void MicroPython::stop() {
@@ -147,6 +167,26 @@ void MicroPython::stop() {
 	}
 
 	stopped_ = true;
+}
+MicroPython::AccessState::AccessState(MicroPython &mp)
+		: mp_(mp), lock_(mp.state_mutex_) {
+}
+
+MicroPython::AccessState::~AccessState() {
+	disable();
+}
+
+bool MicroPython::AccessState::enable() {
+	if (mp_.state_ctx_) {
+		mp_state_ctx = mp_.state_ctx_;
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void MicroPython::AccessState::disable() {
+	mp_state_ctx = nullptr;
 }
 
 MicroPythonShell::MicroPythonShell(const std::string &name)
@@ -175,8 +215,12 @@ void MicroPythonShell::main() {
 }
 
 bool MicroPythonShell::shell_foreground(Shell &shell, bool stop_) {
-	if (running() && shell.available() && stdin_.write_available())
-		stdin_.write(shell.read());
+	if (running() && shell.available() && stdin_.write_available()) {
+		int c = shell.read();
+
+		if (c != -1 && !interrupt_char(c))
+			stdin_.write(c);
+	}
 
 	const uint8_t *buf;
 	auto len = stdout_.read(buf, false);
@@ -194,9 +238,34 @@ bool MicroPythonShell::shell_foreground(Shell &shell, bool stop_) {
 	return false;
 }
 
+bool MicroPythonShell::interrupt_char(int c) {
+	AccessState access{*this};
+
+	if (interrupt_char_ && *interrupt_char_ == c) {
+		if (access.enable())
+			mp_sched_keyboard_interrupt();
+
+		return true;
+	}
+
+	return false;
+}
+
 void MicroPythonShell::shutdown() {
 	stdin_.stop();
 	stdout_.stop();
+}
+
+void MicroPythonShell::state_copy() {
+	MicroPython::state_copy();
+
+	interrupt_char_ = &mp_interrupt_char;
+}
+
+void MicroPythonShell::state_reset() {
+	interrupt_char_ = nullptr;
+
+	MicroPython::state_reset();
 }
 
 } // namespace aurcor

@@ -45,7 +45,7 @@ void App::start() {
 
 	auto cfg = esp_pthread_get_default_config();
 	cfg.stack_size = 5 * 1024;
-	cfg.prio = ESP_TASK_PRIO_MIN + 1;
+	cfg.prio = uxTaskPriorityGet(nullptr);
 	cfg.inherit_cfg = true;
 	esp_pthread_set_cfg(&cfg);
 }
