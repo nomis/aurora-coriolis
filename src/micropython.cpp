@@ -72,6 +72,11 @@ void MicroPython::running_thread() {
 
 	logger_.trace(F("[%p] MicroPython initialising"), this);
 
+	if (mp_state_init()) {
+		logger_.alert(F("[%p] MicroPython failed in mp_state_init()"), this);
+		goto done;
+	}
+
 	if (!::setjmp(abort_)) {
 		where_ = F("mp_stack_ctrl_init");
 		mp_stack_ctrl_init();
@@ -116,6 +121,7 @@ void MicroPython::running_thread() {
 	}
 
 done:
+	mp_state_free();
 	logger_.trace(F("[%p] MicroPython finished"), this);
 	self_ = nullptr;
 	running_ = false;
