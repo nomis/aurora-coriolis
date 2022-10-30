@@ -48,7 +48,7 @@ namespace aurcor {
 uuid::log::Logger MicroPython::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::USER};
 __thread MicroPython *MicroPython::self_ = nullptr;
 
-MicroPython::MicroPython(run_function f) : main_(f) {
+MicroPython::MicroPython() {
 	heap_ = (uint8_t *)::heap_caps_malloc(HEAP_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 	if (!heap_)
 		logger_.emerg(F("[%p] Unable to allocate heap"), this);
@@ -98,8 +98,8 @@ void MicroPython::running_thread() {
 		if (!::setjmp(abort_)) {
 			logger_.trace(F("[%p] MicroPython running"), this);
 
-			where_ = F("main_");
-			main_();
+			where_ = F("main");
+			main();
 
 			logger_.trace(F("[%p] MicroPython shutdown"), this);
 		}
@@ -147,10 +147,6 @@ void MicroPython::stop() {
 	stopped_ = true;
 }
 
-MicroPythonShell::MicroPythonShell()
-		: MicroPython([] { ::pyexec_friendly_repl(); }) {
-}
-
 void MicroPythonShell::start(Shell &shell) {
 	auto self = shared_from_this();
 
@@ -166,6 +162,10 @@ void MicroPythonShell::start(Shell &shell) {
 	shell.block_with([self] (Shell &shell, bool stop) -> bool {
 		return self->shell_foreground(shell, stop);
 	});
+}
+
+void MicroPythonShell::main() {
+	::pyexec_friendly_repl();
 }
 
 bool MicroPythonShell::shell_foreground(Shell &shell, bool stop_) {

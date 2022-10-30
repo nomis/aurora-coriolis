@@ -22,7 +22,6 @@
 
 #include <csetjmp>
 #include <cstdint>
-#include <functional>
 #include <memory>
 #include <thread>
 
@@ -40,17 +39,17 @@ namespace aurcor {
 
 class MicroPython {
 public:
-	using run_function = std::function<void()>;
-
 	static constexpr size_t HEAP_SIZE = 192 * 1024;
 
-	MicroPython(run_function f);
 	virtual ~MicroPython();
 
 protected:
 	static uuid::log::Logger logger_;
 
+	MicroPython();
+
 	void start();
+	virtual void main() = 0;
 	virtual void shutdown() = 0;
 	void stop();
 
@@ -75,7 +74,6 @@ private:
 	mp_lexer_t *mp_lexer_new_from_file(const char *filename);
 
 	uint8_t *heap_;
-	run_function main_;
 	std::thread thread_;
 	bool started_ = false;
 	volatile bool running_ = false;
@@ -91,11 +89,12 @@ public:
 	static constexpr size_t STDIN_LEN = 32;
 	static constexpr size_t STDOUT_LEN = 128;
 
-	MicroPythonShell();
+	MicroPythonShell() = default;
 
 	void start(uuid::console::Shell &shell);
 
 protected:
+	void main() override;
 	void shutdown() override;
 
 	int mp_hal_stdin_rx_chr(void) override;
