@@ -23,6 +23,7 @@
 #include <csetjmp>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <thread>
 
 extern "C" {
@@ -46,7 +47,7 @@ public:
 protected:
 	static uuid::log::Logger logger_;
 
-	MicroPython();
+	MicroPython(const std::string &name);
 
 	void start();
 	virtual void main() = 0;
@@ -61,6 +62,8 @@ protected:
 
 	friend void ::mp_hal_stdout_tx_strn(const char *str, size_t len);
 	virtual void mp_hal_stdout_tx_strn(const uint8_t *str, size_t len) = 0;
+
+	const std::string name_;
 
 private:
 	static __thread MicroPython *self_;
@@ -89,7 +92,7 @@ public:
 	static constexpr size_t STDIN_LEN = 32;
 	static constexpr size_t STDOUT_LEN = 128;
 
-	MicroPythonShell() = default;
+	MicroPythonShell(const std::string &name);
 
 	void start(uuid::console::Shell &shell);
 

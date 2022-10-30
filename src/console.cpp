@@ -56,8 +56,12 @@ MAKE_PSTR_WORD(mpy)
 //MAKE_PSTR(xxx, "[xxx]")
 #pragma GCC diagnostic pop
 
+static inline app::AppShell &to_app_shell(Shell &shell) {
+	return dynamic_cast<app::AppShell&>(shell);
+}
+
 static inline App &to_app(Shell &shell) {
-	return static_cast<App&>(dynamic_cast<app::AppShell&>(shell).app_);
+	return static_cast<App&>(to_app_shell(shell).app_);
 }
 
 static inline void setup_commands(std::shared_ptr<Commands> &commands) {
@@ -65,7 +69,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 
 	commands->add_command(ShellContext::MAIN, CommandFlags::USER, flash_string_vector{F_(mpy)},
 			[=] (Shell &shell __attribute__((unused)), const std::vector<std::string> &arguments __attribute__((unused))) {
-		std::make_shared<MicroPythonShell>()->start(shell);
+		std::make_shared<MicroPythonShell>(to_app_shell(shell).console_name())->start(shell);
 	});
 }
 

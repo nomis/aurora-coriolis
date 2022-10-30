@@ -24,6 +24,8 @@
 #include <csetjmp>
 #include <cstring>
 #include <memory>
+#include <string>
+#include <thread>
 
 #include <uuid/console.h>
 
@@ -48,10 +50,10 @@ namespace aurcor {
 uuid::log::Logger MicroPython::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::USER};
 __thread MicroPython *MicroPython::self_ = nullptr;
 
-MicroPython::MicroPython() {
+MicroPython::MicroPython(const std::string &name) : name_(name) {
 	heap_ = (uint8_t *)::heap_caps_malloc(HEAP_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 	if (!heap_)
-		logger_.emerg(F("[%p] Unable to allocate heap"), this);
+		logger_.emerg(F("[%s/%p] Unable to allocate heap"), this);
 }
 
 MicroPython::~MicroPython() {
@@ -70,10 +72,10 @@ void MicroPython::start() {
 void MicroPython::running_thread() {
 	self_ = this;
 
-	logger_.trace(F("[%p] MicroPython initialising"), this);
+	logger_.trace(F("[%s/%p] MicroPython initialising"), name_.c_str(), this);
 
 	if (mp_state_init()) {
-		logger_.alert(F("[%p] MicroPython failed in mp_state_init()"), this);
+		logger_.alert(F("[%s/%p] MicroPython failed in mp_state_init()"), name_.c_str(), this);
 		goto done;
 	}
 
@@ -96,12 +98,12 @@ void MicroPython::running_thread() {
 		mp_init();
 
 		if (!::setjmp(abort_)) {
-			logger_.trace(F("[%p] MicroPython running"), this);
+			logger_.trace(F("[%s/%p] MicroPython running"), name_.c_str(), this);
 
 			where_ = F("main");
 			main();
 
-			logger_.trace(F("[%p] MicroPython shutdown"), this);
+			logger_.trace(F("[%s/%p] MicroPython shutdown"), name_.c_str(), this);
 		}
 
 		if (!::setjmp(abort_)) {
@@ -122,7 +124,7 @@ void MicroPython::running_thread() {
 
 done:
 	mp_state_free();
-	logger_.trace(F("[%p] MicroPython finished"), this);
+	logger_.trace(F("[%s/%p] MicroPython finished"), name_.c_str(), this);
 	self_ = nullptr;
 	running_ = false;
 }
@@ -132,19 +134,23 @@ void MicroPython::stop() {
 		return;
 
 	if (running_) {
-		logger_.trace(F("[%p] Stopping thread"), this);
+		logger_.trace(F("[%s/%p] Stopping thread"), name_.c_str(), this);
 		running_ = false;
 
 		shutdown();
 	}
 
 	if (thread_.joinable()) {
-		logger_.trace(F("[%p] Waiting for thread to stop"), this);
+		logger_.trace(F("[%s/%p] Waiting for thread to stop"), name_.c_str(), this);
 		thread_.join();
-		logger_.trace(F("[%p] Thread stopped"), this);
+		logger_.trace(F("[%s/%p] Thread stopped"), name_.c_str(), this);
 	}
 
 	stopped_ = true;
+}
+
+MicroPythonShell::MicroPythonShell(const std::string &name)
+		: MicroPython(name) {
 }
 
 void MicroPythonShell::start(Shell &shell) {
@@ -155,7 +161,7 @@ void MicroPythonShell::start(Shell &shell) {
 		return;
 	}
 
-	logger_.trace(F("[%p] Starting thread"), this);
+	logger_.trace(F("[%s/%p] Starting thread"), name_.c_str(), this);
 
 	MicroPython::start();
 
@@ -202,7 +208,7 @@ extern "C" void nlr_jump_fail(void *val) {
 }
 
 void aurcor::MicroPython::nlr_jump_fail(void *val) {
-	logger_.alert(F("[%p] MicroPython failed in %S()"), this, where_);
+	logger_.alert(F("[%s/%p] MicroPython failed in %S()"), name_.c_str(), this, where_);
 	::longjmp(abort_, 1);
 }
 
