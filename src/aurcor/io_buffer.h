@@ -81,7 +81,7 @@ public:
 				if (wait) {
 					cv_read_.wait(lock);
 					if (stop_)
-						return 0;
+						return -1;
 					continue;
 				}
 			}

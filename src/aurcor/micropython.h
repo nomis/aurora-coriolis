@@ -20,6 +20,7 @@
 
 #include <Arduino.h>
 
+#include <atomic>
 #include <csetjmp>
 #include <cstdint>
 #include <memory>
@@ -32,6 +33,7 @@ extern "C" {
 	#include <py/mpstate.h>
 	#include <py/nlr.h>
 	#include <shared/runtime/interrupt_char.h>
+	#include <shared/runtime/pyexec.h>
 }
 
 #include <uuid/console.h>
@@ -56,7 +58,9 @@ protected:
 
 	private:
 		MicroPython &mp_;
-		std::lock_guard<std::mutex> lock_;
+		std::lock_guard<std::mutex> state_lock_;
+		std::unique_lock<std::mutex> atomic_section_;
+		bool enabled_{false};
 	};
 	friend AccessState;
 
@@ -74,6 +78,9 @@ protected:
 
 	virtual void state_copy();
 	virtual void state_reset();
+	void force_exit();
+
+	void abort();
 
 	friend int ::mp_hal_stdin_rx_chr(void);
 	virtual int mp_hal_stdin_rx_chr(void) = 0;
@@ -90,19 +97,29 @@ private:
 	friend void ::nlr_jump_fail(void *val);
 	void nlr_jump_fail(void *val) __attribute__((noreturn));
 
+	friend mp_uint_t ::mp_hal_begin_atomic_section(void);
+	void mp_hal_begin_atomic_section();
+
+	friend void ::mp_hal_end_atomic_section(void);
+	void mp_hal_end_atomic_section();
+
 	friend mp_lexer_t *::mp_lexer_new_from_file(const char *filename);
 	mp_lexer_t *mp_lexer_new_from_file(const char *filename);
 
 	uint8_t *heap_;
 	std::thread thread_;
-	bool started_ = false;
-	volatile bool running_ = false;
-	bool stopped_ = false;
+	bool started_{false};
+	std::atomic<bool> running_{false};
+	bool stopped_{false};
 	const __FlashStringHelper *where_;
 	jmp_buf abort_;
 
 	std::mutex state_mutex_;
-	mp_state_ctx_t *state_ctx_ = nullptr;
+	typeof(mp_state_ctx) state_ctx_{nullptr};
+	typeof(pyexec_system_exit) *exec_system_exit_{nullptr};
+	mp_obj_exception_t system_exit_exc_{};
+
+	std::mutex atomic_section_mutex_;
 };
 
 class MicroPythonShell: public MicroPython,
@@ -133,7 +150,7 @@ private:
 	IOBuffer<uint_fast8_t,STDIN_LEN> stdin_;
 	IOBuffer<uint_fast8_t,STDOUT_LEN> stdout_;
 
-	int16_t *interrupt_char_ = nullptr;
+	typeof(mp_interrupt_char) *interrupt_char_{nullptr};
 };
 
 } // namespace aurcor

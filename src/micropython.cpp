@@ -39,6 +39,7 @@ extern "C" {
 	#include <py/nlr.h>
 	#include <py/runtime.h>
 	#include <py/stackctrl.h>
+	#include <shared/runtime/interrupt_char.h>
 	#include <shared/runtime/pyexec.h>
 }
 
@@ -55,6 +56,12 @@ MicroPython::MicroPython(const std::string &name) : name_(name) {
 	heap_ = (uint8_t *)::heap_caps_malloc(HEAP_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 	if (!heap_)
 		logger_.emerg(F("[%s/%p] Unable to allocate heap"), this);
+
+	system_exit_exc_.base.type = &mp_type_SystemExit;
+	system_exit_exc_.traceback_alloc = 0;
+	system_exit_exc_.traceback_len = 0;
+	system_exit_exc_.traceback_data = NULL;
+	system_exit_exc_.args = (mp_obj_tuple_t *)&mp_const_empty_tuple_obj;
 }
 
 MicroPython::~MicroPython() {
@@ -103,7 +110,7 @@ void MicroPython::running_thread() {
 			state_copy();
 		}
 
-		if (!::setjmp(abort_)) {
+		if (running_ && !::setjmp(abort_)) {
 			logger_.trace(F("[%s/%p] MicroPython running"), name_.c_str(), this);
 
 			where_ = F("main");
@@ -143,10 +150,35 @@ done:
 
 void MicroPython::state_copy() {
 	state_ctx_ = mp_state_ctx;
+	exec_system_exit_ = &pyexec_system_exit;
 }
 
 void MicroPython::state_reset() {
 	state_ctx_ = nullptr;
+	exec_system_exit_ = nullptr;
+}
+
+void MicroPython::force_exit() {
+	AccessState access{*this};
+
+	if (running_) {
+		running_ = false;
+
+		if (exec_system_exit_)
+			*exec_system_exit_ = PYEXEC_FORCED_EXIT;
+
+		if (access.enable()) {
+			mp_sched_exception(MP_OBJ_FROM_PTR(&system_exit_exc_));
+			access.disable();
+		}
+
+		shutdown();
+	}
+}
+
+void MicroPython::abort() {
+	pyexec_system_exit = PYEXEC_FORCED_EXIT;
+	::nlr_raise(MP_OBJ_FROM_PTR(&system_exit_exc_));
 }
 
 void MicroPython::stop() {
@@ -155,9 +187,7 @@ void MicroPython::stop() {
 
 	if (running_) {
 		logger_.trace(F("[%s/%p] Stopping thread"), name_.c_str(), this);
-		running_ = false;
-
-		shutdown();
+		force_exit();
 	}
 
 	if (thread_.joinable()) {
@@ -169,7 +199,8 @@ void MicroPython::stop() {
 	stopped_ = true;
 }
 MicroPython::AccessState::AccessState(MicroPython &mp)
-		: mp_(mp), lock_(mp.state_mutex_) {
+		: mp_(mp), state_lock_(mp.state_mutex_),
+		atomic_section_(mp.atomic_section_mutex_, std::defer_lock) {
 }
 
 MicroPython::AccessState::~AccessState() {
@@ -177,8 +208,10 @@ MicroPython::AccessState::~AccessState() {
 }
 
 bool MicroPython::AccessState::enable() {
-	if (mp_.state_ctx_) {
+	if (!enabled_ && mp_.state_ctx_) {
 		mp_state_ctx = mp_.state_ctx_;
+		atomic_section_.lock();
+		enabled_ = true;
 		return true;
 	} else {
 		return false;
@@ -186,7 +219,11 @@ bool MicroPython::AccessState::enable() {
 }
 
 void MicroPython::AccessState::disable() {
-	mp_state_ctx = nullptr;
+	if (enabled_) {
+		atomic_section_.unlock();
+		mp_state_ctx = nullptr;
+		enabled_ = false;
+	}
 }
 
 MicroPythonShell::MicroPythonShell(const std::string &name)
@@ -215,11 +252,27 @@ void MicroPythonShell::main() {
 }
 
 bool MicroPythonShell::shell_foreground(Shell &shell, bool stop_) {
-	if (running() && shell.available() && stdin_.write_available()) {
-		int c = shell.read();
+	if (running() && shell.available()) {
+		if (stdin_.write_available()) {
+			int c = shell.read();
 
-		if (c != -1 && !interrupt_char(c))
-			stdin_.write(c);
+			if (c == '\x1C') {
+				// Quit (^\)
+				force_exit();
+			} else if (c != -1 && !interrupt_char(c)) {
+				stdin_.write(c);
+			}
+		} else {
+			int c = shell.peek();
+
+			if (c == '\x1C') {
+				// Quit (^\)
+				force_exit();
+				shell.read();
+			} else if (c != -1 && interrupt_char(c)) {
+				shell.read();
+			}
+		}
 	}
 
 	const uint8_t *buf;
@@ -241,7 +294,7 @@ bool MicroPythonShell::shell_foreground(Shell &shell, bool stop_) {
 bool MicroPythonShell::interrupt_char(int c) {
 	AccessState access{*this};
 
-	if (interrupt_char_ && *interrupt_char_ == c) {
+	if (running() && interrupt_char_ && *interrupt_char_ == c) {
 		if (access.enable())
 			mp_sched_keyboard_interrupt();
 
@@ -277,8 +330,29 @@ extern "C" void nlr_jump_fail(void *val) {
 }
 
 void aurcor::MicroPython::nlr_jump_fail(void *val) {
-	logger_.alert(F("[%s/%p] MicroPython failed in %S()"), name_.c_str(), this, where_);
+	if (running_) {
+		logger_.alert(F("[%s/%p] MicroPython failed in %S(): %p"), name_.c_str(), this, where_, val);
+	} else {
+		logger_.trace(F("[%s/%p] MicroPython aborted in %S(): %p"), name_.c_str(), this, where_, val);
+	}
 	::longjmp(abort_, 1);
+}
+
+extern "C" mp_uint_t mp_hal_begin_atomic_section(void) {
+	MicroPython::self_->mp_hal_begin_atomic_section();
+	return 1;
+}
+
+void aurcor::MicroPython::mp_hal_begin_atomic_section() {
+	atomic_section_mutex_.lock();
+}
+
+extern "C" void mp_hal_end_atomic_section() {
+	MicroPython::self_->mp_hal_end_atomic_section();
+}
+
+void aurcor::MicroPython::mp_hal_end_atomic_section() {
+	atomic_section_mutex_.unlock();
 }
 
 extern "C" mp_lexer_t *mp_lexer_new_from_file(const char *filename) {
@@ -290,16 +364,19 @@ mp_lexer_t *aurcor::MicroPython::mp_lexer_new_from_file(const char *filename) {
 }
 
 extern "C" int mp_hal_stdin_rx_chr(void) {
+	// Return values must be in the uint8_t range (-1 is not special)
 	return MicroPython::self_->mp_hal_stdin_rx_chr();
 }
 
 int aurcor::MicroPythonShell::mp_hal_stdin_rx_chr(void) {
-	if (!running())
-		return -1;
+	int c = -1;
 
-	int c = stdin_.read(false);
+	if (!running())
+		goto done;
+
+	c = stdin_.read(false);
 	if (c != -1 || !running())
-		return c;
+		goto done;
 
 	mp_handle_pending(true);
 	MP_THREAD_GIL_EXIT();
@@ -308,6 +385,13 @@ int aurcor::MicroPythonShell::mp_hal_stdin_rx_chr(void) {
 		c = stdin_.read(true);
 
 	MP_THREAD_GIL_ENTER();
+
+done:
+	if (c == -1) {
+		// Return values must be in the uint8_t range (-1 is not special)
+		abort();
+	}
+
 	return c;
 }
 
@@ -317,13 +401,13 @@ extern "C" void mp_hal_stdout_tx_strn(const char *str, size_t len) {
 
 void aurcor::MicroPythonShell::mp_hal_stdout_tx_strn(const uint8_t *str, size_t len) {
 	if (!running())
-		mp_raise_OSError(MP_ENOEXEC);
+		abort();
 
 	while (len > 0) {
 		size_t written = stdout_.write(str, len, false);
 
 		if (!running())
-			mp_raise_OSError(MP_ENOEXEC);
+			abort();
 
 		if (written > 0) {
 			str += written;
@@ -339,7 +423,7 @@ void aurcor::MicroPythonShell::mp_hal_stdout_tx_strn(const uint8_t *str, size_t 
 
 		MP_THREAD_GIL_ENTER();
 		if (!running())
-			mp_raise_OSError(MP_ENOEXEC);
+			abort();
 
 		str += written;
 		len -= written;

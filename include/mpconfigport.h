@@ -62,3 +62,9 @@ typedef long mp_off_t;
 #define MICROPY_HELPER_REPL 1
 #define MICROPY_KBD_EXCEPTION 1
 #define MICROPY_HAL_HAS_VT100 1
+
+extern mp_uint_t mp_hal_begin_atomic_section(void);
+extern void mp_hal_end_atomic_section(void);
+
+#define MICROPY_BEGIN_ATOMIC_SECTION() mp_hal_begin_atomic_section()
+#define MICROPY_END_ATOMIC_SECTION(state) mp_hal_end_atomic_section()
