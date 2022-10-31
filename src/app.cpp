@@ -34,10 +34,18 @@
 #include "app/console.h"
 #include "app/network.h"
 
+#include "aurcor/micropython.h"
+
 namespace aurcor {
 
 App::App() {
 
+}
+
+void App::init() {
+	app::App::init();
+
+	MicroPython::setup(4);
 }
 
 void App::start() {

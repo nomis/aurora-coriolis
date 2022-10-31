@@ -20,34 +20,54 @@
 
 #include <Arduino.h>
 
-#include <initializer_list>
 #include <memory>
+#include <mutex>
+#include <thread>
 #include <vector>
 
-#include <uuid/syslog.h>
-#include <uuid/telnet.h>
-
-#include "../app/app.h"
-#include "../app/console.h"
-#include "../app/network.h"
+#include <uuid/log.h>
 
 namespace aurcor {
 
-class App: public app::App {
-private:
-#if defined(ARDUINO_LOLIN_S2_MINI)
+using HeapData = std::unique_ptr<uint8_t, decltype(::free)*>;
 
-#else
-# error "Unknown board"
-#endif
+class Heaps;
+
+class Heap {
+public:
+	Heap(std::shared_ptr<Heaps> heaps, HeapData data, size_t size);
+	~Heap();
+
+	uint8_t *begin() { return data_.get(); }
+	uint8_t *end() { return data_.get() + size_; }
+	size_t size() const { return size_; }
+
+private:
+	std::weak_ptr<Heaps> heaps_;
+	HeapData data_;
+	const size_t size_;
+};
+
+class Heaps: public std::enable_shared_from_this<Heaps> {
+	friend Heap;
 
 public:
-	App();
-	void init() override;
-	void start() override;
-	void loop() override;
+	Heaps(size_t size, uint32_t caps, size_t count = 0);
+	~Heaps() = default;
+
+	bool resize(size_t count);
+	std::unique_ptr<Heap> allocate();
 
 private:
+	static uuid::log::Logger logger_;
+
+	void restore(HeapData data);
+
+	const size_t size_;
+	const uint32_t caps_;
+	std::mutex mutex_;
+	std::vector<HeapData> heaps_;
+	size_t used_ = 0;
 };
 
 } // namespace aurcor

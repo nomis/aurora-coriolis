@@ -38,6 +38,7 @@ extern "C" {
 
 #include <uuid/console.h>
 
+#include "heap.h"
 #include "io_buffer.h"
 
 namespace aurcor {
@@ -46,7 +47,9 @@ class MicroPython {
 public:
 	static constexpr size_t HEAP_SIZE = 192 * 1024;
 
-	virtual ~MicroPython();
+	static void setup(size_t heap_count);
+
+	virtual ~MicroPython() = default;
 
 protected:
 	class AccessState {
@@ -73,13 +76,13 @@ protected:
 	virtual void shutdown() = 0;
 	void stop();
 
-	inline bool heap_available() const { return heap_ != nullptr; }
+	inline bool heap_available() const { return !!heap_; }
 	inline bool running() const { return running_; }
 
 	virtual void state_copy();
 	virtual void state_reset();
-	void force_exit();
 
+	void force_exit();
 	void abort();
 
 	friend int ::mp_hal_stdin_rx_chr(void);
@@ -92,6 +95,8 @@ protected:
 
 private:
 	static thread_local MicroPython *self_;
+	static std::shared_ptr<Heaps> heaps_;
+
 	void running_thread();
 
 	friend void ::nlr_jump_fail(void *val);
@@ -106,7 +111,7 @@ private:
 	friend mp_lexer_t *::mp_lexer_new_from_file(const char *filename);
 	mp_lexer_t *mp_lexer_new_from_file(const char *filename);
 
-	uint8_t *heap_;
+	std::unique_ptr<Heap> heap_;
 	std::thread thread_;
 	bool started_{false};
 	std::atomic<bool> running_{false};

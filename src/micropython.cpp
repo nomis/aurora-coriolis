@@ -50,22 +50,23 @@ static const char __pstr__logger_name[] __attribute__((__aligned__(sizeof(int)))
 namespace aurcor {
 
 uuid::log::Logger MicroPython::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::USER};
-__thread MicroPython *MicroPython::self_ = nullptr;
 
-MicroPython::MicroPython(const std::string &name) : name_(name) {
-	heap_ = (uint8_t *)::heap_caps_malloc(HEAP_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-	if (!heap_)
-		logger_.emerg(F("[%s/%p] Unable to allocate heap"), this);
+__thread MicroPython *MicroPython::self_{nullptr};
 
+std::shared_ptr<Heaps> MicroPython::heaps_ = std::make_shared<Heaps>(
+	MicroPython::HEAP_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+
+void MicroPython::setup(size_t heap_count) {
+	heaps_->resize(heap_count);
+}
+
+MicroPython::MicroPython(const std::string &name)
+		: name_(name), heap_(std::move(heaps_->allocate())) {
 	system_exit_exc_.base.type = &mp_type_SystemExit;
 	system_exit_exc_.traceback_alloc = 0;
 	system_exit_exc_.traceback_len = 0;
 	system_exit_exc_.traceback_data = NULL;
 	system_exit_exc_.args = (mp_obj_tuple_t *)&mp_const_empty_tuple_obj;
-}
-
-MicroPython::~MicroPython() {
-	::free(heap_);
 }
 
 void MicroPython::start() {
@@ -96,7 +97,7 @@ void MicroPython::running_thread() {
 
 	if (!::setjmp(abort_)) {
 		where_ = F("gc_init");
-		gc_init(heap_, heap_ + HEAP_SIZE);
+		gc_init(heap_->begin(), heap_->end());
 	} else {
 		goto done;
 	}
