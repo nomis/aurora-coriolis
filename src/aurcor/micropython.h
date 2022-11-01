@@ -48,6 +48,8 @@ class MicroPython {
 public:
 	static constexpr size_t HEAP_SIZE = 192 * 1024;
 	static constexpr size_t PYSTACK_SIZE = 4 * 1024;
+	static constexpr size_t TASK_STACK_SIZE = 12 * 1024;
+	static constexpr size_t TASK_STACK_LIMIT = TASK_STACK_SIZE - 4 * 1024;
 
 	static void setup(size_t heap_count);
 
@@ -96,6 +98,12 @@ protected:
 	const std::string name_;
 
 private:
+	struct LogExceptionData {
+		aurcor::MicroPython *mp;
+		uuid::log::Level level;
+		std::vector<char> text;
+	};
+
 	static thread_local MicroPython *self_;
 	static std::shared_ptr<Heaps> heaps_;
 	static std::shared_ptr<Heaps> pystacks_;
@@ -104,6 +112,8 @@ private:
 
 	friend void ::nlr_jump_fail(void *val);
 	void nlr_jump_fail(void *val) __attribute__((noreturn));
+	void log_exception(mp_obj_t exc, uuid::log::Level level);
+	static void log_exception_print(void *env, const char *str, size_t len);
 
 	friend mp_uint_t ::mp_hal_begin_atomic_section(void);
 	void mp_hal_begin_atomic_section();
@@ -125,6 +135,7 @@ private:
 	bool stopped_{false};
 	const __FlashStringHelper *where_;
 	jmp_buf abort_;
+	bool in_nlr_fail_{false};
 
 	std::mutex state_mutex_;
 	typeof(mp_state_ctx) state_ctx_{nullptr};

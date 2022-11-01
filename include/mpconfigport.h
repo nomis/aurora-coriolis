@@ -27,8 +27,7 @@
 #include <stdint.h>
 
 // Options to control how MicroPython is built
-#define MICROPY_CONFIG_ROM_LEVEL MICROPY_CONFIG_ROM_LEVEL_BASIC_FEATURES
-//#define MICROPY_CONFIG_ROM_LEVEL MICROPY_CONFIG_ROM_LEVEL_EXTRA_FEATURES
+#define MICROPY_CONFIG_ROM_LEVEL MICROPY_CONFIG_ROM_LEVEL_EXTRA_FEATURES
 
 // Compiler configuration
 #define MICROPY_ENABLE_COMPILER 1
@@ -103,7 +102,9 @@ typedef long mp_off_t;
 #define MICROPY_INSTANCE_PER_THREAD 1
 #define MICROPY_KBD_EXCEPTION 1
 #define MICROPY_LONGINT_IMPL MICROPY_LONGINT_IMPL_MPZ
-#define MICROPY_PY_URANDOM_SEED_INIT_FUNC esp_random()
+#ifndef ENV_NATIVE
+# define MICROPY_PY_URANDOM_SEED_INIT_FUNC esp_random()
+#endif
 #define MICROPY_WARNINGS 1
 
 extern mp_uint_t mp_hal_begin_atomic_section(void);

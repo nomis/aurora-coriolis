@@ -20,6 +20,10 @@
 
 #include <Arduino.h>
 
+#if defined(ARDUINO_ARCH_ESP32)
+# include <soc/cache_memory.h>
+#endif
+
 #include <algorithm>
 #include <csetjmp>
 #include <cstring>
@@ -96,6 +100,13 @@ void MicroPython::running_thread() {
 	if (!::setjmp(abort_)) {
 		where_ = F("mp_stack_ctrl_init");
 		mp_stack_ctrl_init();
+	} else {
+		goto done;
+	}
+
+	if (!::setjmp(abort_)) {
+		where_ = F("mp_stack_set_limit");
+		mp_stack_set_limit(TASK_STACK_LIMIT);
 	} else {
 		goto done;
 	}
@@ -343,12 +354,83 @@ extern "C" void nlr_jump_fail(void *val) {
 }
 
 void aurcor::MicroPython::nlr_jump_fail(void *val) {
-	if (running_) {
-		logger_.alert(F("[%s/%p] MicroPython failed in %S(): %p"), name_.c_str(), this, where_, val);
-	} else {
-		logger_.trace(F("[%s/%p] MicroPython aborted in %S(): %p"), name_.c_str(), this, where_, val);
+	uuid::log::Level level = (running_ || in_nlr_fail_) ? uuid::log::Level::ALERT : uuid::log::Level::DEBUG;
+	uintptr_t address = (uintptr_t)val;
+	bool valid = false;
+
+	logger_.log(level, logger_.facility(), F("[%s/%p] MicroPython failed in %S(): %p"),
+		name_.c_str(), this, where_, val);
+
+#if defined(ARDUINO_ARCH_ESP32)
+	if (ADDRESS_IN_IRAM0(address)
+			|| ADDRESS_IN_IRAM0_CACHE(address)
+			|| ADDRESS_IN_IRAM1(address)
+			|| ADDRESS_IN_DROM0(address)
+			|| ADDRESS_IN_DRAM0(address)
+			|| ADDRESS_IN_DRAM0_CACHE(address)
+			|| ADDRESS_IN_DRAM1(address)
+			|| (val >= heap_->begin() && val < heap_->end())
+			|| (val >= pystack_->begin() && val < pystack_->end()))
+		valid = true;
+#elif defined(ENV_NATIVE)
+	valid = true;
+#endif
+
+	if (val == nullptr || address == 0xBAAAAAAD || address == 0xBAADF00D)
+		valid = false;
+
+	if (valid && !in_nlr_fail_) {
+		in_nlr_fail_ = true;
+		log_exception((mp_obj_t)address, level);
+		in_nlr_fail_ = false;
 	}
+
 	::longjmp(abort_, 1);
+}
+
+void aurcor::MicroPython::log_exception(mp_obj_t exc, uuid::log::Level level) {
+	aurcor::MicroPython::LogExceptionData data;
+	const mp_print_t logger_print{&data, &aurcor::MicroPython::log_exception_print};
+
+	data.mp = this;
+	data.level = level;
+
+	mp_stack_set_limit(TASK_STACK_SIZE);
+	mp_obj_print_exception(&logger_print, exc);
+	mp_stack_set_limit(TASK_STACK_LIMIT);
+
+	if (!data.text.empty())
+		log_exception_print(&data, "\n", 1);
+}
+
+void aurcor::MicroPython::log_exception_print(void *env, const char *str, size_t len) {
+	auto *data = reinterpret_cast<aurcor::MicroPython::LogExceptionData*>(env);
+	auto &self = *data->mp;
+	auto &text = data->text;
+
+	text.reserve(text.size() + len);
+
+	while (len-- > 0) {
+		if (*str == '\r') {
+			str++;
+			continue;
+		}
+
+		if (*str == '\n') {
+			str++;
+			if (!text.empty()) {
+				text.push_back('\0');
+				self.logger_.log(data->level, self.logger_.facility(),
+					F("[%s/%p] %s"), self.name_.c_str(), &self, text.data());
+				text.clear();
+				text.shrink_to_fit();
+			}
+			continue;
+		}
+
+		text.push_back(*str);
+		str++;
+	}
 }
 
 extern "C" mp_uint_t mp_hal_begin_atomic_section(void) {
