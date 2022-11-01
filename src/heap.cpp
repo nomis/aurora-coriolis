@@ -25,6 +25,17 @@
 
 #include <uuid/log.h>
 
+#ifndef __cpp_lib_make_unique
+namespace std {
+
+template<typename _Tp, typename... _Args>
+inline unique_ptr<_Tp> make_unique(_Args&&... __args) {
+	return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...));
+}
+
+} // namespace std
+#endif
+
 static const char __pstr__logger_name[] __attribute__((__aligned__(sizeof(int)))) PROGMEM = "heap";
 
 namespace aurcor {

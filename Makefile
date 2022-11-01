@@ -3,6 +3,9 @@
 all:
 	platformio run
 
+native:
+	platformio run -e native
+
 clean:
 	platformio run -t clean
 	make -C lib/micropython/port clean

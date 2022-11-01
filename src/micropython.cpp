@@ -30,6 +30,7 @@
 #include <uuid/console.h>
 
 extern "C" {
+	#include <py/builtin.h>
 	#include <py/compile.h>
 	#include <py/gc.h>
 	#include <py/lexer.h>
@@ -371,8 +372,16 @@ extern "C" mp_lexer_t *mp_lexer_new_from_file(const char *filename) {
 	return MicroPython::self_->mp_lexer_new_from_file(filename);
 }
 
-mp_lexer_t *aurcor::MicroPython::mp_lexer_new_from_file(const char *filename) {
+::mp_lexer_t *aurcor::MicroPython::mp_lexer_new_from_file(const char *filename) {
 	mp_raise_OSError(MP_ENOENT);
+}
+
+extern "C" ::mp_import_stat_t mp_import_stat(const char *path) {
+	return MicroPython::self_->mp_import_stat2(path);
+}
+
+::mp_import_stat_t aurcor::MicroPython::mp_import_stat2(const char *path) {
+	return MP_IMPORT_STAT_NO_EXIST;
 }
 
 extern "C" int mp_hal_stdin_rx_chr(void) {

@@ -74,9 +74,8 @@
 #define MICROPY_PY_ONEWIRE 0
 
 // Type definitions for the specific machine
-
-typedef int32_t mp_int_t; // must be pointer size
-typedef uint32_t mp_uint_t; // must be pointer size
+typedef intptr_t mp_int_t;
+typedef uintptr_t mp_uint_t;
 typedef long mp_off_t;
 
 #define MICROPY_FLOAT_IMPL MICROPY_FLOAT_IMPL_FLOAT

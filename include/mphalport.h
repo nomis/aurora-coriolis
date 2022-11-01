@@ -29,7 +29,16 @@
 #ifndef INCLUDED_MPHALPORT_H
 #define INCLUDED_MPHALPORT_H
 
-__attribute__((always_inline)) static inline uint32_t mp_hal_ticks_cpu(void) {
+#ifdef ENV_NATIVE
+# include <time.h>
+
+__attribute__((always_inline)) static inline mp_uint_t mp_hal_ticks_cpu(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+#else
+__attribute__((always_inline)) static inline mp_uint_t mp_hal_ticks_cpu(void) {
     uint32_t ccount;
     #if CONFIG_IDF_TARGET_ESP32C3
     __asm__ __volatile__ ("csrr %0, 0x7E2" : "=r" (ccount)); // Machine Performance Counter Value
@@ -38,5 +47,6 @@ __attribute__((always_inline)) static inline uint32_t mp_hal_ticks_cpu(void) {
     #endif
     return ccount;
 }
+#endif
 
 #endif

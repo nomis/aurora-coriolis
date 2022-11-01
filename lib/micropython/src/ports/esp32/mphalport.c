@@ -28,9 +28,6 @@
 
 #include <sys/time.h>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-
 #include "py/obj.h"
 #include "py/objstr.h"
 #include "py/mpstate.h"
@@ -40,15 +37,56 @@
 #include "shared/runtime/pyexec.h"
 #include "mphalport.h"
 
-uint32_t mp_hal_ticks_ms(void) {
+#ifdef ENV_NATIVE
+# include <time.h>
+# include <unistd.h>
+
+mp_uint_t mp_hal_ticks_ms(void) {
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+mp_uint_t mp_hal_ticks_us(void) {
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    return ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
+}
+
+void mp_hal_delay_ms(mp_uint_t ms) {
+    struct timespec ts = {
+        .tv_sec = 0,
+        .tv_nsec = ms * 1000000,
+    };
+
+    nanosleep(&ts, NULL);
+}
+
+void mp_hal_delay_us(mp_uint_t us) {
+    struct timespec ts = {
+        .tv_sec = 0,
+        .tv_nsec = us * 1000,
+    };
+
+    nanosleep(&ts, NULL);
+}
+#else
+# include "freertos/FreeRTOS.h"
+# include "freertos/task.h"
+
+mp_uint_t mp_hal_ticks_ms(void) {
     return esp_timer_get_time() / 1000;
 }
 
-uint32_t mp_hal_ticks_us(void) {
+mp_uint_t mp_hal_ticks_us(void) {
     return esp_timer_get_time();
 }
 
-void mp_hal_delay_ms(uint32_t ms) {
+void mp_hal_delay_ms(mp_uint_t ms) {
     uint64_t us = ms * 1000;
     uint64_t dt;
     uint64_t t0 = esp_timer_get_time();
@@ -75,7 +113,7 @@ void mp_hal_delay_ms(uint32_t ms) {
     }
 }
 
-void mp_hal_delay_us(uint32_t us) {
+void mp_hal_delay_us(mp_uint_t us) {
     // these constants are tested for a 240MHz clock
     const uint32_t this_overhead = 5;
     const uint32_t pend_overhead = 150;
@@ -99,6 +137,7 @@ void mp_hal_delay_us(uint32_t us) {
         }
     }
 }
+#endif
 
 int32_t mp_hal_time_s(void) {
     struct timeval tv;

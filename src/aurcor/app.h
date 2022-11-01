@@ -24,9 +24,6 @@
 #include <memory>
 #include <vector>
 
-#include <uuid/syslog.h>
-#include <uuid/telnet.h>
-
 #include "../app/app.h"
 #include "../app/console.h"
 #include "../app/network.h"
@@ -36,6 +33,8 @@ namespace aurcor {
 class App: public app::App {
 private:
 #if defined(ARDUINO_LOLIN_S2_MINI)
+
+#elif defined(ENV_NATIVE)
 
 #else
 # error "Unknown board"

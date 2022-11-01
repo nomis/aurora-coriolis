@@ -18,21 +18,9 @@
 
 #include "aurcor/app.h"
 
-#include <esp_pthread.h>
-
-#include <initializer_list>
-#include <memory>
-#include <vector>
-
-#include <uuid/common.h>
-#include <uuid/console.h>
-#include <uuid/log.h>
-#include <uuid/syslog.h>
-#include <uuid/telnet.h>
-
-#include "app/config.h"
-#include "app/console.h"
-#include "app/network.h"
+#ifndef ENV_NATIVE
+# include <esp_pthread.h>
+#endif
 
 #include "aurcor/micropython.h"
 
@@ -51,11 +39,13 @@ void App::init() {
 void App::start() {
 	app::App::start();
 
+#ifndef ENV_NATIVE
 	auto cfg = esp_pthread_get_default_config();
 	cfg.stack_size = 5 * 1024;
 	cfg.prio = uxTaskPriorityGet(nullptr);
 	cfg.inherit_cfg = true;
 	esp_pthread_set_cfg(&cfg);
+#endif
 }
 
 void App::loop() {

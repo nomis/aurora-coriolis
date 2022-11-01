@@ -28,6 +28,7 @@
 #include <thread>
 
 extern "C" {
+	#include <py/builtin.h>
 	#include <py/lexer.h>
 	#include <py/mphal.h>
 	#include <py/mpstate.h>
@@ -110,8 +111,11 @@ private:
 	friend void ::mp_hal_end_atomic_section(void);
 	void mp_hal_end_atomic_section();
 
-	friend mp_lexer_t *::mp_lexer_new_from_file(const char *filename);
-	mp_lexer_t *mp_lexer_new_from_file(const char *filename);
+	friend ::mp_lexer_t *::mp_lexer_new_from_file(const char *filename);
+	::mp_lexer_t *mp_lexer_new_from_file(const char *filename);
+
+	friend typeof(::mp_import_stat_t) ::mp_import_stat(const char *path);
+	::mp_import_stat_t mp_import_stat2(const char *path);
 
 	std::unique_ptr<Heap> heap_;
 	std::unique_ptr<Heap> pystack_;
