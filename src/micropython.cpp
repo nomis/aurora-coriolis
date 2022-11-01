@@ -173,12 +173,16 @@ done:
 }
 
 void MicroPython::state_copy() {
-	state_ctx_ = mp_state_ctx;
+#if MICROPY_INSTANCE_PER_THREAD
+	state_ctx_ = mp_state_ctx_thread;
+#endif
 	exec_system_exit_ = &pyexec_system_exit;
 }
 
 void MicroPython::state_reset() {
+#if MICROPY_INSTANCE_PER_THREAD
 	state_ctx_ = nullptr;
+#endif
 	exec_system_exit_ = nullptr;
 }
 
@@ -232,20 +236,27 @@ MicroPython::AccessState::~AccessState() {
 }
 
 bool MicroPython::AccessState::enable() {
-	if (!enabled_ && mp_.state_ctx_) {
-		mp_state_ctx = mp_.state_ctx_;
-		atomic_section_.lock();
-		enabled_ = true;
+	if (enabled_)
 		return true;
-	} else {
+
+#if MICROPY_INSTANCE_PER_THREAD
+	if (!mp_.state_ctx_)
 		return false;
-	}
+
+	mp_state_ctx_thread = mp_.state_ctx_;
+#endif
+
+	atomic_section_.lock();
+	enabled_ = true;
+	return true;
 }
 
 void MicroPython::AccessState::disable() {
 	if (enabled_) {
 		atomic_section_.unlock();
-		mp_state_ctx = nullptr;
+#if MICROPY_INSTANCE_PER_THREAD
+		mp_state_ctx_thread = nullptr;
+#endif
 		enabled_ = false;
 	}
 }

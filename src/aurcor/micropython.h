@@ -155,7 +155,9 @@ private:
 	bool in_nlr_fail_{false};
 
 	std::mutex state_mutex_;
-	typeof(mp_state_ctx) state_ctx_{nullptr};
+#if MICROPY_INSTANCE_PER_THREAD
+	typeof(mp_state_ctx_thread) state_ctx_{nullptr};
+#endif
 	typeof(pyexec_system_exit) *exec_system_exit_{nullptr};
 	mp_obj_exception_t system_exit_exc_{};
 
