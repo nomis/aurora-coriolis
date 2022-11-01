@@ -46,6 +46,7 @@ namespace aurcor {
 class MicroPython {
 public:
 	static constexpr size_t HEAP_SIZE = 192 * 1024;
+	static constexpr size_t PYSTACK_SIZE = 4 * 1024;
 
 	static void setup(size_t heap_count);
 
@@ -76,7 +77,7 @@ protected:
 	virtual void shutdown() = 0;
 	void stop();
 
-	inline bool heap_available() const { return !!heap_; }
+	inline bool heap_available() const { return heap_ && pystack_; }
 	inline bool running() const { return running_; }
 
 	virtual void state_copy();
@@ -96,6 +97,7 @@ protected:
 private:
 	static thread_local MicroPython *self_;
 	static std::shared_ptr<Heaps> heaps_;
+	static std::shared_ptr<Heaps> pystacks_;
 
 	void running_thread();
 
@@ -112,6 +114,7 @@ private:
 	mp_lexer_t *mp_lexer_new_from_file(const char *filename);
 
 	std::unique_ptr<Heap> heap_;
+	std::unique_ptr<Heap> pystack_;
 	std::thread thread_;
 	bool started_{false};
 	std::atomic<bool> running_{false};

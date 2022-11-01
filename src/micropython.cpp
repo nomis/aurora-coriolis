@@ -55,13 +55,17 @@ __thread MicroPython *MicroPython::self_{nullptr};
 
 std::shared_ptr<Heaps> MicroPython::heaps_ = std::make_shared<Heaps>(
 	MicroPython::HEAP_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+std::shared_ptr<Heaps> MicroPython::pystacks_ = std::make_shared<Heaps>(
+	MicroPython::PYSTACK_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 
 void MicroPython::setup(size_t heap_count) {
 	heaps_->resize(heap_count);
+	pystacks_->resize(heap_count);
 }
 
 MicroPython::MicroPython(const std::string &name)
-		: name_(name), heap_(std::move(heaps_->allocate())) {
+		: name_(name), heap_(std::move(heaps_->allocate())),
+		pystack_(std::move(pystacks_->allocate())) {
 	system_exit_exc_.base.type = &mp_type_SystemExit;
 	system_exit_exc_.traceback_alloc = 0;
 	system_exit_exc_.traceback_len = 0;
@@ -98,6 +102,13 @@ void MicroPython::running_thread() {
 	if (!::setjmp(abort_)) {
 		where_ = F("gc_init");
 		gc_init(heap_->begin(), heap_->end());
+	} else {
+		goto done;
+	}
+
+	if (!::setjmp(abort_)) {
+		where_ = F("mp_pystack_init");
+		mp_pystack_init(pystack_->begin(), pystack_->end());
 	} else {
 		goto done;
 	}
