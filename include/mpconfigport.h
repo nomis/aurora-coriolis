@@ -92,6 +92,7 @@ typedef long mp_off_t;
 #define MICROPY_HW_BOARD_NAME "ESP32 module"
 #define MICROPY_HW_MCU_NAME "ESP32"
 
+#define MICROPY_ALLOC_PATH_MAX 64
 #define MICROPY_ENABLE_GC 1
 #define MICROPY_ENABLE_PYSTACK 1
 #define MICROPY_ENABLE_EMERGENCY_EXCEPTION_BUF 1
@@ -105,6 +106,7 @@ typedef long mp_off_t;
 #ifndef ENV_NATIVE
 # define MICROPY_PY_URANDOM_SEED_INIT_FUNC esp_random()
 #endif
+#define MICROPY_USE_INTERNAL_PRINTF 0
 #define MICROPY_WARNINGS 1
 
 extern mp_uint_t mp_hal_begin_atomic_section(void);
