@@ -26,6 +26,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <vector>
 
 extern "C" {
 	#include <py/builtin.h>
@@ -98,11 +99,27 @@ protected:
 	const std::string name_;
 
 private:
-	struct LogExceptionData {
-		aurcor::MicroPython *mp;
-		uuid::log::Level level;
-		std::vector<char> text;
+	class LogWriter {
+	public:
+		static constexpr size_t MAX_LINE_LENGTH = 100;
+		static constexpr char NORMAL_LINE = '>';
+		static constexpr char CONTINUATION_LINE = '|';
+
+		LogWriter(MicroPython &mp, uuid::log::Level level,
+			const char prefix);
+		void write(const char *str, size_t len);
+		~LogWriter();
+
+	private:
+		void flush();
+
+		MicroPython &mp_;
+		std::vector<char> text_;
+		uuid::log::Level level_;
+		const char prefix_;
+		char type_;
 	};
+	friend LogWriter;
 
 	static thread_local MicroPython *self_;
 	static std::shared_ptr<Heaps> heaps_;

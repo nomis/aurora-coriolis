@@ -250,6 +250,42 @@ void MicroPython::AccessState::disable() {
 	}
 }
 
+MicroPython::LogWriter::LogWriter(MicroPython &mp, uuid::log::Level level,
+		const char prefix) : mp_(mp), level_(level),
+		prefix_(prefix), type_(NORMAL_LINE) {
+	text_.reserve(MAX_LINE_LENGTH + 1);
+}
+
+void MicroPython::LogWriter::write(const char *str, size_t len) {
+	while (len-- > 0) {
+		if (*str == '\r' || *str == '\n') {
+			flush();
+			type_ = NORMAL_LINE;
+		} else {
+			if (text_.size() == MAX_LINE_LENGTH) {
+				flush();
+				type_ = CONTINUATION_LINE;
+			}
+
+			text_.push_back(*str);
+		}
+		str++;
+	}
+}
+
+MicroPython::LogWriter::~LogWriter() {
+	flush();
+}
+
+void MicroPython::LogWriter::flush() {
+	if (!text_.empty()) {
+		text_.push_back('\0');
+		mp_.logger_.log(level_, mp_.logger_.facility(), F("[%s/%p] %c%c %s"),
+			mp_.name_.c_str(), &mp_, prefix_, type_, text_.data());
+		text_.clear();
+	}
+}
+
 MicroPythonShell::MicroPythonShell(const std::string &name)
 		: MicroPython(name) {
 }
@@ -389,48 +425,16 @@ void aurcor::MicroPython::nlr_jump_fail(void *val) {
 }
 
 void aurcor::MicroPython::log_exception(mp_obj_t exc, uuid::log::Level level) {
-	aurcor::MicroPython::LogExceptionData data;
-	const mp_print_t logger_print{&data, &aurcor::MicroPython::log_exception_print};
-
-	data.mp = this;
-	data.level = level;
+	aurcor::MicroPython::LogWriter writer{*this, level, 'E'};
+	const mp_print_t logger_print{&writer, &aurcor::MicroPython::log_exception_print};
 
 	mp_stack_set_limit(TASK_STACK_SIZE);
 	mp_obj_print_exception(&logger_print, exc);
 	mp_stack_set_limit(TASK_STACK_LIMIT);
-
-	if (!data.text.empty())
-		log_exception_print(&data, "\n", 1);
 }
 
 void aurcor::MicroPython::log_exception_print(void *env, const char *str, size_t len) {
-	auto *data = reinterpret_cast<aurcor::MicroPython::LogExceptionData*>(env);
-	auto &self = *data->mp;
-	auto &text = data->text;
-
-	text.reserve(text.size() + len);
-
-	while (len-- > 0) {
-		if (*str == '\r') {
-			str++;
-			continue;
-		}
-
-		if (*str == '\n') {
-			str++;
-			if (!text.empty()) {
-				text.push_back('\0');
-				self.logger_.log(data->level, self.logger_.facility(),
-					F("[%s/%p] %s"), self.name_.c_str(), &self, text.data());
-				text.clear();
-				text.shrink_to_fit();
-			}
-			continue;
-		}
-
-		text.push_back(*str);
-		str++;
-	}
+	reinterpret_cast<aurcor::MicroPython::LogWriter*>(env)->write(str, len);
 }
 
 extern "C" mp_uint_t mp_hal_begin_atomic_section(void) {
