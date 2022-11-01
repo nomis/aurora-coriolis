@@ -409,7 +409,7 @@ extern "C" void nlr_jump_fail(void *val) {
 }
 
 void aurcor::MicroPython::nlr_jump_fail(void *val) {
-	uuid::log::Level level = (running_ || in_nlr_fail_) ? uuid::log::Level::ALERT : uuid::log::Level::DEBUG;
+	uuid::log::Level level = (running_ || in_nlr_fail_) ? uuid::log::Level::ALERT : uuid::log::Level::NOTICE;
 	uintptr_t address = (uintptr_t)val;
 	bool valid = false;
 
