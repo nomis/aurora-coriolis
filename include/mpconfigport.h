@@ -106,6 +106,7 @@ typedef long mp_off_t;
 #ifndef ENV_NATIVE
 # define MICROPY_PY_URANDOM_SEED_INIT_FUNC esp_random()
 #endif
+#define MICROPY_REPL_SUPPORT_RAW_PASTE 0
 #define MICROPY_USE_INTERNAL_PRINTF 0
 #define MICROPY_WARNINGS 1
 

@@ -319,7 +319,15 @@ void MicroPythonShell::start(Shell &shell) {
 }
 
 void MicroPythonShell::main() {
-	::pyexec_friendly_repl();
+	while (1) {
+		if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
+			if (::pyexec_raw_repl())
+				break;
+		} else {
+			if (::pyexec_friendly_repl())
+				break;
+		}
+	}
 }
 
 bool MicroPythonShell::shell_foreground(Shell &shell, bool stop_) {
@@ -405,7 +413,7 @@ void aurcor::MicroPython::nlr_jump_fail(void *val) {
 	uintptr_t address = (uintptr_t)val;
 	bool valid = false;
 
-	logger_.log(level, logger_.facility(), F("[%s/%p] MicroPython failed in %S(): %p"),
+	logger_.log(level, logger_.facility(), F("[%s/%p] MicroPython aborted in %S(): %p"),
 		name_.c_str(), this, where_, val);
 
 #if defined(ARDUINO_ARCH_ESP32)
