@@ -116,14 +116,16 @@ mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
 	if (n_args == 1) {
 		mp_obj_print_helper(print->context(), args[0], PRINT_STR);
 	} else {
-		mp_obj_t dict = MP_OBJ_NULL;
+		mp_obj_t message;
 
-		if (n_args == 2 && mp_obj_is_type(args[1], &mp_type_dict))
-			dict = args[1];
+		if (n_args == 2 && mp_obj_is_type(args[1], &mp_type_dict)) {
+			message = mp_obj_str_binary_op(MP_BINARY_OP_MODULO, args[0], args[1]);
+		} else {
+			message = mp_obj_str_binary_op(MP_BINARY_OP_MODULO, args[0],
+				mp_obj_new_tuple(n_args - 1, &args[1]));
+		}
 
-		mp_obj_print_helper(print->context(),
-			mp_obj_str_modulo_format(args[0], n_args - 1, &args[1], dict),
-			PRINT_STR);
+		mp_obj_print_helper(print->context(), message, PRINT_STR);
 	}
 
 	if (parsed_args[ARG_exc_info].u_obj != MP_OBJ_NULL)
