@@ -31,8 +31,6 @@
 #include <string>
 #include <thread>
 
-#include <uuid/console.h>
-
 extern "C" {
 	#include <py/builtin.h>
 	#include <py/compile.h>
@@ -48,6 +46,24 @@ extern "C" {
 	#include <shared/runtime/pyexec.h>
 }
 
+#include <uuid/console.h>
+#include <uuid/log.h>
+
+#include "aurcor/mp_print.h"
+
+#ifndef __cpp_lib_make_unique
+namespace std {
+
+template<typename _Tp, typename... _Args>
+inline unique_ptr<_Tp> make_unique(_Args&&... __args) {
+	return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...));
+}
+
+} // namespace std
+#endif
+
+using aurcor::micropython::LogPrint;
+using aurcor::micropython::PlatformPrint;
 using uuid::console::Shell;
 
 static const char __pstr__logger_name[] __attribute__((__aligned__(sizeof(int)))) PROGMEM = "mpy";
@@ -90,10 +106,10 @@ void MicroPython::start() {
 void MicroPython::running_thread() {
 	self_ = this;
 
-	logger_.trace(F("[%s/%p] MicroPython initialising"), name_.c_str(), this);
+	logger_.trace(F("[%s] MicroPython initialising"), name_.c_str());
 
 	if (mp_state_init()) {
-		logger_.alert(F("[%s/%p] MicroPython failed in mp_state_init()"), name_.c_str(), this);
+		logger_.alert(F("[%s] MicroPython failed in mp_state_init()"), name_.c_str());
 		goto done;
 	}
 
@@ -135,12 +151,12 @@ void MicroPython::running_thread() {
 		}
 
 		if (running_ && !::setjmp(abort_)) {
-			logger_.trace(F("[%s/%p] MicroPython running"), name_.c_str(), this);
+			logger_.trace(F("[%s] MicroPython running"), name_.c_str());
 
 			where_ = F("main");
 			main();
 
-			logger_.trace(F("[%s/%p] MicroPython shutdown"), name_.c_str(), this);
+			logger_.trace(F("[%s] MicroPython shutdown"), name_.c_str());
 		}
 
 		{
@@ -167,7 +183,7 @@ void MicroPython::running_thread() {
 done:
 	mp_state_free();
 
-	logger_.trace(F("[%s/%p] MicroPython finished"), name_.c_str(), this);
+	logger_.trace(F("[%s] MicroPython finished"), name_.c_str());
 	self_ = nullptr;
 	running_ = false;
 }
@@ -214,18 +230,31 @@ void MicroPython::stop() {
 		return;
 
 	if (running_) {
-		logger_.trace(F("[%s/%p] Stopping thread"), name_.c_str(), this);
+		logger_.trace(F("[%s] Stopping thread"), name_.c_str());
 		force_exit();
 	}
 
 	if (thread_.joinable()) {
-		logger_.trace(F("[%s/%p] Waiting for thread to stop"), name_.c_str(), this);
+		logger_.trace(F("[%s] Waiting for thread to stop"), name_.c_str());
 		thread_.join();
-		logger_.trace(F("[%s/%p] Thread stopped"), name_.c_str(), this);
+		logger_.trace(F("[%s] Thread stopped"), name_.c_str());
 	}
 
 	stopped_ = true;
 }
+
+void MicroPython::log_exception(mp_obj_t exc, uuid::log::Level level) {
+	std::vector<char> prefix(1 + name_.size() + 3 + 1);
+
+	::snprintf_P(prefix.data(), prefix.size(), PSTR("[%s] E"), name_.c_str());
+
+	LogPrint print{logger_, level, prefix.data()};
+
+	mp_stack_set_limit(TASK_STACK_SIZE);
+	mp_obj_print_exception(print.context(), exc);
+	mp_stack_set_limit(TASK_STACK_LIMIT);
+}
+
 MicroPython::AccessState::AccessState(MicroPython &mp)
 		: mp_(mp), state_lock_(mp.state_mutex_),
 		atomic_section_(mp.atomic_section_mutex_, std::defer_lock) {
@@ -261,42 +290,6 @@ void MicroPython::AccessState::disable() {
 	}
 }
 
-MicroPython::LogWriter::LogWriter(MicroPython &mp, uuid::log::Level level,
-		const char prefix) : mp_(mp), level_(level),
-		prefix_(prefix), type_(NORMAL_LINE) {
-	text_.reserve(MAX_LINE_LENGTH + 1);
-}
-
-void MicroPython::LogWriter::write(const char *str, size_t len) {
-	while (len-- > 0) {
-		if (*str == '\r' || *str == '\n') {
-			flush();
-			type_ = NORMAL_LINE;
-		} else {
-			if (text_.size() == MAX_LINE_LENGTH) {
-				flush();
-				type_ = CONTINUATION_LINE;
-			}
-
-			text_.push_back(*str);
-		}
-		str++;
-	}
-}
-
-MicroPython::LogWriter::~LogWriter() {
-	flush();
-}
-
-void MicroPython::LogWriter::flush() {
-	if (!text_.empty()) {
-		text_.push_back('\0');
-		mp_.logger_.log(level_, mp_.logger_.facility(), F("[%s/%p] %c%c %s"),
-			mp_.name_.c_str(), &mp_, prefix_, type_, text_.data());
-		text_.clear();
-	}
-}
-
 MicroPythonShell::MicroPythonShell(const std::string &name)
 		: MicroPython(name) {
 }
@@ -309,7 +302,7 @@ void MicroPythonShell::start(Shell &shell) {
 		return;
 	}
 
-	logger_.trace(F("[%s/%p] Starting thread"), name_.c_str(), this);
+	logger_.trace(F("[%s] Starting thread"), name_.c_str());
 
 	MicroPython::start();
 
@@ -400,12 +393,20 @@ void MicroPythonShell::state_reset() {
 	MicroPython::state_reset();
 }
 
+bool MicroPythonShell::modulogging_is_enabled(uuid::log::Level level) {
+	return true;
+}
+
+std::unique_ptr<aurcor::micropython::Print> MicroPythonShell::modulogging_print(uuid::log::Level level) {
+	return std::make_unique<PlatformPrint>(level);
+}
+
 } // namespace aurcor
 
 using aurcor::MicroPython;
 
 extern "C" void nlr_jump_fail(void *val) {
-	MicroPython::self_->nlr_jump_fail(val);
+	MicroPython::current().nlr_jump_fail(val);
 }
 
 void aurcor::MicroPython::nlr_jump_fail(void *val) {
@@ -413,8 +414,8 @@ void aurcor::MicroPython::nlr_jump_fail(void *val) {
 	uintptr_t address = (uintptr_t)val;
 	bool valid = false;
 
-	logger_.log(level, logger_.facility(), F("[%s/%p] MicroPython aborted in %S(): %p"),
-		name_.c_str(), this, where_, val);
+	logger_.log(level, logger_.facility(), F("[%s] MicroPython aborted in %S(): %p"),
+		name_.c_str(), where_, val);
 
 #if defined(ARDUINO_ARCH_ESP32)
 	if (ADDRESS_IN_IRAM0(address)
@@ -443,21 +444,8 @@ void aurcor::MicroPython::nlr_jump_fail(void *val) {
 	::longjmp(abort_, 1);
 }
 
-void aurcor::MicroPython::log_exception(mp_obj_t exc, uuid::log::Level level) {
-	aurcor::MicroPython::LogWriter writer{*this, level, 'E'};
-	const mp_print_t logger_print{&writer, &aurcor::MicroPython::log_exception_print};
-
-	mp_stack_set_limit(TASK_STACK_SIZE);
-	mp_obj_print_exception(&logger_print, exc);
-	mp_stack_set_limit(TASK_STACK_LIMIT);
-}
-
-void aurcor::MicroPython::log_exception_print(void *env, const char *str, size_t len) {
-	reinterpret_cast<aurcor::MicroPython::LogWriter*>(env)->write(str, len);
-}
-
 extern "C" mp_uint_t mp_hal_begin_atomic_section(void) {
-	MicroPython::self_->mp_hal_begin_atomic_section();
+	MicroPython::current().mp_hal_begin_atomic_section();
 	return 1;
 }
 
@@ -466,7 +454,7 @@ void aurcor::MicroPython::mp_hal_begin_atomic_section() {
 }
 
 extern "C" void mp_hal_end_atomic_section() {
-	MicroPython::self_->mp_hal_end_atomic_section();
+	MicroPython::current().mp_hal_end_atomic_section();
 }
 
 void aurcor::MicroPython::mp_hal_end_atomic_section() {
@@ -474,7 +462,7 @@ void aurcor::MicroPython::mp_hal_end_atomic_section() {
 }
 
 extern "C" mp_lexer_t *mp_lexer_new_from_file(const char *filename) {
-	return MicroPython::self_->mp_lexer_new_from_file(filename);
+	return MicroPython::current().mp_lexer_new_from_file(filename);
 }
 
 ::mp_lexer_t *aurcor::MicroPython::mp_lexer_new_from_file(const char *filename) {
@@ -482,16 +470,16 @@ extern "C" mp_lexer_t *mp_lexer_new_from_file(const char *filename) {
 }
 
 extern "C" ::mp_import_stat_t mp_import_stat(const char *path) {
-	return MicroPython::self_->mp_import_stat2(path);
+	return MicroPython::current().mp_import_stat(path);
 }
 
-::mp_import_stat_t aurcor::MicroPython::mp_import_stat2(const char *path) {
+::mp_import_stat_t aurcor::MicroPython::mp_import_stat(const char *path) {
 	return MP_IMPORT_STAT_NO_EXIST;
 }
 
 extern "C" int mp_hal_stdin_rx_chr(void) {
 	// Return values must be in the uint8_t range (-1 is not special)
-	return MicroPython::self_->mp_hal_stdin_rx_chr();
+	return MicroPython::current().mp_hal_stdin_rx_chr();
 }
 
 int aurcor::MicroPythonShell::mp_hal_stdin_rx_chr(void) {
@@ -522,7 +510,7 @@ done:
 }
 
 extern "C" void mp_hal_stdout_tx_strn(const char *str, size_t len) {
-	MicroPython::self_->mp_hal_stdout_tx_strn(reinterpret_cast<const uint8_t *>(str), len);
+	MicroPython::current().mp_hal_stdout_tx_strn(reinterpret_cast<const uint8_t *>(str), len);
 }
 
 void aurcor::MicroPythonShell::mp_hal_stdout_tx_strn(const uint8_t *str, size_t len) {

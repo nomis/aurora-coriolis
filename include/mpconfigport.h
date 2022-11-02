@@ -34,8 +34,9 @@
 
 // Python internal features
 #define MICROPY_OPT_COMPUTED_GOTO 1
-#define MICROPY_PY_UTIME_MP_HAL 1
 #define MICROPY_PY_ALL_INPLACE_SPECIAL_METHODS 1
+#define MICROPY_PY_SYS_EXC_INFO 1
+#define MICROPY_PY_UTIME_MP_HAL 1
 
 #define MICROPY_ENABLE_EXTERNAL_IMPORT 0
 #define MICROPY_STREAMS_NON_BLOCK 0
@@ -77,6 +78,7 @@ typedef intptr_t mp_int_t;
 typedef uintptr_t mp_uint_t;
 typedef long mp_off_t;
 
+#define MICROPY_OBJ_REPR MICROPY_OBJ_REPR_C
 #define MICROPY_FLOAT_IMPL MICROPY_FLOAT_IMPL_FLOAT
 
 // Need to provide a declaration/definition of alloca()

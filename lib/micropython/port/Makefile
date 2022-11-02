@@ -8,5 +8,7 @@ include ../../../micropython/py/mkenv.mk
 include $(TOP)/py/py.mk
 
 SRC_MOD += ports/esp32/modutime.c
+SRC_MOD += ../src/modulogging.c
+SRC_MOD += ../src/ulogging.cpp
 
 include $(TOP)/py/mkrules.mk
