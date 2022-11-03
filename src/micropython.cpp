@@ -62,11 +62,15 @@ inline unique_ptr<_Tp> make_unique(_Args&&... __args) {
 } // namespace std
 #endif
 
+#ifndef PSTR_ALIGN
+# define PSTR_ALIGN 4
+#endif
+
 using aurcor::micropython::LogPrint;
 using aurcor::micropython::PlatformPrint;
 using uuid::console::Shell;
 
-static const char __pstr__logger_name[] __attribute__((__aligned__(sizeof(int)))) PROGMEM = "mpy";
+static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "mpy";
 
 namespace aurcor {
 

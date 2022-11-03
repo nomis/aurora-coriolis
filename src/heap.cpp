@@ -36,7 +36,11 @@ inline unique_ptr<_Tp> make_unique(_Args&&... __args) {
 } // namespace std
 #endif
 
-static const char __pstr__logger_name[] __attribute__((__aligned__(sizeof(int)))) PROGMEM = "heap";
+#ifndef PSTR_ALIGN
+# define PSTR_ALIGN 4
+#endif
+
+static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "heap";
 
 namespace aurcor {
 
