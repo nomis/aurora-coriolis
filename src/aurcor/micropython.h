@@ -84,7 +84,7 @@ protected:
 	void start();
 	virtual void main() = 0;
 	virtual void shutdown() = 0;
-	void stop();
+	bool stop();
 
 	inline bool heap_available() const { return heap_ && pystack_; }
 	inline bool running() const { return running_; }
@@ -135,6 +135,7 @@ private:
 	std::unique_ptr<Heap> pystack_;
 	std::thread thread_;
 	bool started_{false};
+	std::mutex active_;
 	std::atomic<bool> running_{false};
 	bool stopped_{false};
 	const __FlashStringHelper *where_;

@@ -108,6 +108,11 @@ void MicroPython::start() {
 }
 
 void MicroPython::running_thread() {
+	std::lock_guard<std::mutex> lock{active_};
+
+	if (!running_)
+		return;
+
 	self_ = this;
 
 	logger_.trace(F("[%s] MicroPython initialising"), name_.c_str());
@@ -229,9 +234,9 @@ void MicroPython::abort() {
 	::nlr_raise(MP_OBJ_FROM_PTR(&system_exit_exc_));
 }
 
-void MicroPython::stop() {
-	if (!started_ || stopped_)
-		return;
+bool MicroPython::stop() {
+	if (!started_)
+		return true;
 
 	if (running_) {
 		logger_.trace(F("[%s] Stopping thread"), name_.c_str());
@@ -239,12 +244,18 @@ void MicroPython::stop() {
 	}
 
 	if (thread_.joinable()) {
-		logger_.trace(F("[%s] Waiting for thread to stop"), name_.c_str());
-		thread_.join();
-		logger_.trace(F("[%s] Thread stopped"), name_.c_str());
+		std::unique_lock<std::mutex> lock{active_, std::try_to_lock};
+
+		if (lock.owns_lock()) {
+			thread_.join();
+			logger_.trace(F("[%s] Thread stopped"), name_.c_str());
+		} else if (!stopped_) {
+			logger_.trace(F("[%s] Waiting for thread to stop"), name_.c_str());
+		}
 	}
 
 	stopped_ = true;
+	return !thread_.joinable();
 }
 
 void MicroPython::log_exception(mp_obj_t exc, uuid::log::Level level) {
@@ -360,8 +371,8 @@ bool MicroPythonShell::shell_foreground(Shell &shell, bool stop_) {
 	}
 
 	if (stop_ || (!running() && stdout_.read_available() == 0)) {
-		stop();
-		return true;
+		if (stop())
+			return true;
 	}
 
 	return false;
