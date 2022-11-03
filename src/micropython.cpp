@@ -265,7 +265,7 @@ void MicroPython::log_exception(mp_obj_t exc, uuid::log::Level level) {
 
 	LogPrint print{logger_, level, prefix.data()};
 
-	mp_stack_set_limit(TASK_STACK_SIZE);
+	mp_stack_set_limit(TASK_EXC_STACK_LIMIT);
 	mp_obj_print_exception(print.context(), exc);
 	mp_stack_set_limit(TASK_STACK_LIMIT);
 }

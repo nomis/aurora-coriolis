@@ -55,7 +55,12 @@ public:
 	static constexpr size_t HEAP_SIZE = 192 * 1024;
 	static constexpr size_t PYSTACK_SIZE = 4 * 1024;
 	static constexpr size_t TASK_STACK_SIZE = 12 * 1024;
-	static constexpr size_t TASK_STACK_LIMIT = TASK_STACK_SIZE - 4 * 1024;
+	static constexpr size_t TASK_STACK_MARGIN = 4 * 1024;
+	static constexpr size_t TASK_EXC_STACK_MARGIN = 2 * 1024;
+	static constexpr size_t TASK_STACK_LIMIT = TASK_STACK_SIZE - TASK_STACK_MARGIN;
+	static constexpr size_t TASK_EXC_STACK_LIMIT = TASK_STACK_SIZE - TASK_EXC_STACK_MARGIN;
+	static_assert(TASK_STACK_LIMIT < TASK_STACK_SIZE, "Task stack limit must be lower than task stack size");
+	static_assert(TASK_STACK_LIMIT < TASK_EXC_STACK_LIMIT, "Task stack limit must be lower than task exception stack limit");
 
 	static void setup(size_t heap_count);
 
