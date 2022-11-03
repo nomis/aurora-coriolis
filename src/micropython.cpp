@@ -397,8 +397,8 @@ void MicroPythonShell::state_reset() {
 	MicroPython::state_reset();
 }
 
-bool MicroPythonShell::modulogging_is_enabled(uuid::log::Level level) {
-	return true;
+uuid::log::Level MicroPythonShell::modulogging_effective_level() {
+	return uuid::log::Level::ALL;
 }
 
 std::unique_ptr<aurcor::micropython::Print> MicroPythonShell::modulogging_print(uuid::log::Level level) {

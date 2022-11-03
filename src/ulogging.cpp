@@ -19,6 +19,8 @@
 #include "aurcor/modulogging.h"
 
 #ifndef NO_QSTR
+#include <algorithm>
+
 extern "C" {
 	# include <py/runtime.h>
 	# include <py/obj.h>
@@ -56,19 +58,24 @@ mp_obj_t ulogging_exception(size_t n_args, const mp_obj_t *args, mp_map_t *kwarg
 mp_obj_t ulogging_disable(size_t n_args, const mp_obj_t *args) {
 	mp_int_t level = ULOGGING_L_EMERG;
 
-	if (n_args >= 1) {
-		if (!mp_obj_is_int(args[0]))
-			mp_raise_TypeError(MP_ERROR_TEXT("level must be an integer"));
-
-		level = mp_obj_get_int(args[0]);
-	}
+	if (n_args >= 1)
+		level = ULogging::level_from_obj(args[0]);
 
 	ULogging::disable(level);
 	return MP_ROM_NONE;
 }
 
+mp_obj_t ulogging_getEffectiveLevel() {
+	return MP_OBJ_NEW_SMALL_INT(ULogging::effective_level());
+}
+
 mp_obj_t ulogging_isEnabledFor(mp_obj_t level_o) {
 	return ULogging::enabled_level(ULogging::level_from_obj(level_o)) != Level::OFF ? MP_ROM_TRUE : MP_ROM_FALSE;
+}
+
+mp_obj_t ulogging_setLevel(mp_obj_t level) {
+	ULogging::enable(ULogging::level_from_obj(level));
+	return MP_ROM_NONE;
 }
 
 } // extern "C"
@@ -95,6 +102,17 @@ inline Level ULogging::find_level(mp_int_t py_level) {
 #undef ULOGGING_LEVEL
 
 	return Level::OFF;
+}
+
+inline mp_int_t ULogging::to_py_level(Level level) {
+	switch (level) {
+#define ULOGGING_LEVEL(_level, _py_lc_name, _py_uc_name, _py_level) \
+		case _level: return _py_level;
+	ULOGGING_LEVELS_WITH_META
+#undef ULOGGING_LEVEL
+	}
+
+	return ULOGGING_L_NOTSET;
 }
 
 mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
@@ -149,16 +167,29 @@ mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
 	return MP_ROM_NONE;
 }
 
-inline Level ULogging::enabled_level(mp_int_t py_level) {
+Level ULogging::enabled_level(mp_int_t py_level) {
 	if (py_level <= current().disable_level_)
+		return Level::OFF;
+
+	if (py_level < current().enable_level_)
 		return Level::OFF;
 
 	Level level = find_level(py_level);
 
-	if (!MicroPython::current().modulogging_is_enabled(level))
+	if (level > MicroPython::current().modulogging_effective_level())
 		level = Level::OFF;
 
 	return level;
+}
+
+mp_int_t ULogging::effective_level() {
+	Level level = MicroPython::current().modulogging_effective_level();
+
+	return std::max(current().enable_level_, to_py_level(level));
+}
+
+inline void ULogging::enable(mp_int_t py_level) {
+	current().enable_level_ = py_level;
 }
 
 inline void ULogging::disable(mp_int_t py_level) {

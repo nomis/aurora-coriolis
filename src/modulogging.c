@@ -32,7 +32,9 @@ ULOGGING_LEVELS
 MP_DEFINE_CONST_FUN_OBJ_KW(ulogging_log_obj, 2, ulogging_log);
 MP_DEFINE_CONST_FUN_OBJ_KW(ulogging_exception_obj, 1, ulogging_exception);
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(ulogging_disable_obj, 0, 1, ulogging_disable);
+MP_DEFINE_CONST_FUN_OBJ_0(ulogging_getEffectiveLevel_obj, ulogging_getEffectiveLevel);
 MP_DEFINE_CONST_FUN_OBJ_1(ulogging_isEnabledFor_obj, ulogging_isEnabledFor);
+MP_DEFINE_CONST_FUN_OBJ_1(ulogging_setLevel_obj, ulogging_setLevel);
 
 STATIC const mp_rom_map_elem_t ulogging_module_globals_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR___name__),          MP_ROM_QSTR(MP_QSTR_ulogging) },
@@ -49,7 +51,9 @@ STATIC const mp_rom_map_elem_t ulogging_module_globals_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR_exception),         MP_ROM_PTR(&ulogging_exception_obj) },
 
 	{ MP_ROM_QSTR(MP_QSTR_disable),           MP_ROM_PTR(&ulogging_disable_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_getEffectiveLevel), MP_ROM_PTR(&ulogging_getEffectiveLevel_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_isEnabledFor),      MP_ROM_PTR(&ulogging_isEnabledFor_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_setLevel),          MP_ROM_PTR(&ulogging_setLevel_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(ulogging_module_globals, ulogging_module_globals_table);

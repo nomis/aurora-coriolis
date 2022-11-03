@@ -40,12 +40,16 @@ extern "C" {
 	ULOGGING_LEVEL(Level::DEBUG,    debug,    DEBUG,    10) \
 	ULOGGING_LEVEL(Level::TRACE,    trace,    TRACE,     5)
 
+#define ULOGGING_LEVELS_WITH_META \
+	ULOGGING_LEVEL(Level::OFF,      off,      OFF,   10000) \
+	ULOGGING_LEVELS \
+	ULOGGING_LEVEL(Level::ALL,      all,      NOTSET,    0)
+
 enum ulogging_py_levels {
 #define ULOGGING_LEVEL(_level, _py_lc_name, _py_uc_name, _py_level) \
 	ULOGGING_L_ ## _py_uc_name = _py_level,
-ULOGGING_LEVELS
+ULOGGING_LEVELS_WITH_META
 #undef ULOGGING_LEVEL
-	ULOGGING_L_NOTSET   = 0,
 };
 
 mp_obj_t ulogging_log(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
@@ -63,8 +67,14 @@ MP_DECLARE_CONST_FUN_OBJ_KW(ulogging_exception_obj);
 mp_obj_t ulogging_disable(size_t n_args, const mp_obj_t *args);
 MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(ulogging_disable_obj);
 
+mp_obj_t ulogging_getEffectiveLevel();
+MP_DECLARE_CONST_FUN_OBJ_0(ulogging_getEffectiveLevel_obj);
+
 mp_obj_t ulogging_isEnabledFor(mp_obj_t level);
 MP_DECLARE_CONST_FUN_OBJ_1(ulogging_isEnabledFor_obj);
+
+mp_obj_t ulogging_setLevel(mp_obj_t level);
+MP_DECLARE_CONST_FUN_OBJ_1(ulogging_setLevel_obj);
 
 #ifdef __cplusplus
 } // extern "C"
@@ -81,14 +91,20 @@ class ULogging {
 public:
 	static mp_int_t level_from_obj(mp_obj_t level_o);
 	static uuid::log::Level find_level(mp_int_t py_level);
+	static mp_int_t to_py_level(uuid::log::Level level);
+
 	static mp_obj_t do_log(qstr fn, mp_int_t py_level, bool exc_info,
 		size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	static uuid::log::Level enabled_level(mp_int_t py_level);
+
+	static mp_int_t effective_level();
+	static void enable(mp_int_t py_level);
 	static void disable(mp_int_t py_level);
 
 private:
 	static ULogging& current();
 
+	mp_int_t enable_level_{ULOGGING_L_NOTSET};
 	mp_int_t disable_level_{ULOGGING_L_NOTSET};
 };
 

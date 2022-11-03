@@ -101,7 +101,7 @@ protected:
 	friend void ::mp_hal_stdout_tx_strn(const char *str, size_t len);
 	virtual void mp_hal_stdout_tx_strn(const uint8_t *str, size_t len) = 0;
 
-	virtual bool modulogging_is_enabled(uuid::log::Level level) = 0;
+	virtual uuid::log::Level modulogging_effective_level() = 0;
 	virtual std::unique_ptr<aurcor::micropython::Print> modulogging_print(uuid::log::Level level) = 0;
 
 	const std::string name_;
@@ -174,7 +174,7 @@ protected:
 	int mp_hal_stdin_rx_chr(void) override;
 	void mp_hal_stdout_tx_strn(const uint8_t *str, size_t len) override;
 
-	bool modulogging_is_enabled(uuid::log::Level level) override;
+	uuid::log::Level modulogging_effective_level() override;
 	std::unique_ptr<aurcor::micropython::Print> modulogging_print(uuid::log::Level level) override;
 
 private:
