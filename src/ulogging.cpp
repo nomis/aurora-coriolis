@@ -101,7 +101,7 @@ inline Level ULogging::find_level(mp_int_t py_level) {
 	ULOGGING_LEVELS
 #undef ULOGGING_LEVEL
 
-	return Level::OFF;
+	return Level::TRACE;
 }
 
 inline mp_int_t ULogging::to_py_level(Level level) {
