@@ -25,7 +25,9 @@
  */
 
 #include <stdint.h>
-#include <esp_random.h>
+#if __has_include(<esp_random.h>)
+# include <esp_random.h>
+#endif
 
 // Options to control how MicroPython is built
 #define MICROPY_CONFIG_ROM_LEVEL MICROPY_CONFIG_ROM_LEVEL_EXTRA_FEATURES
