@@ -31,6 +31,8 @@
 
 namespace aurcor {
 
+class LEDBus;
+
 class LEDBus {
 public:
 	static constexpr size_t MAX_LEDS = 1024;
@@ -48,7 +50,7 @@ public:
 
 	uint64_t last_update_ms() const;
 
-	void write(std::vector<uint8_t> data);
+	void write(const uint8_t *data, size_t size); /* data is in RGB order */
 	virtual void loop() = 0;
 
 protected:
@@ -71,6 +73,14 @@ private:
 	bool busy_{false};
 	uint64_t last_update_ms_{0};
 };
+
+namespace ledbus {
+
+static inline void write(LEDBus &bus, const std::vector<uint8_t> data) {
+	bus.write(data.data(), data.size());
+}
+
+} // namespace ledbus
 
 class NullLEDBus: public LEDBus {
 public:

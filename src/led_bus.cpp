@@ -23,7 +23,6 @@
 #include <algorithm>
 #include <cstring>
 #include <thread>
-#include <vector>
 
 #include <uuid/common.h>
 #include <uuid/log.h>
@@ -46,7 +45,7 @@ uint64_t LEDBus::last_update_ms() const {
 	return last_update_ms_;
 }
 
-void LEDBus::write(std::vector<uint8_t> data) {
+void LEDBus::write(const uint8_t *data, size_t size) {
 	std::unique_lock<std::mutex> lock{mutex_};
 
 	while (busy_)
@@ -55,7 +54,7 @@ void LEDBus::write(std::vector<uint8_t> data) {
 	last_update_ms_ = uuid::get_uptime_ms();
 	busy_ = true;
 
-	start(lock, data.data(), (data.size() / BYTES_PER_LED) * BYTES_PER_LED);
+	start(lock, data, (size / BYTES_PER_LED) * BYTES_PER_LED);
 }
 
 void LEDBus::finish() {
