@@ -55,7 +55,6 @@ private:
 class LinePrint: public Print {
 public:
 	LinePrint() = default;
-	virtual ~LinePrint() = default;
 
 	void print(const char *str, size_t len) final override;
 
@@ -72,7 +71,7 @@ protected:
 class LineWrapPrint: public LinePrint {
 public:
 	LineWrapPrint(size_t line_length);
-	virtual ~LineWrapPrint();
+	~LineWrapPrint() override;
 
 protected:
 	void print_part_line(const char *str, size_t len) final override;
@@ -95,7 +94,6 @@ public:
 
 	LogPrint(uuid::log::Logger &logger, uuid::log::Level level,
 		const std::string &prefix);
-	virtual ~LogPrint() = default;
 
 protected:
 	void print_wrapped_line(const char *text, bool continuation) override;
@@ -109,7 +107,7 @@ private:
 class PlatformPrint: public LinePrint {
 public:
 	PlatformPrint(uuid::log::Level level);
-	~PlatformPrint();
+	~PlatformPrint() override;
 
 protected:
 	void begin_line() override;

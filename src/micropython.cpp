@@ -49,18 +49,8 @@ extern "C" {
 #include <uuid/console.h>
 #include <uuid/log.h>
 
+#include "app/gcc.h"
 #include "aurcor/mp_print.h"
-
-#ifndef __cpp_lib_make_unique
-namespace std {
-
-template<typename _Tp, typename... _Args>
-inline unique_ptr<_Tp> make_unique(_Args&&... __args) {
-	return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...));
-}
-
-} // namespace std
-#endif
 
 #ifndef PSTR_ALIGN
 # define PSTR_ALIGN 4
