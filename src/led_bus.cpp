@@ -45,6 +45,12 @@ uint64_t LEDBus::last_update_ms() const {
 	return last_update_ms_;
 }
 
+bool LEDBus::ready() const {
+	std::unique_lock<std::mutex> lock{mutex_};
+
+	return !busy_;
+}
+
 void LEDBus::write(const uint8_t *data, size_t size) {
 	std::unique_lock<std::mutex> lock{mutex_};
 

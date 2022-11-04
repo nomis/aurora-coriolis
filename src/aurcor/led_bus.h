@@ -50,6 +50,7 @@ public:
 
 	uint64_t last_update_ms() const;
 
+	bool ready() const;
 	void write(const uint8_t *data, size_t size); /* data is in RGB order */
 	virtual void loop() = 0;
 
