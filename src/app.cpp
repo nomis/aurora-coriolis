@@ -22,7 +22,12 @@
 # include <esp_pthread.h>
 #endif
 
+#include <memory>
+
+#include "app/gcc.h"
+#include "aurcor/led_bus.h"
 #include "aurcor/micropython.h"
+#include "aurcor/uart_led_bus.h"
 
 namespace aurcor {
 
@@ -33,7 +38,19 @@ App::App() {
 void App::init() {
 	app::App::init();
 
-	MicroPython::setup(4);
+#if defined(ARDUINO_LOLIN_S2_MINI)
+	buses_.push_back(std::make_unique<UARTLEDBus<0>>(F("led0"),  1, 39));
+	buses_.push_back(std::make_unique<UARTLEDBus<1>>(F("led1"), 14, 40));
+	buses_.push_back(std::make_unique<NullLEDBus>(F("null0")));
+	buses_.push_back(std::make_unique<NullLEDBus>(F("null1")));
+#else
+	buses_.push_back(std::make_unique<NullLEDBus>(F("null0")));
+	buses_.push_back(std::make_unique<NullLEDBus>(F("null1")));
+	buses_.push_back(std::make_unique<NullLEDBus>(F("null2")));
+	buses_.push_back(std::make_unique<NullLEDBus>(F("null3")));
+#endif
+
+	MicroPython::setup(buses_.size());
 }
 
 void App::start() {
@@ -46,10 +63,17 @@ void App::start() {
 	cfg.inherit_cfg = true;
 	esp_pthread_set_cfg(&cfg);
 #endif
+
+	// TODO make this configurable
+	for (auto& bus : buses_)
+		bus->length(LEDBus::MAX_LEDS);
 }
 
 void App::loop() {
 	app::App::loop();
+
+	for (auto& bus : buses_)
+		bus->loop();
 }
 
 } // namespace aurcor

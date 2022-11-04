@@ -27,6 +27,7 @@
 #include "../app/app.h"
 #include "../app/console.h"
 #include "../app/network.h"
+#include "led_bus.h"
 
 namespace aurcor {
 
@@ -47,6 +48,7 @@ public:
 	void loop() override;
 
 private:
+	std::vector<std::unique_ptr<LEDBus>> buses_;
 };
 
 } // namespace aurcor
