@@ -102,6 +102,16 @@ protected:
 		}
 	}
 
+	void finish() override {
+		if (millis() == tx_done_millis_) {
+			long reset_time_us = RESET_TIME_US - (micros() - tx_done_micros_);
+
+			if (reset_time_us > 0)
+				delayMicroseconds(reset_time_us);
+		}
+		ByteBufferLEDBus::finish();
+	}
+
 private:
 	static constexpr const uart_signal_conn_t &periph = uart_periph_signal[UARTNumber];
 	static constexpr uart_dev_t &hw = *(UART_LL_GET_HW(UARTNumber));
@@ -180,6 +190,8 @@ private:
 
 	intr_handle_t interrupt_;
 	bool ok_;
+	unsigned long tx_done_micros_{0};
+	unsigned long tx_done_millis_{0};
 };
 
 } // namespace aurcor

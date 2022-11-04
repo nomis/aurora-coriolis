@@ -31,7 +31,7 @@
 # define PSTR_ALIGN 4
 #endif
 
-static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "led";
+static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "led-bus";
 
 namespace aurcor {
 
@@ -57,21 +57,11 @@ void LEDBus::write(std::vector<uint8_t> data) {
 	start(lock, data.data(), (data.size() / BYTES_PER_LED) * BYTES_PER_LED);
 }
 
-void LEDBus::tx_sleep() const {
-	if (millis() == tx_done_millis_) {
-		long reset_time_us = RESET_TIME_US - (micros() - tx_done_micros_);
-
-		if (reset_time_us > 0)
-			delayMicroseconds(reset_time_us);
-	}
-}
-
 void LEDBus::finish() {
 	std::lock_guard<std::mutex> lock{mutex_};
 
-	tx_sleep();
-	ready_.notify_all();
 	busy_ = false;
+	ready_.notify_all();
 }
 
 NullLEDBus::NullLEDBus(const __FlashStringHelper *name) : LEDBus(name) {
@@ -92,7 +82,6 @@ BackgroundLEDBus::BackgroundLEDBus(const __FlashStringHelper *name) : LEDBus(nam
 
 void BackgroundLEDBus::loop() {
 	if (state_ == State::FINISHED) {
-		logger_.trace(F("[%S] Finish"), name());
 		state_ = State::IDLE;
 		finish();
 	}
@@ -105,7 +94,6 @@ void ByteBufferLEDBus::start(std::unique_lock<std::mutex> &lock, const uint8_t *
 		size_t size) {
 	size_t max_bytes = length() * BYTES_PER_LED;
 
-	logger_.trace(F("[%S] Start (%zu bytes)"), name(), max_bytes);
 	::memcpy(&buffer_[0], data, std::min(max_bytes, size));
 
 	pos_ = &buffer_[0];

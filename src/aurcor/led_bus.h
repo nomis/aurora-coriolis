@@ -54,21 +54,15 @@ public:
 protected:
 	virtual void start(std::unique_lock<std::mutex> &lock, const uint8_t *data,
 		size_t size) = 0;
-	inline void tx_done() { tx_done_micros_ = micros(); tx_done_millis_ = millis(); }
-	void finish();
+	virtual void finish();
 
 	static uuid::log::Logger logger_;
-
-	unsigned long tx_done_micros_{0};
-	unsigned long tx_done_millis_{0};
 
 private:
 	LEDBus(LEDBus&&) = delete;
 	LEDBus(const LEDBus&) = delete;
 	LEDBus& operator=(LEDBus&&) = delete;
 	LEDBus& operator=(const LEDBus&) = delete;
-
-	void tx_sleep() const;
 
 	const __FlashStringHelper *name_;
 	std::atomic<size_t> length_{0};
