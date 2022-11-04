@@ -18,6 +18,7 @@
 
 #include "aurcor/heap.h"
 
+#include <cstring>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -77,7 +78,7 @@ std::unique_ptr<Heap> Heaps::allocate() {
 		heaps_.pop_back();
 		used_++;
 
-		::memset(heap->begin(), 0, heap->size());
+		std::memset(heap->begin(), 0, heap->size());
 		return heap;
 	}
 

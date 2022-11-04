@@ -21,6 +21,7 @@
 #include <Arduino.h>
 
 #include <algorithm>
+#include <cstring>
 #include <thread>
 #include <vector>
 
@@ -94,7 +95,7 @@ void ByteBufferLEDBus::start(std::unique_lock<std::mutex> &lock, const uint8_t *
 		size_t size) {
 	size_t max_bytes = length() * BYTES_PER_LED;
 
-	::memcpy(&buffer_[0], data, std::min(max_bytes, size));
+	std::memcpy(&buffer_[0], data, std::min(max_bytes, size));
 
 	pos_ = &buffer_[0];
 	bytes_ = max_bytes;

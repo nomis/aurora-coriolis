@@ -24,6 +24,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <thread>
 
@@ -135,7 +136,7 @@ public:
 		if (available > count)
 			available = count;
 
-		memcpy(&buf_[write_], buf, available);
+		std::memcpy(&buf_[write_], buf, available);
 		lock.lock();
 		give_locked(available);
 		return available;

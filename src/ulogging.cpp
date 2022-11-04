@@ -21,6 +21,8 @@
 #ifndef NO_QSTR
 #include <algorithm>
 
+#include <cstring>
+
 extern "C" {
 	# include <py/runtime.h>
 	# include <py/obj.h>
@@ -144,7 +146,7 @@ mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
 			TUPLE_FIXED0(tuple, STACK_TUPLE_NUM);
 
 			tuple.len = n_args - 1;
-			memcpy(&tuple.items[0], &args[1], tuple.len * sizeof(tuple.items[0]));
+			std::memcpy(&tuple.items[0], &args[1], tuple.len * sizeof(tuple.items[0]));
 
 			message = mp_obj_str_binary_op(MP_BINARY_OP_MODULO, args[0], MP_OBJ_FROM_PTR(&tuple));
 		} else {
