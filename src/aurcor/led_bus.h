@@ -113,7 +113,7 @@ protected:
 		size_t size) override;
 	virtual void transmit() = 0;
 
-	std::array<uint8_t,MAX_BYTES> buffer_;
+	std::array<uint8_t,MAX_BYTES> buffer_{};
 	const uint8_t *pos_{nullptr};
 	size_t bytes_{0};
 };
