@@ -20,11 +20,13 @@
 
 #include <Arduino.h>
 
+#include <esp_timer.h>
+#include <freertos/semphr.h>
+
 #include <algorithm>
 #include <cstring>
-#include <thread>
+#include <new>
 
-#include <uuid/common.h>
 #include <uuid/log.h>
 
 #ifndef PSTR_ALIGN
@@ -38,73 +40,74 @@ namespace aurcor {
 uuid::log::Logger LEDBus::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::LPR};
 
 LEDBus::LEDBus(const __FlashStringHelper *name) : name_(name) {
+	semaphore_ = xSemaphoreCreateBinary();
+	if (semaphore_) {
+		if (xSemaphoreGive(semaphore_) != pdTRUE) {
+			logger_.emerg(F("[%S] Semaphore init failed"), name);
+		}
+	} else {
+		throw std::bad_alloc();
+	}
 }
 
-uint64_t LEDBus::last_update_ms() const {
-	std::lock_guard<std::mutex> lock{mutex_};
-	return last_update_ms_;
+LEDBus::~LEDBus() {
+	if (semaphore_) {
+		vSemaphoreDelete(semaphore_);
+	}
+}
+
+uint64_t LEDBus::last_update_us() const {
+	return last_update_us_;
 }
 
 bool LEDBus::ready() const {
-	std::unique_lock<std::mutex> lock{mutex_};
-
 	return !busy_;
 }
 
 void LEDBus::write(const uint8_t *data, size_t size) {
-	std::unique_lock<std::mutex> lock{mutex_};
+	if (xSemaphoreTake(semaphore_, SEMAPHORE_TIMEOUT_TICKS) != pdTRUE) {
+		logger_.emerg(F("[%S] Semaphore take timeout"), name_);
+		return;
+	}
 
-	while (busy_)
-		ready_.wait(lock);
-
-	last_update_ms_ = uuid::get_uptime_ms();
 	busy_ = true;
+	last_update_us_ = esp_timer_get_time();
 
-	start(lock, data, (size / BYTES_PER_LED) * BYTES_PER_LED);
+	start(data, (size / BYTES_PER_LED) * BYTES_PER_LED);
 }
 
 void LEDBus::finish() {
-	std::lock_guard<std::mutex> lock{mutex_};
+	busy_ = false;
+	if (xSemaphoreGive(semaphore_) != pdTRUE)
+		logger_.emerg(F("[%S] Semaphore give failed"), name_);
+}
+
+IRAM_ATTR void LEDBus::finish_isr() {
+	BaseType_t xHigherPriorityTaskWoken{pdFALSE};
 
 	busy_ = false;
-	ready_.notify_all();
+	xSemaphoreGiveFromISR(semaphore_, &xHigherPriorityTaskWoken);
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 NullLEDBus::NullLEDBus(const __FlashStringHelper *name) : LEDBus(name) {
 	length(MAX_LEDS);
 }
 
-void NullLEDBus::loop() {
-}
-
-void NullLEDBus::start(std::unique_lock<std::mutex> &lock, const uint8_t *data,
-	size_t length) {
-	lock.unlock();
+void NullLEDBus::start(const uint8_t *data, size_t length) {
 	finish();
 }
 
-BackgroundLEDBus::BackgroundLEDBus(const __FlashStringHelper *name) : LEDBus(name) {
+ByteBufferLEDBus::ByteBufferLEDBus(const __FlashStringHelper *name) : LEDBus(name) {
 }
 
-void BackgroundLEDBus::loop() {
-	if (state_ == State::FINISHED) {
-		state_ = State::IDLE;
-		finish();
-	}
-}
-
-ByteBufferLEDBus::ByteBufferLEDBus(const __FlashStringHelper *name) : BackgroundLEDBus(name) {
-}
-
-void ByteBufferLEDBus::start(std::unique_lock<std::mutex> &lock, const uint8_t *data,
-		size_t size) {
+void ByteBufferLEDBus::start(const uint8_t *data, size_t size) {
 	size_t max_bytes = length() * BYTES_PER_LED;
 
 	std::memcpy(&buffer_[0], data, std::min(max_bytes, size));
 
 	pos_ = &buffer_[0];
 	bytes_ = max_bytes;
-	state_ = State::RUNNING;
 	transmit();
 }
 

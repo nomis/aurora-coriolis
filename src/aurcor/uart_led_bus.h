@@ -23,6 +23,7 @@
 
 #include <driver/periph_ctrl.h>
 #include <driver/uart.h>
+#include <esp_timer.h>
 #include <hal/uart_ll.h>
 #include <soc/uart_reg.h>
 
@@ -94,22 +95,17 @@ public:
 
 protected:
 	void transmit() override {
+		while ((uint64_t)esp_timer_get_time() - tx_done_us_ <= next_tx_delay_us_) {
+			asm volatile ("nop");
+		}
+
 		if (ok_) {
+			next_tx_delay_us_ = RESET_TIME_US + std::min(TX_FIFO_MAX_US, TX_BYTE_US * bytes_);
 			uart_ll_ena_intr_mask(&hw, UART_INTR_TXFIFO_EMPTY);
 		} else {
 			bytes_ = 0;
-			state_ = State::FINISHED;
+			finish();
 		}
-	}
-
-	void finish() override {
-		if (millis() == tx_done_millis_) {
-			long reset_time_us = RESET_TIME_US - (micros() - tx_done_micros_);
-
-			if (reset_time_us > 0)
-				delayMicroseconds(reset_time_us);
-		}
-		ByteBufferLEDBus::finish();
 	}
 
 private:
@@ -128,10 +124,13 @@ private:
 	static constexpr uint8_t TX_FIFO_SIZE = UART_LL_FIFO_DEF_LEN;
 	static constexpr uint8_t TX_FIFO_MIN_SPACE = ((TX_FIFO_SIZE / 2) / TX_WORDS_PER_BYTE) * TX_WORDS_PER_BYTE;
 	static constexpr uint8_t TX_FIFO_THRESHOLD = TX_FIFO_SIZE - TX_FIFO_MIN_SPACE;
-	static constexpr unsigned long TX_FIFO_SIZE_US = 1000000 /
-		(BAUD_RATE / (TX_FIFO_SIZE * (TX_START_BITS + TX_BITS_PER_WORD + TX_STOP_BITS)));
 	static_assert(TX_FIFO_MIN_SPACE >= TX_WORDS_PER_BYTE,
 		"Must be enough space for at least one byte of data when the interrupt is raised");
+
+	static constexpr uint64_t TX_FIFO_MAX_US = 1000000 /
+		(BAUD_RATE / (TX_FIFO_SIZE * (TX_START_BITS + TX_BITS_PER_WORD + TX_STOP_BITS)));
+	static constexpr uint64_t TX_BYTE_US = 1000000 /
+		(BAUD_RATE / (TX_WORDS_PER_BYTE * (TX_START_BITS + TX_BITS_PER_WORD + TX_STOP_BITS)));
 
 	template<int N>
 	class PatternTable {
@@ -179,19 +178,18 @@ private:
 		}
 
 		if (bytes == 0) {
-			self->tx_done_micros_ = micros() - TX_FIFO_SIZE_US;
-			self->tx_done_millis_ = millis();
+			self->tx_done_us_ = esp_timer_get_time();
 			uart_ll_disable_intr_mask(&hw, UART_INTR_TXFIFO_EMPTY);
-			self->state_ = State::FINISHED;
+			self->finish_isr();
 		} else {
 			uart_ll_clr_intsts_mask(&hw, UART_INTR_TXFIFO_EMPTY);
 		}
 	}
 
+	uint64_t next_tx_delay_us_{0};
+	uint64_t tx_done_us_{0};
 	intr_handle_t interrupt_;
 	bool ok_;
-	unsigned long tx_done_micros_{0};
-	unsigned long tx_done_millis_{0};
 };
 
 } // namespace aurcor

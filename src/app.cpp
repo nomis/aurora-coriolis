@@ -71,9 +71,6 @@ void App::start() {
 
 void App::loop() {
 	app::App::loop();
-
-	for (auto& bus : buses_)
-		bus->loop();
 }
 
 } // namespace aurcor

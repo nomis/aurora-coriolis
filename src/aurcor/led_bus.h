@@ -20,11 +20,11 @@
 
 #include <Arduino.h>
 
+#include <freertos/semphr.h>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <condition_variable>
-#include <mutex>
 #include <vector>
 
 #include <uuid/log.h>
@@ -39,25 +39,25 @@ public:
 	static constexpr size_t BYTES_PER_LED = 3;
 	static constexpr size_t MAX_BYTES = MAX_LEDS * BYTES_PER_LED;
 	static constexpr unsigned long UPDATE_RATE_HZ = 800000;
-	static constexpr unsigned long RESET_TIME_US = 280;
+	static constexpr uint64_t RESET_TIME_US = 280;
+	static constexpr TickType_t SEMAPHORE_TIMEOUT_TICKS = 30 * 1000 * portTICK_PERIOD_MS;
 
 	LEDBus(const __FlashStringHelper *name);
-	virtual ~LEDBus() = default;
+	virtual ~LEDBus();
 
 	const __FlashStringHelper *name() const { return name_; }
 	inline size_t length() const { return length_; }
 	inline void length(size_t length) { length_ = std::min(length, MAX_LEDS); }
 
-	uint64_t last_update_ms() const;
+	uint64_t last_update_us() const;
 
 	bool ready() const;
 	void write(const uint8_t *data, size_t size); /* data is in RGB order */
-	virtual void loop() = 0;
 
 protected:
-	virtual void start(std::unique_lock<std::mutex> &lock, const uint8_t *data,
-		size_t size) = 0;
+	virtual void start(const uint8_t *data, size_t size) = 0;
 	virtual void finish();
+	virtual IRAM_ATTR void finish_isr();
 
 	static uuid::log::Logger logger_;
 
@@ -69,10 +69,9 @@ private:
 
 	const __FlashStringHelper *name_;
 	std::atomic<size_t> length_{0};
-	mutable std::mutex mutex_;
-	std::condition_variable ready_;
-	bool busy_{false};
-	uint64_t last_update_ms_{0};
+	SemaphoreHandle_t semaphore_{nullptr};
+	std::atomic<bool> busy_{false};
+	uint64_t last_update_us_{0};
 };
 
 namespace ledbus {
@@ -88,40 +87,17 @@ public:
 	NullLEDBus(const __FlashStringHelper *name);
 	virtual ~NullLEDBus() = default;
 
-	void loop() override;
-
 protected:
-	void start(std::unique_lock<std::mutex> &lock, const uint8_t *data,
-		size_t size) override;
+	void start(const uint8_t *data, size_t size) override;
 };
 
-class BackgroundLEDBus: public LEDBus {
-public:
-	BackgroundLEDBus(const __FlashStringHelper *name);
-	virtual ~BackgroundLEDBus() = default;
-
-	void loop() override;
-
-protected:
-	enum State : uint8_t {
-		IDLE = 0,
-		RUNNING,
-		FINISHED,
-	};
-
-	virtual void transmit() = 0;
-
-	std::atomic<State> state_{State::IDLE};
-};
-
-class ByteBufferLEDBus: public BackgroundLEDBus {
+class ByteBufferLEDBus: public LEDBus {
 public:
 	ByteBufferLEDBus(const __FlashStringHelper *name);
 	virtual ~ByteBufferLEDBus() = default;
 
 protected:
-	void start(std::unique_lock<std::mutex> &lock, const uint8_t *data,
-		size_t size) override;
+	void start(const uint8_t *data, size_t size) override;
 	virtual void transmit() = 0;
 
 	std::array<uint8_t,MAX_BYTES> buffer_{};
