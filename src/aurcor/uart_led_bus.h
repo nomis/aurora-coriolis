@@ -17,25 +17,56 @@
  */
 
 #pragma once
-#ifndef ENV_NATIVE
 
 #include <Arduino.h>
 
-#include <driver/periph_ctrl.h>
-#include <driver/uart.h>
-#include <esp_timer.h>
-#include <hal/uart_ll.h>
-#include <soc/uart_reg.h>
+#ifndef ENV_NATIVE
+# include <driver/periph_ctrl.h>
+# include <driver/uart.h>
+# include <esp_timer.h>
+# include <hal/uart_ll.h>
+# include <soc/uart_reg.h>
+#endif
 
 #include <array>
-#include <condition_variable>
-#include <mutex>
-#include <vector>
 
 #include "led_bus.h"
 
 namespace aurcor {
 
+namespace ledbus {
+
+template<int N>
+class UARTPatternTable {
+public:
+	static constexpr unsigned long TX_WORDS_PER_BYTE = 4;
+
+	constexpr UARTPatternTable() {
+		for (unsigned int i = 0; i < N; i++) {
+			values[i][0] = data[(i >> 6) & 3];
+			values[i][1] = data[(i >> 4) & 3];
+			values[i][2] = data[(i >> 2) & 3];
+			values[i][3] = data[(i     ) & 3];
+		}
+	}
+
+	const std::array<uint8_t,TX_WORDS_PER_BYTE>& operator[](size_t i) const {
+		return values[i];
+	}
+
+private:
+	static inline constexpr std::array<uint8_t,TX_WORDS_PER_BYTE> data{
+		0b00110111, 0b00000111, 0b00110100, 0b00000100
+	};
+
+	std::array<std::array<uint8_t,TX_WORDS_PER_BYTE>,N> values{};
+};
+
+static IRAM_ATTR constexpr const UARTPatternTable<256> uart_pattern_table{};
+
+} // namespace ledbus
+
+#ifndef ENV_NATIVE
 template<unsigned int UARTNumber>
 class UARTLEDBus: public ByteBufferLEDBus {
 public:
@@ -116,6 +147,7 @@ private:
 	static constexpr uart_word_length_t CFG_UART_WORD_LENGTH = UART_DATA_6_BITS;
 	static constexpr unsigned long TX_BITS_PER_WORD = 6;
 	static constexpr unsigned long TX_WORDS_PER_BYTE = 4;
+
 	static constexpr uart_stop_bits_t CFG_UART_STOP_BITS = UART_STOP_BITS_1;
 	static constexpr unsigned long TX_STOP_BITS = 1;
 
@@ -132,31 +164,8 @@ private:
 	static constexpr uint64_t TX_BYTE_US = 1000000 /
 		(BAUD_RATE / (TX_WORDS_PER_BYTE * (TX_START_BITS + TX_BITS_PER_WORD + TX_STOP_BITS)));
 
-	template<int N>
-	class PatternTable {
-	public:
-		constexpr PatternTable() {
-			for (unsigned int i = 0; i < N; i++) {
-				values[i][0] = data[(i >> 6) & 3];
-				values[i][1] = data[(i >> 4) & 3];
-				values[i][2] = data[(i >> 2) & 3];
-				values[i][3] = data[(i     ) & 3];
-			}
-		}
-
-		const std::array<uint8_t,TX_WORDS_PER_BYTE>& operator[](size_t i) const {
-			return values[i];
-		}
-
-	private:
-		static inline constexpr std::array<uint8_t,TX_WORDS_PER_BYTE> data{
-			0b00110111, 0b00000111, 0b00110100, 0b00000100
-		};
-
-		std::array<std::array<uint8_t,TX_WORDS_PER_BYTE>,N> values{};
-	};
-
-	static IRAM_ATTR constexpr const PatternTable<256> pattern_table{};
+	static_assert(ledbus::uart_pattern_table.TX_WORDS_PER_BYTE == TX_WORDS_PER_BYTE,
+		"Pattern table must use the same words per byte");
 
 	static IRAM_ATTR void interrupt_handler(void *arg) {
 		auto *self = reinterpret_cast<UARTLEDBus<UARTNumber>*>(arg);
@@ -167,7 +176,7 @@ private:
 
 			while (bytes > 0 && uart_ll_get_txfifo_len(&hw) >= TX_WORDS_PER_BYTE) {
 				for (uint8_t i = 0; i < TX_WORDS_PER_BYTE; i++)
-					WRITE_PERI_REG(UART_FIFO_REG(UARTNumber), pattern_table[*pos][i]);
+					WRITE_PERI_REG(UART_FIFO_REG(UARTNumber), ledbus::uart_pattern_table[*pos][i]);
 
 				pos++;
 				bytes--;
@@ -191,6 +200,6 @@ private:
 	intr_handle_t interrupt_;
 	bool ok_;
 };
+#endif
 
 } // namespace aurcor
-#endif
