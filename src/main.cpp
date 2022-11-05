@@ -23,10 +23,18 @@
 static aurcor::App application;
 
 void setup() {
-	application.start();
+	try {
+		application.start();
+	} catch (...) {
+		application.exception(F("setup"));
+	}
 }
 
 void loop() {
-	application.loop();
-	::yield();
+	try {
+		application.loop();
+		::yield();
+	} catch (...) {
+		application.exception(F("loop"));
+	}
 }
