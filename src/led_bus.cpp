@@ -75,7 +75,7 @@ void LEDBus::write(const uint8_t *data, size_t size) {
 	busy_ = true;
 	last_update_us_ = esp_timer_get_time();
 
-	start(data, (size / BYTES_PER_LED) * BYTES_PER_LED);
+	start(data, size);
 }
 
 void LEDBus::finish() {
