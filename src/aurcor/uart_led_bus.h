@@ -176,7 +176,7 @@ private:
 			auto *pos = self->pos_;
 
 			while (bytes > 0 && uart_ll_get_txfifo_len(&hw) >= TX_WORDS_PER_BYTE) {
-				uint32_t value = ledbus::uart_pattern_table[*pos];
+				int32_t value = ledbus::uart_pattern_table[*pos];
 
 				for (uint8_t i = 0; i < TX_WORDS_PER_BYTE; i++) {
 					WRITE_PERI_REG(UART_FIFO_REG(UARTNumber), value);
