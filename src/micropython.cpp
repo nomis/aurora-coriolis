@@ -98,7 +98,7 @@ void MicroPython::start() {
 }
 
 void MicroPython::running_thread() {
-	std::lock_guard<std::mutex> lock{active_};
+	std::lock_guard lock{active_};
 
 	if (!running_)
 		return;
@@ -145,7 +145,7 @@ void MicroPython::running_thread() {
 		mp_init();
 
 		{
-			std::lock_guard<std::mutex> lock{state_mutex_};
+			std::lock_guard lock{state_mutex_};
 			state_copy();
 		}
 
@@ -159,7 +159,7 @@ void MicroPython::running_thread() {
 		}
 
 		{
-			std::lock_guard<std::mutex> lock{state_mutex_};
+			std::lock_guard lock{state_mutex_};
 			state_reset();
 		}
 
@@ -234,7 +234,7 @@ bool MicroPython::stop() {
 	}
 
 	if (thread_.joinable()) {
-		std::unique_lock<std::mutex> lock{active_, std::try_to_lock};
+		std::unique_lock lock{active_, std::try_to_lock};
 
 		if (lock.owns_lock()) {
 			thread_.join();

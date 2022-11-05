@@ -44,7 +44,7 @@ Heaps::Heaps(size_t size, uint32_t caps, size_t count)
 }
 
 bool Heaps::resize(size_t count) {
-	std::lock_guard<std::mutex> lock{mutex_};
+	std::lock_guard lock{mutex_};
 
 	while (heaps_.size() + used_ < count) {
 		HeapData data{reinterpret_cast<uint8_t*>(::heap_caps_malloc(size_, caps_)), ::free};
@@ -69,7 +69,7 @@ bool Heaps::resize(size_t count) {
 }
 
 std::unique_ptr<Heap> Heaps::allocate() {
-	std::lock_guard<std::mutex> lock{mutex_};
+	std::lock_guard lock{mutex_};
 
 	if (!heaps_.empty()) {
 		auto self = shared_from_this();
@@ -86,7 +86,7 @@ std::unique_ptr<Heap> Heaps::allocate() {
 }
 
 void Heaps::restore(HeapData data) {
-	std::lock_guard<std::mutex> lock{mutex_};
+	std::lock_guard lock{mutex_};
 
 	heaps_.push_back(std::move(data));
 	used_--;

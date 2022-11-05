@@ -39,12 +39,12 @@ public:
 	using len_t = T;
 
 	inline T read_available() {
-		std::lock_guard<std::mutex> lock{mutex_};
+		std::lock_guard lock{mutex_};
 		return read_available_locked();
 	}
 
 	inline int read(bool wait) {
-		std::unique_lock<std::mutex> lock{mutex_};
+		std::unique_lock lock{mutex_};
 		T available;
 
 		while (1) {
@@ -72,7 +72,7 @@ public:
 	}
 
 	inline T read(const uint8_t *&buf, bool wait) {
-		std::unique_lock<std::mutex> lock{mutex_};
+		std::unique_lock lock{mutex_};
 		T available;
 
 		while (1) {
@@ -96,12 +96,12 @@ public:
 	}
 
 	inline void take(T count) {
-		std::lock_guard<std::mutex> lock{mutex_};
+		std::lock_guard lock{mutex_};
 		take_locked(count);
 	}
 
 	inline T write_available() {
-		std::lock_guard<std::mutex> lock{mutex_};
+		std::lock_guard lock{mutex_};
 		return write_available_locked();
 	}
 
@@ -113,7 +113,7 @@ public:
 	}
 
 	inline size_t write(const uint8_t *buf, size_t count, bool wait) {
-		std::unique_lock<std::mutex> lock{mutex_};
+		std::unique_lock lock{mutex_};
 		T available;
 
 		while (1) {
@@ -143,7 +143,7 @@ public:
 	}
 
 	void stop() {
-		std::lock_guard<std::mutex> lock{mutex_};
+		std::lock_guard lock{mutex_};
 		stop_ = true;
 		cv_read_.notify_all();
 		cv_write_.notify_all();
@@ -201,7 +201,7 @@ private:
 	}
 
 	inline void give(T count) {
-		std::lock_guard<std::mutex> lock{mutex_};
+		std::lock_guard lock{mutex_};
 		give_locked(count);
 	}
 
