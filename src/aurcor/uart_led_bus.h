@@ -21,11 +21,8 @@
 #include <Arduino.h>
 
 #ifndef ENV_NATIVE
-# include <driver/periph_ctrl.h>
-# include <driver/uart.h>
-# include <esp_timer.h>
 # include <hal/uart_ll.h>
-# include <soc/uart_reg.h>
+# include <soc/uart_periph.h>
 #endif
 
 #include <array>
@@ -38,7 +35,7 @@ namespace ledbus {
 
 class UARTPatternTable {
 public:
-	static constexpr unsigned long TX_WORDS_PER_BYTE = 4;
+	static constexpr unsigned long WORDS_PER_BYTE = 4;
 
 	constexpr UARTPatternTable() {
 		for (size_t i = 0; i <= UINT8_MAX; i++) {
@@ -56,94 +53,26 @@ public:
 	}
 
 private:
-	static inline constexpr std::array<uint8_t,TX_WORDS_PER_BYTE> data{
+	static inline constexpr std::array<uint8_t,WORDS_PER_BYTE> data{
 		0b00110111, 0b00000111, 0b00110100, 0b00000100
 	};
 
 	std::array<uint32_t,UINT8_MAX + 1> values{};
 };
 
-static IRAM_ATTR constexpr const UARTPatternTable uart_pattern_table{};
-
 } // namespace ledbus
 
 #ifndef ENV_NATIVE
-template<unsigned int UARTNumber>
 class UARTLEDBus: public ByteBufferLEDBus {
 public:
-	UARTLEDBus(const __FlashStringHelper *name, uint8_t rx_pin,
-			uint8_t tx_pin) : ByteBufferLEDBus(name) {
-		periph_module_enable(periph.module);
-
-#if SOC_UART_REQUIRE_CORE_RESET
-		uart_ll_set_reset_core(&hw, true);
-		periph_module_reset(periph.module);
-		uart_ll_set_reset_core(&hw, false);
-#else
-		periph_module_reset(periph.module);
-#endif
-
-		uart_ll_disable_intr_mask(&hw, UART_LL_INTR_MASK);
-
-		uart_ll_set_sclk(&hw, UART_SCLK_APB);
-		uart_ll_set_baudrate(&hw, BAUD_RATE);
-		uart_ll_set_mode(&hw, UART_MODE_UART);
-		uart_ll_set_parity(&hw, UART_PARITY_DISABLE);
-		uart_ll_set_data_bit_num(&hw, CFG_UART_WORD_LENGTH);
-		uart_ll_set_stop_bits(&hw, CFG_UART_STOP_BITS);
-		uart_ll_set_tx_idle_num(&hw, 0);
-		uart_ll_set_hw_flow_ctrl(&hw, UART_HW_FLOWCTRL_DISABLE, 0);
-		uart_ll_rxfifo_rst(&hw);
-		uart_ll_txfifo_rst(&hw);
-
-		uart_ll_set_rx_tout(&hw, 0);
-		uart_ll_set_rxfifo_full_thr(&hw, 0);
-		uart_ll_set_txfifo_empty_thr(&hw, TX_FIFO_THRESHOLD);
-
-		uart_ll_inverse_signal(&hw, UART_SIGNAL_RXD_INV | UART_SIGNAL_TXD_INV);
-
-		uart_ll_clr_intsts_mask(&hw, UART_LL_INTR_MASK);
-
-		ok_ = esp_intr_alloc(periph.irq, ESP_INTR_FLAG_LEVEL1, interrupt_handler,
-			this, &interrupt_) == ESP_OK;
-		uart_set_pin(UARTNumber, tx_pin, rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-
-		if (ok_) {
-			logger_.debug(F("[%S] Configured UART%u on pins RX/%d TX/%d with TX FIFO threshold %zu/%zu"),
-				name, UARTNumber, rx_pin, tx_pin, TX_FIFO_THRESHOLD, TX_FIFO_SIZE);
-		} else {
-			logger_.emerg(F("[%S] Failed to set up interrupt handler for UART%u"), name, UARTNumber);
-		}
-	}
-
-	~UARTLEDBus() override {
-		uart_ll_disable_intr_mask(&hw, UART_LL_INTR_MASK);
-		if (ok_)
-			esp_intr_free(interrupt_);
-		uart_ll_clr_intsts_mask(&hw, UART_LL_INTR_MASK);
-
-		periph_module_disable(periph.module);
-	}
+	UARTLEDBus(unsigned int uart_num, const __FlashStringHelper *name,
+		uint8_t rx_pin, uint8_t tx_pin);
+	~UARTLEDBus() override;
 
 protected:
-	void transmit() override {
-		while ((uint64_t)esp_timer_get_time() < next_tx_start_us_) {
-			asm volatile ("nop");
-		}
-
-		if (ok_) {
-			next_tx_delay_us_ = RESET_TIME_US + std::min(TX_FIFO_MAX_US, TX_BYTE_US * bytes_) + 1;
-			uart_ll_ena_intr_mask(&hw, UART_INTR_TXFIFO_EMPTY);
-		} else {
-			bytes_ = 0;
-			finish();
-		}
-	}
+	void transmit() override;
 
 private:
-	static constexpr const uart_signal_conn_t &periph = uart_periph_signal[UARTNumber];
-	static constexpr uart_dev_t &hw = *(UART_LL_GET_HW(UARTNumber));
-
 	static constexpr unsigned long TX_START_BITS = 1;
 	static constexpr uart_word_length_t CFG_UART_WORD_LENGTH = UART_DATA_6_BITS;
 	static constexpr unsigned long TX_BITS_PER_WORD = 6;
@@ -165,46 +94,15 @@ private:
 	static constexpr uint64_t TX_BYTE_US = 1000000 /
 		(BAUD_RATE / (TX_WORDS_PER_BYTE * (TX_START_BITS + TX_BITS_PER_WORD + TX_STOP_BITS)));
 
-	static_assert(ledbus::uart_pattern_table.TX_WORDS_PER_BYTE == TX_WORDS_PER_BYTE,
+	static_assert(ledbus::UARTPatternTable::WORDS_PER_BYTE == TX_WORDS_PER_BYTE,
 		"Pattern table must use the same words per byte");
 
-	static inline bool tx_fifo_ready() {
-		return ((READ_PERI_REG(UART_STATUS_REG(UARTNumber)) >> UART_TXFIFO_CNT_S) & UART_TXFIFO_CNT_V)
-			<= TX_FIFO_SIZE - TX_WORDS_PER_BYTE;
-	}
+	static IRAM_ATTR void interrupt_handler(void *arg);
 
-	static IRAM_ATTR void interrupt_handler(void *arg) {
-		auto *self = reinterpret_cast<UARTLEDBus<UARTNumber>*>(arg);
-		auto bytes = self->bytes_;
-
-		if (bytes > 0) {
-			auto *pos = self->pos_;
-
-			while (bytes > 0 && tx_fifo_ready()) {
-				int32_t value = ledbus::uart_pattern_table[*pos];
-
-				for (uint8_t i = 0; i < TX_WORDS_PER_BYTE; i++) {
-					WRITE_PERI_REG(UART_FIFO_REG(UARTNumber), value);
-					value >>= 8;
-				}
-
-				pos++;
-				bytes--;
-			}
-
-			self->pos_ = pos;
-			self->bytes_ = bytes;
-		}
-
-		if (bytes == 0) {
-			self->next_tx_start_us_ = esp_timer_get_time() + self->next_tx_delay_us_;
-			uart_ll_disable_intr_mask(&hw, UART_INTR_TXFIFO_EMPTY);
-			self->finish_isr();
-		} else {
-			uart_ll_clr_intsts_mask(&hw, UART_INTR_TXFIFO_EMPTY);
-		}
-	}
-
+	const uart_signal_conn_t &periph_;
+	uart_dev_t &hw_;
+	const uintptr_t uart_fifo_reg_;
+	const uintptr_t uart_status_reg_;
 	uint64_t next_tx_start_us_{0};
 	uint32_t next_tx_delay_us_{0};
 	intr_handle_t interrupt_;

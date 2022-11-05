@@ -39,8 +39,8 @@ void App::init() {
 	app::App::init();
 
 #if defined(ARDUINO_LOLIN_S2_MINI)
-	buses_.push_back(std::make_unique<UARTLEDBus<0>>(F("led0"),  1, 39));
-	buses_.push_back(std::make_unique<UARTLEDBus<1>>(F("led1"), 14, 40));
+	buses_.push_back(std::make_unique<UARTLEDBus>(0, F("led0"),  1, 39));
+	buses_.push_back(std::make_unique<UARTLEDBus>(1, F("led1"), 14, 40));
 	buses_.push_back(std::make_unique<NullLEDBus>(F("null0")));
 	buses_.push_back(std::make_unique<NullLEDBus>(F("null1")));
 #else
