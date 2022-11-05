@@ -35,7 +35,7 @@ class LEDBus;
 
 class LEDBus {
 public:
-	static constexpr size_t MAX_LEDS = 1024;
+	static constexpr size_t MAX_LEDS = 1000;
 	static constexpr size_t BYTES_PER_LED = 3;
 	static constexpr size_t MAX_BYTES = MAX_LEDS * BYTES_PER_LED;
 	static constexpr unsigned long UPDATE_RATE_HZ = 800000;
