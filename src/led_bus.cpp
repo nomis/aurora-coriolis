@@ -25,7 +25,6 @@
 
 #include <algorithm>
 #include <cstring>
-#include <new>
 
 #include <uuid/log.h>
 
@@ -44,9 +43,9 @@ LEDBus::LEDBus(const __FlashStringHelper *name) : name_(name) {
 	if (semaphore_) {
 		if (xSemaphoreGive(semaphore_) != pdTRUE) {
 			logger_.emerg(F("[%S] Semaphore init failed"), name);
+			vSemaphoreDelete(semaphore_);
+			semaphore_ = nullptr;
 		}
-	} else {
-		throw std::bad_alloc();
 	}
 }
 
@@ -65,6 +64,9 @@ bool LEDBus::ready() const {
 }
 
 void LEDBus::write(const uint8_t *data, size_t size) {
+	if (!semaphore_)
+		return;
+
 	if (xSemaphoreTake(semaphore_, SEMAPHORE_TIMEOUT_TICKS) != pdTRUE) {
 		logger_.emerg(F("[%S] Semaphore take timeout"), name_);
 		return;
