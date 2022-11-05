@@ -36,21 +36,22 @@ namespace aurcor {
 
 namespace ledbus {
 
-template<int N>
 class UARTPatternTable {
 public:
 	static constexpr unsigned long TX_WORDS_PER_BYTE = 4;
 
 	constexpr UARTPatternTable() {
-		for (unsigned int i = 0; i < N; i++) {
-			values[i][0] = data[(i >> 6) & 3];
-			values[i][1] = data[(i >> 4) & 3];
-			values[i][2] = data[(i >> 2) & 3];
-			values[i][3] = data[(i     ) & 3];
+		for (size_t i = 0; i <= UINT8_MAX; i++) {
+			// Writes to the UART FIFO are effectively little-endian
+			values[i] =
+				  (data[(i >> 6) & 3]      )
+				| (data[(i >> 4) & 3] <<  8)
+				| (data[(i >> 2) & 3] << 16)
+				| (data[(i     ) & 3] << 24);
 		}
 	}
 
-	const std::array<uint8_t,TX_WORDS_PER_BYTE>& operator[](size_t i) const {
+	uint32_t operator[](size_t i) const {
 		return values[i];
 	}
 
@@ -59,10 +60,10 @@ private:
 		0b00110111, 0b00000111, 0b00110100, 0b00000100
 	};
 
-	std::array<std::array<uint8_t,TX_WORDS_PER_BYTE>,N> values{};
+	std::array<uint32_t,UINT8_MAX + 1> values{};
 };
 
-static IRAM_ATTR constexpr const UARTPatternTable<256> uart_pattern_table{};
+static IRAM_ATTR constexpr const UARTPatternTable uart_pattern_table{};
 
 } // namespace ledbus
 
@@ -175,8 +176,12 @@ private:
 			auto *pos = self->pos_;
 
 			while (bytes > 0 && uart_ll_get_txfifo_len(&hw) >= TX_WORDS_PER_BYTE) {
-				for (uint8_t i = 0; i < TX_WORDS_PER_BYTE; i++)
-					WRITE_PERI_REG(UART_FIFO_REG(UARTNumber), ledbus::uart_pattern_table[*pos][i]);
+				uint32_t value = ledbus::uart_pattern_table[*pos];
+
+				for (uint8_t i = 0; i < TX_WORDS_PER_BYTE; i++) {
+					WRITE_PERI_REG(UART_FIFO_REG(UARTNumber), value);
+					value >>= 8;
+				}
 
 				pos++;
 				bytes--;
