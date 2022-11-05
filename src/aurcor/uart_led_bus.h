@@ -168,6 +168,11 @@ private:
 	static_assert(ledbus::uart_pattern_table.TX_WORDS_PER_BYTE == TX_WORDS_PER_BYTE,
 		"Pattern table must use the same words per byte");
 
+	static inline bool tx_fifo_ready() {
+		return ((READ_PERI_REG(UART_STATUS_REG(UARTNumber)) >> UART_TXFIFO_CNT_S) & UART_TXFIFO_CNT_V)
+			<= TX_FIFO_SIZE - TX_WORDS_PER_BYTE;
+	}
+
 	static IRAM_ATTR void interrupt_handler(void *arg) {
 		auto *self = reinterpret_cast<UARTLEDBus<UARTNumber>*>(arg);
 		auto bytes = self->bytes_;
@@ -175,7 +180,7 @@ private:
 		if (bytes > 0) {
 			auto *pos = self->pos_;
 
-			while (bytes > 0 && uart_ll_get_txfifo_len(&hw) >= TX_WORDS_PER_BYTE) {
+			while (bytes > 0 && tx_fifo_ready()) {
 				int32_t value = ledbus::uart_pattern_table[*pos];
 
 				for (uint8_t i = 0; i < TX_WORDS_PER_BYTE; i++) {
