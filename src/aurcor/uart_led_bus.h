@@ -127,12 +127,12 @@ public:
 
 protected:
 	void transmit() override {
-		while ((uint64_t)esp_timer_get_time() - tx_done_us_ <= next_tx_delay_us_) {
+		while ((uint64_t)esp_timer_get_time() < next_tx_start_us_) {
 			asm volatile ("nop");
 		}
 
 		if (ok_) {
-			next_tx_delay_us_ = RESET_TIME_US + std::min(TX_FIFO_MAX_US, TX_BYTE_US * bytes_);
+			next_tx_delay_us_ = RESET_TIME_US + std::min(TX_FIFO_MAX_US, TX_BYTE_US * bytes_) + 1;
 			uart_ll_ena_intr_mask(&hw, UART_INTR_TXFIFO_EMPTY);
 		} else {
 			bytes_ = 0;
@@ -192,7 +192,7 @@ private:
 		}
 
 		if (bytes == 0) {
-			self->tx_done_us_ = esp_timer_get_time();
+			self->next_tx_start_us_ = esp_timer_get_time() + self->next_tx_delay_us_;
 			uart_ll_disable_intr_mask(&hw, UART_INTR_TXFIFO_EMPTY);
 			self->finish_isr();
 		} else {
@@ -200,8 +200,8 @@ private:
 		}
 	}
 
-	uint64_t next_tx_delay_us_{0};
-	uint64_t tx_done_us_{0};
+	uint64_t next_tx_start_us_{0};
+	uint32_t next_tx_delay_us_{0};
 	intr_handle_t interrupt_;
 	bool ok_;
 };
