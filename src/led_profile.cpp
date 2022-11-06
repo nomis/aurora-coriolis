@@ -28,6 +28,7 @@
 #include <uuid/log.h>
 
 #include "app/fs.h"
+#include "app/json.h"
 
 #ifndef PSTR_ALIGN
 # define PSTR_ALIGN 4
@@ -300,7 +301,7 @@ LEDProfile::Result LEDProfile::load(const __FlashStringHelper *bus_name,
 
 	auto file = FS.open(filename.c_str(), "r");
 	if (file) {
-		ArduinoJson::DynamicJsonDocument doc{BUFFER_SIZE};
+		app::JsonDocument doc{BUFFER_SIZE};
 
 		auto error = ArduinoJson::deserializeJson(doc, file);
 		if (error) {
@@ -330,7 +331,7 @@ LEDProfile::Result LEDProfile::load(const __FlashStringHelper *bus_name,
 	}
 }
 
-LEDProfile::Result inline LEDProfile::load(ArduinoJson::DynamicJsonDocument &doc) {
+LEDProfile::Result inline LEDProfile::load(app::JsonDocument &doc) {
 	Result result = Result::PARSE_ERROR;
 	auto root = doc.as<JsonArray>();
 
@@ -488,7 +489,7 @@ LEDProfile::Result LEDProfile::save(const __FlashStringHelper *bus_name,
 
 	logger_.notice(F("Writing profile to file %s"), filename.c_str());
 
-	ArduinoJson::DynamicJsonDocument doc{BUFFER_SIZE};
+	app::JsonDocument doc{BUFFER_SIZE};
 
 	if (!ratios_.empty() && ratios_.begin()->index != 0)
 		save(doc, RatioConfig{0, DEFAULT_RATIO});
@@ -518,7 +519,7 @@ LEDProfile::Result LEDProfile::save(const __FlashStringHelper *bus_name,
 	}
 }
 
-void LEDProfile::save(ArduinoJson::DynamicJsonDocument &doc, const RatioConfig &cfg) {
+void LEDProfile::save(app::JsonDocument &doc, const RatioConfig &cfg) {
 	auto array = doc.createNestedArray();
 
 	array.add(cfg.index);

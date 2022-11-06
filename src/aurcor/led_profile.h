@@ -29,6 +29,7 @@
 #include <uuid/console.h>
 #include <uuid/log.h>
 
+#include "app/json.h"
 #include "led_bus.h"
 
 namespace aurcor {
@@ -148,7 +149,7 @@ private:
 	static std::string make_filename(const __FlashStringHelper *bus_name,
 		const __FlashStringHelper *profile_name);
 
-	Result load(ArduinoJson::DynamicJsonDocument &doc);
+	Result load(app::JsonDocument &doc);
 	Result load_ratio_configs(ArduinoJson::JsonArray &array);
 	Result load_ratio_config(ArduinoJson::JsonArray &array);
 	static Result get_ratio_config_index(ArduinoJson::JsonArray &array,
@@ -158,7 +159,7 @@ private:
 	static Result get_ratio_config_ratio_value(
 		ArduinoJson::JsonVariant &element, uint8_t &ratio_value);
 
-	void save(ArduinoJson::DynamicJsonDocument &doc, const RatioConfig &cfg);
+	void save(app::JsonDocument &doc, const RatioConfig &cfg);
 
 	static uuid::log::Logger logger_;
 

@@ -18,6 +18,8 @@
 
 #include "aurcor/heap.h"
 
+#include <Arduino.h>
+
 #include <cstring>
 #include <memory>
 #include <mutex>
