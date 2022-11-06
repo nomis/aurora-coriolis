@@ -104,11 +104,25 @@ ByteBufferLEDBus::ByteBufferLEDBus(const __FlashStringHelper *name) : LEDBus(nam
 }
 
 void ByteBufferLEDBus::start(const uint8_t *data, size_t size) {
-	size_t max_bytes = length() * BYTES_PER_LED;
+	const size_t max_bytes = length() * BYTES_PER_LED;
 
-	std::memcpy(&buffer_[0], data, std::min(max_bytes, size));
+	size = std::min(max_bytes, size);
+	std::memcpy(&buffer_[0], data, size);
+
+	if (size < max_bytes) {
+		/*
+		 * If the length has increased but the script isn't aware of this yet,
+		 * we need to turn off the extra LEDs or they'll have stale values.
+		 */
+		std::memset(&buffer_[size], 0, max_bytes - size);
+	}
 
 	pos_ = &buffer_[0];
+	/*
+	 * To ensure consistency in the update rate regardless of where the changes
+	 * are, we always write everything. (It would be possible to determine where
+	 * the last change is in the buffer before overwriting it.)
+	 */
 	bytes_ = max_bytes;
 	transmit();
 }
