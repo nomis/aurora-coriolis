@@ -22,8 +22,8 @@
 #include <ArduinoJson.h>
 
 #include <limits>
+#include <map>
 #include <mutex>
-#include <set>
 #include <shared_mutex>
 
 #include <uuid/console.h>
@@ -104,26 +104,13 @@ private:
 				&& lhs.g == rhs.g
 				&& lhs.b == rhs.b;
 		}
+
+		friend inline bool operator!=(const Ratio &lhs, const Ratio &rhs) {
+			return !(lhs == rhs);
+		}
 	} __attribute__((packed));
 
 	static constexpr Ratio DEFAULT_RATIO{UINT8_MAX, UINT8_MAX, UINT8_MAX};
-
-	struct RatioConfig {
-		index_t index;
-		Ratio ratio;
-
-		inline bool is_default() const {
-			return index == 0 && ratio == DEFAULT_RATIO;
-		}
-
-		friend inline bool operator==(const RatioConfig &lhs, const RatioConfig &rhs) {
-			return lhs.index == rhs.index;
-		}
-
-		friend inline bool operator<(const RatioConfig &lhs, const RatioConfig &rhs) {
-			return lhs.index < rhs.index;
-		}
-	} __attribute__((packed));
 
 	static bool valid_index(int index) {
 		return index >= MIN_INDEX
@@ -141,8 +128,8 @@ private:
 		return result;
 	}
 
-	Result add(const RatioConfig &ratio);
-	Result remove(const std::set<RatioConfig>::iterator &it);
+	Result add(index_t index, const Ratio &ratio);
+	Result remove(const std::map<index_t,Ratio>::iterator &it);
 	Ratio get(index_t index) const;
 	Result copy(int src, int dst, bool move);
 
@@ -159,12 +146,12 @@ private:
 	static Result get_ratio_config_ratio_value(
 		ArduinoJson::JsonVariant &element, uint8_t &ratio_value);
 
-	void save(app::JsonDocument &doc, const RatioConfig &cfg);
+	void save(app::JsonDocument &doc, index_t index, const Ratio &ratio);
 
 	static uuid::log::Logger logger_;
 
 	mutable std::shared_mutex data_mutex_;
-	std::set<RatioConfig> ratios_;
+	std::map<index_t,Ratio> ratios_;
 
 	bool modified_{false};
 };

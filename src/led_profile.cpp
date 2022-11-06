@@ -23,6 +23,7 @@
 
 #include <mutex>
 #include <shared_mutex>
+#include <utility>
 
 #include <uuid/console.h>
 #include <uuid/log.h>
@@ -64,14 +65,14 @@ void LEDProfile::print(uuid::console::Shell &shell, size_t limit) const {
 
 	for (auto it = ratios_.cbegin(); limit-- > 0; index++) {
 		if (it != ratios_.cend()) {
-			if (it->index == index) {
+			if (it->first == index) {
 				if (index > 0) {
 					shell.printfln(FPSTR(__pstr__print_row), begin, index - 1,
 						ratio.r, ratio.g, ratio.b);
 
 					begin = index;
 				}
-				ratio = it->ratio;
+				ratio = it->second;
 				++it;
 			}
 		} else {
@@ -88,8 +89,8 @@ void LEDProfile::transform(char *data, size_t size) const {
 	Ratio ratio = DEFAULT_RATIO;
 
 	for (auto it = ratios_.cbegin(); size > 0; index++) {
-		if (it != ratios_.cend() && it->index == index) {
-			ratio = it->ratio;
+		if (it != ratios_.cend() && it->first == index) {
+			ratio = it->second;
 			++it;
 		}
 
@@ -101,8 +102,8 @@ void LEDProfile::transform(char *data, size_t size) const {
 	}
 }
 
-LEDProfile::Result LEDProfile::add(const RatioConfig &ratio) {
-	if (!ratio.is_default()) {
+LEDProfile::Result LEDProfile::add(index_t index, const Ratio &ratio) {
+	if (index != 0 || ratio != DEFAULT_RATIO) {
 		size_t size = ratios_.size();
 
 		if (size > MAX_RATIOS
@@ -110,14 +111,14 @@ LEDProfile::Result LEDProfile::add(const RatioConfig &ratio) {
 			return Result::FULL;
 		}
 
-		ratios_.insert(ratio);
+		ratios_.insert(std::pair{index, ratio});
 		modified_ = true;
 	}
 
 	return Result::OK;
 }
 
-LEDProfile::Result LEDProfile::remove(const std::set<RatioConfig>::iterator &it) {
+LEDProfile::Result LEDProfile::remove(const std::map<index_t,Ratio>::iterator &it) {
 	if (it != ratios_.end()) {
 		ratios_.erase(it);
 		modified_ = true;
@@ -130,8 +131,8 @@ LEDProfile::Result LEDProfile::remove(const std::set<RatioConfig>::iterator &it)
 std::vector<int> LEDProfile::indexes() const {
 	std::vector<int> values{{0}};
 
-	for (auto& ratio : ratios_)
-		values.push_back(ratio.index);
+	for (auto &entry : ratios_)
+		values.push_back(entry.first);
 
 	return values;
 }
@@ -159,10 +160,10 @@ LEDProfile::Result LEDProfile::set(int index, int r, int g, int b) {
 	b = std::min(std::max(0, b), UINT8_MAX);
 
 	std::unique_lock data_lock{data_mutex_};
-	RatioConfig ratio{(index_t)index, {(uint8_t)r, (uint8_t)g, (uint8_t)b}};
+	Ratio ratio{(uint8_t)r, (uint8_t)g, (uint8_t)b};
 
-	remove(ratios_.find(ratio));
-	return add(ratio);
+	remove(ratios_.find(index));
+	return add(index, ratio);
 }
 
 LEDProfile::Result LEDProfile::adjust(int index, int r, int g, int b) {
@@ -170,32 +171,27 @@ LEDProfile::Result LEDProfile::adjust(int index, int r, int g, int b) {
 		return Result::OUT_OF_RANGE;
 
 	std::unique_lock data_lock{data_mutex_};
-	RatioConfig cfg{(index_t)index, get((index_t)index)};
+	Ratio ratio{get((index_t)index)};
 
-	cfg.ratio.r = std::min(std::max(0, (int)cfg.ratio.r + r), UINT8_MAX);
-	cfg.ratio.g = std::min(std::max(0, (int)cfg.ratio.g + g), UINT8_MAX);
-	cfg.ratio.b = std::min(std::max(0, (int)cfg.ratio.b + b), UINT8_MAX);
+	ratio.r = std::min(std::max(0, (int)ratio.r + r), UINT8_MAX);
+	ratio.g = std::min(std::max(0, (int)ratio.g + g), UINT8_MAX);
+	ratio.b = std::min(std::max(0, (int)ratio.b + b), UINT8_MAX);
 
-	return add(cfg);
+	return add((index_t)index, ratio);
 }
 
 LEDProfile::Ratio LEDProfile::get(index_t index) const {
-	RatioConfig cfg{(index_t)index, DEFAULT_RATIO};
-	auto it = ratios_.find(cfg);
+	Ratio ratio{DEFAULT_RATIO};
 
-	if (it != ratios_.end()) {
-		return it->ratio;
-	} else {
-		for (auto& ratio : ratios_) {
-			if (ratio.index < index) {
-				cfg.ratio = ratio.ratio;
-			} else {
-				break;
-			}
+	for (auto &entry : ratios_) {
+		if (entry.first < index) {
+			ratio = entry.second;
+		} else {
+			break;
 		}
-
-		return cfg.ratio;
 	}
+
+	return ratio;
 }
 
 LEDProfile::Result LEDProfile::move(int src, int dst) {
@@ -211,11 +207,11 @@ LEDProfile::Result LEDProfile::copy(int src, int dst, bool move) {
 		return Result::OUT_OF_RANGE;
 
 	std::unique_lock data_lock{data_mutex_};
-	RatioConfig dst_ratio{(index_t)dst, DEFAULT_RATIO};
-	auto src_it = ratios_.find(RatioConfig{(index_t)src, DEFAULT_RATIO});
+	Ratio dst_ratio{DEFAULT_RATIO};
+	auto src_it = ratios_.find((index_t)src);
 
 	if (src_it != ratios_.end()) {
-		dst_ratio.ratio = src_it->ratio;
+		dst_ratio = src_it->second;
 
 		if (move)
 			remove(src_it);
@@ -224,8 +220,8 @@ LEDProfile::Result LEDProfile::copy(int src, int dst, bool move) {
 		return Result::NOT_FOUND;
 	}
 
-	remove(ratios_.find(dst_ratio));
-	return add(dst_ratio);
+	remove(ratios_.find((index_t)dst));
+	return add((index_t)dst, dst_ratio);
 }
 
 LEDProfile::Result LEDProfile::remove(int index) {
@@ -234,7 +230,7 @@ LEDProfile::Result LEDProfile::remove(int index) {
 
 	std::unique_lock data_lock{data_mutex_};
 
-	return remove(ratios_.find(RatioConfig{(index_t)index, DEFAULT_RATIO}));
+	return remove(ratios_.find((index_t)index));
 }
 
 void LEDProfile::clear() {
@@ -258,7 +254,7 @@ bool LEDProfile::compact(size_t limit) {
 			do {
 				it--;
 
-				if (next != ratios_.end() && next->ratio == it->ratio) {
+				if (next != ratios_.end() && next->second == it->second) {
 					remove(next);
 					removed++;
 				}
@@ -271,7 +267,7 @@ bool LEDProfile::compact(size_t limit) {
 			// The loop above can't remove the first element so the set is never empty
 			auto first = ratios_.begin();
 
-			if (first->ratio == DEFAULT_RATIO) {
+			if (first->second == DEFAULT_RATIO) {
 				remove(first);
 				removed++;
 			}
@@ -387,7 +383,7 @@ LEDProfile::Result inline LEDProfile::load_ratio_config(JsonArray &array) {
 			get_ratio_config_ratio(array, it, ratio)) != Result::OK)
 		return result;
 
-	downgrade_result(result, add(RatioConfig{index, ratio}));
+	downgrade_result(result, add(index, ratio));
 
 	++it;
 	if (it != array.end()) {
@@ -501,11 +497,11 @@ LEDProfile::Result LEDProfile::save(const __FlashStringHelper *bus_name,
 
 	app::JsonDocument doc{BUFFER_SIZE};
 
-	if (!ratios_.empty() && ratios_.begin()->index != 0)
-		save(doc, RatioConfig{0, DEFAULT_RATIO});
+	if (!ratios_.empty() && ratios_.begin()->first != 0)
+		save(doc, 0, DEFAULT_RATIO);
 
-	for (auto &ratio : ratios_)
-		save(doc, ratio);
+	for (auto &entry : ratios_)
+		save(doc, entry.first, entry.second);
 
 	if (doc.overflowed()) {
 		logger_.err(F("Out of memory saving profile"));
@@ -530,16 +526,16 @@ LEDProfile::Result LEDProfile::save(const __FlashStringHelper *bus_name,
 	}
 }
 
-void LEDProfile::save(app::JsonDocument &doc, const RatioConfig &cfg) {
+void LEDProfile::save(app::JsonDocument &doc, index_t index, const Ratio &ratio) {
 	auto array = doc.createNestedArray();
 
-	array.add(cfg.index);
+	array.add(index);
 
 	array = array.createNestedArray();
 
-	array.add(cfg.ratio.r);
-	array.add(cfg.ratio.g);
-	array.add(cfg.ratio.b);
+	array.add(ratio.r);
+	array.add(ratio.g);
+	array.add(ratio.b);
 }
 
 } // namespace aurcor
