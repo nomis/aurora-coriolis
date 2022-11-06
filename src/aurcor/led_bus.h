@@ -56,8 +56,8 @@ public:
 
 protected:
 	virtual void start(const uint8_t *data, size_t size) = 0;
-	virtual void finish();
-	virtual IRAM_ATTR void finish_isr();
+	void finish();
+	IRAM_ATTR void finish_isr();
 
 	static uuid::log::Logger logger_;
 
