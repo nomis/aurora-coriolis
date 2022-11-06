@@ -45,6 +45,8 @@ static const char __pstr__print_header2[] __attribute__((__aligned__(PSTR_ALIGN)
 static const char __pstr__print_row[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM =
 	"%5u..%-5u" " %3u  %3u  %3u";
 
+static const char __pstr__directory_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "/profiles";
+
 namespace aurcor {
 
 uuid::log::Logger LEDProfile::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::DAEMON};
@@ -283,7 +285,8 @@ std::string LEDProfile::make_filename(const __FlashStringHelper *bus_name,
 		const __FlashStringHelper *profile_name) {
 	std::string filename;
 
-	filename.append(uuid::read_flash_string(F("/profiles/")));
+	filename.append(uuid::read_flash_string(FPSTR(__pstr__directory_name)));
+	filename.append(1, 	'/');
 	filename.append(uuid::read_flash_string(bus_name));
 	filename.append(1, 	'.');
 	filename.append(uuid::read_flash_string(profile_name));
@@ -299,7 +302,8 @@ LEDProfile::Result LEDProfile::load(const __FlashStringHelper *bus_name,
 
 	logger_.notice(F("Reading profile from file %s"), filename.c_str());
 
-	auto file = FS.open(filename.c_str(), "r");
+	const char mode[2] = {'r', '\0'};
+	auto file = FS.open(filename.c_str(), mode);
 	if (file) {
 		app::JsonDocument doc{BUFFER_SIZE};
 
@@ -484,10 +488,16 @@ LEDProfile::Result inline LEDProfile::get_ratio_config_ratio_value(
 
 LEDProfile::Result LEDProfile::save(const __FlashStringHelper *bus_name,
 		const __FlashStringHelper *profile_name) {
+	auto dirname = uuid::read_flash_string(FPSTR(__pstr__directory_name));
 	auto filename = make_filename(bus_name, profile_name);
 	std::shared_lock data_lock{data_mutex_};
 
 	logger_.notice(F("Writing profile to file %s"), filename.c_str());
+
+	if (!FS.mkdir(dirname.c_str())) {
+		logger_.err(F("Unable to create directory %s"), dirname.c_str());
+		return Result::IO_ERROR;
+	}
 
 	app::JsonDocument doc{BUFFER_SIZE};
 
@@ -502,7 +512,8 @@ LEDProfile::Result LEDProfile::save(const __FlashStringHelper *bus_name,
 		return Result::IO_ERROR;
 	}
 
-	auto file = FS.open(filename.c_str(), "w");
+	const char mode[2] = {'w', '\0'};
+	auto file = FS.open(filename.c_str(), mode);
 	if (file) {
 		ArduinoJson::serializeJson(doc, file);
 

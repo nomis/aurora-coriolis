@@ -144,7 +144,7 @@ void PlatformPrint::print_part_line(const char *str, size_t len) {
 }
 
 void PlatformPrint::end_line() {
-	static const std::array<char, 2> crlf{'\r', '\n'};
+	const std::array<char, 2> crlf{'\r', '\n'};
 
 	::mp_hal_stdout_tx_strn(crlf.data(), crlf.size());
 }
