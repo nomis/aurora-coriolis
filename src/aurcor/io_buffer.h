@@ -34,6 +34,7 @@ template<typename T, size_t N>
 class IOBuffer {
 	static_assert(N > 0);
 	static_assert(N <= std::numeric_limits<T>::max());
+	static_assert(std::numeric_limits<T>::min() == 0);
 
 public:
 	using len_t = T;
@@ -71,7 +72,7 @@ public:
 		}
 	}
 
-	inline T read(const uint8_t *&buf, bool wait) {
+	inline int read(const uint8_t *&buf, bool wait) {
 		std::unique_lock lock{mutex_};
 		T available;
 

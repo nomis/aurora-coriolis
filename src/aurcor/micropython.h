@@ -187,8 +187,8 @@ private:
 	bool shell_foreground(uuid::console::Shell &shell, bool stop);
 	bool interrupt_char(int c);
 
-	IOBuffer<uint_fast8_t,STDIN_LEN> stdin_;
-	IOBuffer<uint_fast8_t,STDOUT_LEN> stdout_;
+	IOBuffer<uint8_t,STDIN_LEN> stdin_;
+	IOBuffer<uint8_t,STDOUT_LEN> stdout_;
 
 	typeof(mp_interrupt_char) *interrupt_char_{nullptr};
 };
