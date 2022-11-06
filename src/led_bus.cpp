@@ -113,6 +113,11 @@ void ByteBufferLEDBus::start(const uint8_t *data, size_t size) {
 		/*
 		 * If the length has increased but the script isn't aware of this yet,
 		 * we need to turn off the extra LEDs or they'll have stale values.
+		 *
+		 * If the LED profile has changed then we need all of the original
+		 * values to be able to transform them but the LEDBus doesn't have that
+		 * information. The original values need to be buffered somewhere and
+		 * that is delegated to the script by not allowing partial writes.
 		 */
 		std::memset(&buffer_[size], 0, max_bytes - size);
 	}
