@@ -38,7 +38,7 @@ namespace aurcor {
 
 uuid::log::Logger LEDBus::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::LPR};
 
-LEDBus::LEDBus(const __FlashStringHelper *name) : name_(name) {
+LEDBus::LEDBus(const __FlashStringHelper *name) : name_(name), profiles_(name) {
 	semaphore_ = xSemaphoreCreateBinary();
 	if (semaphore_) {
 		if (xSemaphoreGive(semaphore_) != pdTRUE) {

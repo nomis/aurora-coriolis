@@ -30,15 +30,19 @@
 #include <uuid/log.h>
 
 #include "app/json.h"
-#include "led_bus.h"
+#include "constants.h"
 
 namespace aurcor {
 
+class LEDProfiles;
+
 class LEDProfile {
 public:
+	friend LEDProfiles;
+
 	using index_t = uint16_t;
-	static_assert(std::numeric_limits<index_t>::max() + 1 >= LEDBus::MAX_LEDS,
-		"Index is too small to cover all LEDs");
+	static_assert(std::numeric_limits<index_t>::max() + 1 >= MAX_LEDS,
+		"Index type is too small to cover all LEDs");
 
 	static constexpr int MIN_INDEX = std::numeric_limits<index_t>::min();
 	static constexpr int MAX_INDEX = std::numeric_limits<index_t>::max();
@@ -56,7 +60,7 @@ public:
 	LEDProfile() = default;
 	~LEDProfile() = default;
 
-	void print(uuid::console::Shell &shell, size_t limit) const;
+	void print(uuid::console::Shell &shell, size_t limit = MAX_LEDS) const;
 	void transform(char *data, size_t size) const;
 
 	std::vector<int> indexes() const;
@@ -69,18 +73,20 @@ public:
 	void clear();
 	bool compact(size_t limit = SIZE_MAX);
 
-	Result load(const __FlashStringHelper *bus_name,
-		const __FlashStringHelper *profile_name);
 	/* Not protected by a mutex; assumes modifications only happen from one
 	 * thread. Making this thread-safe would require an extra mutex to avoid
 	 * blocking other readers when saving the profile.
 	 */
 	bool modified() const { return modified_; }
+
+protected:
+	Result load(const __FlashStringHelper *bus_name,
+		const __FlashStringHelper *profile_name);
 	Result save(const __FlashStringHelper *bus_name,
 		const __FlashStringHelper *profile_name);
 
 private:
-	static constexpr size_t MAX_RATIOS = (LEDBus::MAX_LEDS + 49) / 50;
+	static constexpr size_t MAX_RATIOS = (MAX_LEDS + MIN_RATIO_LEDS - 1) / MIN_RATIO_LEDS;
 	static constexpr size_t BUFFER_SIZE = JSON_ARRAY_SIZE(MAX_RATIOS)
 		+ MAX_RATIOS * (JSON_ARRAY_SIZE(2) + JSON_ARRAY_SIZE(3));
 #ifdef ENV_NATIVE
@@ -115,7 +121,7 @@ private:
 	static bool valid_index(int index) {
 		return index >= MIN_INDEX
 			&& index <= MAX_INDEX
-			&& (index_t)index < LEDBus::MAX_LEDS;
+			&& (index_t)index < MAX_LEDS;
 	}
 
 	static bool valid_value(int value) {

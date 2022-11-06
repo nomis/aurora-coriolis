@@ -29,13 +29,14 @@
 
 #include <uuid/log.h>
 
-namespace aurcor {
+#include "constants.h"
+#include "led_profile.h"
+#include "led_profiles.h"
 
-class LEDBus;
+namespace aurcor {
 
 class LEDBus {
 public:
-	static constexpr size_t MAX_LEDS = 1000;
 	static constexpr size_t BYTES_PER_LED = 3;
 	static constexpr size_t MAX_BYTES = MAX_LEDS * BYTES_PER_LED;
 	static constexpr unsigned long UPDATE_RATE_HZ = 800000;
@@ -49,8 +50,12 @@ public:
 	inline size_t length() const { return length_; }
 	inline void length(size_t length) { length_ = std::min(length, MAX_LEDS); }
 
-	uint64_t last_update_us() const;
+	inline LEDProfile& profile(enum led_profile_id id) { return profiles_.get(id); }
+	inline const LEDProfile& profile(enum led_profile_id id) const { return profiles_.get(id); }
+	inline LEDProfile::Result load_profile(enum led_profile_id id) { return profiles_.load(id); }
+	inline LEDProfile::Result save_profile(enum led_profile_id id) { return profiles_.save(id); }
 
+	uint64_t last_update_us() const;
 	bool ready() const;
 	void write(const uint8_t *data, size_t size); /* data is in RGB order */
 
@@ -72,6 +77,7 @@ private:
 	SemaphoreHandle_t semaphore_{nullptr};
 	std::atomic<bool> busy_{false};
 	uint64_t last_update_us_{0};
+	mutable LEDProfiles profiles_;
 };
 
 namespace ledbus {
