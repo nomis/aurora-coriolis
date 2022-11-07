@@ -48,6 +48,7 @@ extern "C" {
 enum ulogging_py_levels {
 #define ULOGGING_LEVEL(_level, _py_lc_name, _py_uc_name, _py_level) \
 	ULOGGING_L_ ## _py_uc_name = _py_level,
+
 ULOGGING_LEVELS_WITH_META
 #undef ULOGGING_LEVEL
 };
@@ -58,6 +59,7 @@ MP_DECLARE_CONST_FUN_OBJ_KW(ulogging_log_obj);
 #define ULOGGING_LEVEL(_level, _py_lc_name, _py_uc_name, _py_level) \
 	mp_obj_t ulogging_ ## _py_lc_name (size_t n_args, const mp_obj_t *args, mp_map_t *kwargs); \
 	MP_DECLARE_CONST_FUN_OBJ_KW(ulogging_ ## _py_lc_name ## _obj);
+
 ULOGGING_LEVELS
 #undef ULOGGING_LEVEL
 

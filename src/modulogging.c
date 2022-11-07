@@ -26,6 +26,7 @@
 
 #define ULOGGING_LEVEL(_level, _py_lc_name, _py_uc_name, _py_level) \
 	MP_DEFINE_CONST_FUN_OBJ_KW(ulogging_ ## _py_lc_name ## _obj, 1, ulogging_ ## _py_lc_name);
+
 ULOGGING_LEVELS
 #undef ULOGGING_LEVEL
 
@@ -44,7 +45,8 @@ STATIC const mp_rom_map_elem_t ulogging_module_globals_table[] = {
 #define ULOGGING_LEVEL(_level, _py_lc_name, _py_uc_name, _py_level) \
 	{ MP_ROM_QSTR(MP_QSTR_ ## _py_uc_name),   MP_ROM_INT(ULOGGING_L_ ## _py_uc_name) }, \
 	{ MP_ROM_QSTR(MP_QSTR_ ## _py_lc_name),   MP_ROM_PTR(&ulogging_ ## _py_lc_name ## _obj) },
-	ULOGGING_LEVELS
+
+ULOGGING_LEVELS
 #undef ULOGGING_LEVEL
 
 	{ MP_ROM_QSTR(MP_QSTR_log),               MP_ROM_PTR(&ulogging_log_obj) },

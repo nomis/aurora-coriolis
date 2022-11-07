@@ -50,6 +50,7 @@ mp_obj_t ulogging_log(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
 	mp_obj_t ulogging_ ## _py_lc_name (size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) { \
 		return ULogging::do_log(MP_QSTR_ ## _py_lc_name, ULOGGING_L_ ## _py_uc_name, false, n_args, args, kwargs); \
 	}
+
 ULOGGING_LEVELS
 #undef ULOGGING_LEVEL
 
@@ -58,7 +59,7 @@ mp_obj_t ulogging_exception(size_t n_args, const mp_obj_t *args, mp_map_t *kwarg
 }
 
 mp_obj_t ulogging_disable(size_t n_args, const mp_obj_t *args) {
-	mp_int_t level = ULOGGING_L_EMERG;
+	mp_int_t level = ULOGGING_L_OFF;
 
 	if (n_args >= 1)
 		level = ULogging::level_from_obj(args[0]);
@@ -101,6 +102,7 @@ inline Level ULogging::find_level(mp_int_t py_level) {
 #define ULOGGING_LEVEL(_level, _py_lc_name, _py_uc_name, _py_level) \
 		if (py_level >= ULOGGING_L_ ## _py_uc_name) return _level;
 	ULOGGING_LEVELS
+
 #undef ULOGGING_LEVEL
 
 	return Level::TRACE;
@@ -110,7 +112,8 @@ inline mp_int_t ULogging::to_py_level(Level level) {
 	switch (level) {
 #define ULOGGING_LEVEL(_level, _py_lc_name, _py_uc_name, _py_level) \
 		case _level: return _py_level;
-	ULOGGING_LEVELS_WITH_META
+
+ULOGGING_LEVELS_WITH_META
 #undef ULOGGING_LEVEL
 	}
 
