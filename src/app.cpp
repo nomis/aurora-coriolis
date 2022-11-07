@@ -25,6 +25,7 @@
 #include <memory>
 
 #include "app/gcc.h"
+#include "aurcor/constants.h"
 #include "aurcor/led_bus.h"
 #include "aurcor/micropython.h"
 #include "aurcor/uart_led_bus.h"
@@ -66,7 +67,7 @@ void App::start() {
 
 	// TODO make this configurable
 	for (auto& bus : buses_)
-		bus->length(LEDBus::MAX_LEDS);
+		bus->length(MAX_LEDS);
 }
 
 void App::loop() {
