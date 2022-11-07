@@ -19,9 +19,9 @@
 #include "aurcor/modulogging.h"
 
 #ifndef NO_QSTR
-#include <algorithm>
+# include <algorithm>
 
-#include <cstring>
+# include <cstring>
 
 extern "C" {
 	# include <py/runtime.h>
