@@ -124,7 +124,8 @@ static constexpr ModuleVersionPreReleaseString module_version_pre_release_str{};
 
 extern "C" {
 
-static MP_DEFINE_STR_OBJ(aurcor_version_pre_release_obj, aurcor::micropython::module_version_pre_release_str.text);
+static MP_DEFINE_STR_OBJ(aurcor_version_pre_release_obj,
+	aurcor::micropython::module_version_pre_release_str.text);
 
 const aurcor_version_t aurcor_version_obj = {
 	{ &mp_type_tuple },
