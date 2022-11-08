@@ -27,6 +27,7 @@ extern "C" {
 	# include <py/objtuple.h>
 }
 
+# include <cstddef>
 # include <cstdint>
 # include <limits>
 #endif
@@ -118,7 +119,7 @@ public:
 		}
 	}
 
-	char text[module_version.pre_release_length] = {};
+	byte text[module_version.pre_release_length] = {};
 };
 
 static constexpr ModuleVersionPreReleaseString module_version_pre_release_str{};
@@ -144,8 +145,12 @@ static_assert(module_version.patch <= (std::numeric_limits<int>::max() >> 1), "P
 
 extern "C" {
 
-static constexpr const MP_DEFINE_STR_OBJ(aurcor_version_pre_release_obj PROGMEM,
-	module_version_pre_release_str.text);
+static constexpr const mp_obj_str_t aurcor_version_pre_release_obj PROGMEM = {
+	{ &mp_type_str },
+	0,
+	sizeof(module_version_pre_release_str.text) - 1,
+	module_version_pre_release_str.text,
+};
 
 constexpr const aurcor_version_t aurcor_version_obj PROGMEM = {
 	{ &mp_type_tuple },
