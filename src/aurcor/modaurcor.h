@@ -29,7 +29,7 @@ extern "C" {
 typedef struct {
 	mp_obj_base_t base;
 	size_t len;
-	mp_obj_t items[4];
+	uintptr_t items[4];
 } aurcor_version_t;
 
 extern const aurcor_version_t aurcor_version_obj;

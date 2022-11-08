@@ -19,11 +19,16 @@
 #include "aurcor/modaurcor.h"
 
 #ifndef NO_QSTR
+# include <Arduino.h>
+
 extern "C" {
 	# include <py/obj.h>
 	# include <py/objstr.h>
 	# include <py/objtuple.h>
 }
+
+# include <cstdint>
+# include <limits>
 #endif
 
 namespace aurcor {
@@ -90,9 +95,9 @@ public:
 		return pre_release_length > 0;
 	}
 
-	mp_int_t major{0};
-	mp_int_t minor{0};
-	mp_int_t patch{0};
+	long long major{0};
+	long long minor{0};
+	long long patch{0};
 
 private:
 	const char *pre_release{nullptr};
@@ -122,20 +127,35 @@ static constexpr ModuleVersionPreReleaseString module_version_pre_release_str{};
 
 } // namespace aurcor
 
+using aurcor::micropython::module_version;
+using aurcor::micropython::module_version_pre_release_str;
+
+static inline constexpr uintptr_t mp_small_int_to_uintptr_obj_t(const long long value) {
+	static_assert(MICROPY_OBJ_REPR == MICROPY_OBJ_REPR_C, "MicroPython must use object representation C");
+	return (((uintptr_t)value << 1) | 1);
+}
+
+static_assert(module_version.major >= (std::numeric_limits<int>::min() >> 1), "Negative major value outside supported range");
+static_assert(module_version.major <= (std::numeric_limits<int>::max() >> 1), "Positive major value outside supported range");
+static_assert(module_version.minor >= (std::numeric_limits<int>::min() >> 1), "Negative minor value outside supported range");
+static_assert(module_version.minor <= (std::numeric_limits<int>::max() >> 1), "Positive minor value outside supported range");
+static_assert(module_version.patch >= (std::numeric_limits<int>::min() >> 1), "Negative patch value outside supported range");
+static_assert(module_version.patch <= (std::numeric_limits<int>::max() >> 1), "Positive patch value outside supported range");
+
 extern "C" {
 
-static MP_DEFINE_STR_OBJ(aurcor_version_pre_release_obj,
-	aurcor::micropython::module_version_pre_release_str.text);
+static constexpr const MP_DEFINE_STR_OBJ(aurcor_version_pre_release_obj PROGMEM,
+	module_version_pre_release_str.text);
 
-const aurcor_version_t aurcor_version_obj = {
+constexpr const aurcor_version_t aurcor_version_obj PROGMEM = {
 	{ &mp_type_tuple },
-	aurcor::micropython::module_version.has_pre_release() ? 4 : 3,
+	module_version.has_pre_release() ? 4 : 3,
 	{
-		MP_ROM_INT(aurcor::micropython::module_version.major),
-		MP_ROM_INT(aurcor::micropython::module_version.minor),
-		MP_ROM_INT(aurcor::micropython::module_version.patch),
-		aurcor::micropython::module_version.has_pre_release()
-			? MP_ROM_PTR(&aurcor_version_pre_release_obj) : 0,
+		mp_small_int_to_uintptr_obj_t(module_version.major),
+		mp_small_int_to_uintptr_obj_t(module_version.minor),
+		mp_small_int_to_uintptr_obj_t(module_version.patch),
+		module_version.has_pre_release()
+			? (uintptr_t)&aurcor_version_pre_release_obj : 0,
 	},
 };
 
