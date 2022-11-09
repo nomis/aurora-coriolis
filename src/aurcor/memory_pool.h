@@ -67,7 +67,8 @@ private:
 	const uint32_t caps_;
 	std::mutex mutex_;
 	std::vector<MemoryAllocation> blocks_;
-	size_t used_ = 0;
+	size_t used_{0};
+	size_t capacity_{0};
 };
 
 } // namespace aurcor

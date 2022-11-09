@@ -48,24 +48,28 @@ MemoryPool::MemoryPool(size_t size, uint32_t caps, size_t count)
 bool MemoryPool::resize(size_t count) {
 	std::lock_guard lock{mutex_};
 
-	while (blocks_.size() + used_ < count) {
+	while (capacity_ < count) {
 		MemoryAllocation data{reinterpret_cast<uint8_t*>(::heap_caps_malloc(size_, caps_)), ::free};
 
 		if (!data) {
 			logger_.emerg(F("Unable to allocate block with size %u caps 0x%08x (%u of %u)"),
-				size_, caps_, blocks_.size() + used_ + 1, count);
+				size_, caps_, capacity_ + 1, count);
 			return false;
-		} else {
-			logger_.trace(F("Allocated block with size %u caps 0x%08x (%u of %u)"),
-				size_, caps_, blocks_.size() + used_ + 1, count);
 		}
 
 		blocks_.push_back(std::move(data));
+		capacity_++;
 	}
 
-	while (blocks_.size() + used_ > count && !blocks_.empty()) {
+	while (capacity_ > count && !blocks_.empty()) {
 		blocks_.pop_back();
+		capacity_--;
 	}
+
+	size_t actual = blocks_.size() + used_;
+
+	logger_.trace(F("Allocated %u block%S with size %u caps 0x%08x"),
+		actual, actual != 1 ? F("s") : F(""), size_, caps_);
 
 	return true;
 }
@@ -90,7 +94,9 @@ std::unique_ptr<MemoryBlock> MemoryPool::allocate() {
 void MemoryPool::restore(MemoryAllocation data) {
 	std::lock_guard lock{mutex_};
 
-	blocks_.push_back(std::move(data));
+	if (blocks_.size() + used_ <= capacity_)
+		blocks_.push_back(std::move(data));
+
 	used_--;
 }
 
