@@ -86,6 +86,11 @@ MicroPython::MicroPython(const std::string &name)
 	system_exit_exc_.traceback_len = 0;
 	system_exit_exc_.traceback_data = NULL;
 	system_exit_exc_.args = (mp_obj_tuple_t *)&mp_const_empty_tuple_obj;
+
+	if (!heap_available()) {
+		heap_.reset();
+		pystack_.reset();
+	}
 }
 
 void MicroPython::start() {
