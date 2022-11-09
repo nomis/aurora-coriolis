@@ -18,19 +18,15 @@
 
 #include "aurcor/modaurcor.h"
 
-#ifndef NO_QSTR
-# include <Arduino.h>
+#include <Arduino.h>
 
-extern "C" {
-	# include <py/obj.h>
-	# include <py/objstr.h>
-	# include <py/objtuple.h>
-}
+#include <py/obj.h>
+#include <py/objstr.h>
+#include <py/objtuple.h>
 
-# include <cstddef>
-# include <cstdint>
-# include <limits>
-#endif
+#include <cstddef>
+#include <cstdint>
+#include <limits>
 
 namespace aurcor {
 
