@@ -52,6 +52,9 @@ namespace aurcor {
 
 class LEDProfiles {
 public:
+	static constexpr size_t MIN_ID = 0;
+	static constexpr size_t MAX_ID = NUM_LED_PROFILES - 1;
+
 	LEDProfiles(const __FlashStringHelper *bus_name_);
 	~LEDProfiles() = default;
 

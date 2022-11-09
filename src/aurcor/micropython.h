@@ -43,12 +43,14 @@ extern "C" {
 
 #include "io_buffer.h"
 #include "memory_pool.h"
+#include "modaurcor.h"
 #include "modulogging.h"
 #include "mp_print.h"
 
 namespace aurcor {
 
 class MicroPython {
+	friend aurcor::micropython::PyModule;
 	friend aurcor::micropython::ULogging;
 
 public:
@@ -156,6 +158,7 @@ private:
 
 	std::mutex atomic_section_mutex_;
 
+	micropython::PyModule modaurcor_;
 	micropython::ULogging modulogging_;
 };
 

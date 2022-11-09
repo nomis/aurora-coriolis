@@ -37,9 +37,8 @@ namespace aurcor {
 class LEDProfiles;
 
 class LEDProfile {
-public:
 	friend LEDProfiles;
-
+public:
 	using index_t = uint16_t;
 	static_assert(std::numeric_limits<index_t>::max() + 1 >= MAX_LEDS,
 		"Index type is too small to cover all LEDs");
