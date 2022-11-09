@@ -88,12 +88,12 @@ namespace aurcor {
 namespace micropython {
 
 inline ULogging& ULogging::current() {
-	return aurcor::MicroPython::current().modulogging_;
+	return MicroPython::current().modulogging_;
 }
 
 mp_int_t ULogging::level_from_obj(mp_obj_t level_o) {
 	if (!mp_obj_is_int(level_o))
-		mp_raise_TypeError(MP_ERROR_TEXT("level must be an integer"));
+		mp_raise_TypeError(MP_ERROR_TEXT("level must be an int"));
 
 	return mp_obj_get_int(level_o);
 }
@@ -123,8 +123,8 @@ ULOGGING_LEVELS_WITH_META
 mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
 		size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
 	static constexpr size_t STACK_TUPLE_NUM = 8;
-
-	Level level = enabled_level(py_level);
+	auto &self = current();
+	Level level = self.enabled_level(py_level);
 
 	if (level == Level::OFF)
 		return MP_ROM_NONE;
@@ -184,10 +184,12 @@ mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
 }
 
 Level ULogging::enabled_level(mp_int_t py_level) {
-	if (py_level <= current().disable_level_)
+	auto &self = current();
+
+	if (py_level <= self.disable_level_)
 		return Level::OFF;
 
-	if (py_level < current().enable_level_)
+	if (py_level < self.enable_level_)
 		return Level::OFF;
 
 	Level level = find_level(py_level);
