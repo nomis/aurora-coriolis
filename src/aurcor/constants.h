@@ -18,11 +18,22 @@
 
 #pragma once
 
-#include <cstddef>
+#ifndef AURCOR_MAX_LEDS
+# define AURCOR_MAX_LEDS 1000
+#endif
+
+#ifndef AURCOR_MIN_RATIO_LEDS
+# define AURCOR_MIN_RATIO_LEDS 50
+#endif
+
+#ifdef __cplusplus
+# include <cstddef>
 
 namespace aurcor {
 
-static constexpr size_t MAX_LEDS = 1000;
-static constexpr size_t MIN_RATIO_LEDS = 50;
+static constexpr size_t MAX_LEDS = AURCOR_MAX_LEDS;
+static constexpr size_t MIN_RATIO_LEDS = AURCOR_MIN_RATIO_LEDS;
 
 } // namespace aurcor
+
+#endif
