@@ -29,44 +29,44 @@
 
 namespace aurcor {
 
-using HeapData = std::unique_ptr<uint8_t, decltype(::free)*>;
+using MemoryAllocation = std::unique_ptr<uint8_t, decltype(::free)*>;
 
-class Heaps;
+class MemoryPool;
 
-class Heap {
+class MemoryBlock {
 public:
-	Heap(std::shared_ptr<Heaps> heaps, HeapData data, size_t size);
-	~Heap();
+	MemoryBlock(std::shared_ptr<MemoryPool> blocks, MemoryAllocation data, size_t size);
+	~MemoryBlock();
 
 	uint8_t *begin() { return data_.get(); }
 	uint8_t *end() { return data_.get() + size_; }
 	size_t size() const { return size_; }
 
 private:
-	std::weak_ptr<Heaps> heaps_;
-	HeapData data_;
+	std::weak_ptr<MemoryPool> blocks_;
+	MemoryAllocation data_;
 	const size_t size_;
 };
 
-class Heaps: public std::enable_shared_from_this<Heaps> {
-	friend Heap;
+class MemoryPool: public std::enable_shared_from_this<MemoryPool> {
+	friend MemoryBlock;
 
 public:
-	Heaps(size_t size, uint32_t caps, size_t count = 0);
-	~Heaps() = default;
+	MemoryPool(size_t size, uint32_t caps, size_t count = 0);
+	~MemoryPool() = default;
 
 	bool resize(size_t count);
-	std::unique_ptr<Heap> allocate();
+	std::unique_ptr<MemoryBlock> allocate();
 
 private:
 	static uuid::log::Logger logger_;
 
-	void restore(HeapData data);
+	void restore(MemoryAllocation data);
 
 	const size_t size_;
 	const uint32_t caps_;
 	std::mutex mutex_;
-	std::vector<HeapData> heaps_;
+	std::vector<MemoryAllocation> blocks_;
 	size_t used_ = 0;
 };
 

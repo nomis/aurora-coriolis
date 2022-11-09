@@ -68,14 +68,14 @@ uuid::log::Logger MicroPython::logger_{FPSTR(__pstr__logger_name), uuid::log::Fa
 
 __thread MicroPython *MicroPython::self_{nullptr};
 
-std::shared_ptr<Heaps> MicroPython::heaps_ = std::make_shared<Heaps>(
+std::shared_ptr<MemoryPool> MicroPython::heaps_ = std::make_shared<MemoryPool>(
 	MicroPython::HEAP_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-std::shared_ptr<Heaps> MicroPython::pystacks_ = std::make_shared<Heaps>(
+std::shared_ptr<MemoryPool> MicroPython::pystacks_ = std::make_shared<MemoryPool>(
 	MicroPython::PYSTACK_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 
-void MicroPython::setup(size_t heap_count) {
-	heaps_->resize(heap_count);
-	pystacks_->resize(heap_count);
+void MicroPython::setup(size_t pool_count) {
+	heaps_->resize(pool_count);
+	pystacks_->resize(pool_count);
 }
 
 MicroPython::MicroPython(const std::string &name)

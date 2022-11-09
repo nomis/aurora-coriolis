@@ -41,8 +41,8 @@ extern "C" {
 #include <uuid/console.h>
 #include <uuid/log.h>
 
-#include "heap.h"
 #include "io_buffer.h"
+#include "memory_pool.h"
 #include "modulogging.h"
 #include "mp_print.h"
 
@@ -62,7 +62,7 @@ public:
 	static_assert(TASK_STACK_LIMIT < TASK_STACK_SIZE, "Task stack limit must be lower than task stack size");
 	static_assert(TASK_STACK_LIMIT < TASK_EXC_STACK_LIMIT, "Task stack limit must be lower than task exception stack limit");
 
-	static void setup(size_t heap_count);
+	static void setup(size_t pool_count);
 
 	virtual ~MicroPython() = default;
 
@@ -115,8 +115,8 @@ private:
 	static inline MicroPython& current() { return *self_; }
 
 	static thread_local MicroPython *self_;
-	static std::shared_ptr<Heaps> heaps_;
-	static std::shared_ptr<Heaps> pystacks_;
+	static std::shared_ptr<MemoryPool> heaps_;
+	static std::shared_ptr<MemoryPool> pystacks_;
 
 	void running_thread();
 
@@ -136,8 +136,8 @@ private:
 	friend typeof(::mp_import_stat_t) ::mp_import_stat(const char *path);
 	::mp_import_stat_t mp_import_stat(const char *path);
 
-	std::unique_ptr<Heap> heap_;
-	std::unique_ptr<Heap> pystack_;
+	std::unique_ptr<MemoryBlock> heap_;
+	std::unique_ptr<MemoryBlock> pystack_;
 	std::thread thread_;
 	bool started_{false};
 	std::mutex active_;
