@@ -19,6 +19,8 @@
 #include "aurcor/modaurcor.h"
 
 #ifndef NO_QSTR
+#include <algorithm>
+
 extern "C" {
 	# include <py/runtime.h>
 	# include <py/obj.h>
@@ -60,17 +62,28 @@ inline PyModule& PyModule::current() {
 }
 
 mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
-	enum { ARG_values, ARG_profile, ARG_fps, ARG_wait_ms, ARG_repeat, ARG_rotate };
-	static constexpr size_t N_BEFORE_DEFAULTS = 1;
+	enum {
+		ARG_values,
+		ARG_length,
+		ARG_profile,
+		ARG_fps,
+		ARG_wait_ms,
+		ARG_repeat,
+		ARG_reverse,
+		ARG_rotate,
+	};
+	static constexpr size_t N_BEFORE_DEFAULTS = 2;
 	static constexpr size_t N_AFTER_DEFAULTS = 1;
 	static const mp_arg_t allowed_args[] = {
 		// BEFORE_DEFAULTS
 		{MP_QSTR_,            MP_ARG_REQUIRED | MP_ARG_OBJ,   {u_obj: MP_OBJ_NULL}},
+		{MP_QSTR_,            MP_ARG_OBJ,                     {u_obj: MP_OBJ_NULL}},
 
 		{MP_QSTR_profile,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 		{MP_QSTR_fps,         MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 		{MP_QSTR_wait_ms,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 		{MP_QSTR_repeat,      MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
+		{MP_QSTR_reverse,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 
 		// AFTER_DEFAULTS
 		{MP_QSTR_rotate,      MP_ARG_KW_ONLY | MP_ARG_INT,    {u_int: 0}},
@@ -85,9 +98,9 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		&parsed_args[off_allowed_args]);
 
 	auto profile = set_defaults ? DEFAULT_PROFILE : profile_;
-	auto fps = set_defaults ? NO_FPS : fps_;
-	auto wait_ms = set_defaults ? NO_WAIT_MS : wait_ms_;
+	auto wait_us = set_defaults ? DEFAULT_WAIT_US : wait_us_;
 	auto repeat = set_defaults ? DEFAULT_REPEAT : repeat_;
+	auto reverse = set_defaults ? DEFAULT_REPEAT : reverse_;
 
 	if (parsed_args[ARG_profile].u_obj != MP_ROM_NONE) {
 		if (!mp_obj_is_int(parsed_args[ARG_profile].u_obj))
@@ -113,11 +126,14 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 
 		mp_int_t value = mp_obj_get_int(parsed_args[ARG_fps].u_obj);
 
-		if (value != NO_FPS && (value < MIN_FPS || value > MAX_FPS))
+		if (value != 0 && (value < MIN_FPS || value > MAX_FPS))
 			mp_raise_ValueError(MP_ERROR_TEXT("fps out of range"));
 
-		fps = value;
-		wait_ms = NO_WAIT_MS; // override default
+		if (value == 0) {
+			wait_us = 0;
+		} else {
+			wait_us = 1000000 / value;
+		}
 	}
 
 	if (parsed_args[ARG_wait_ms].u_obj != MP_ROM_NONE) {
@@ -126,11 +142,10 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 
 		mp_int_t value = mp_obj_get_int(parsed_args[ARG_wait_ms].u_obj);
 
-		if (value != NO_WAIT_MS && (value < MIN_WAIT_MS || value > MAX_WAIT_MS))
+		if (value != 0 && (value < MIN_WAIT_MS || value > MAX_WAIT_MS))
 			mp_raise_ValueError(MP_ERROR_TEXT("wait_ms out of range"));
 
-		wait_ms = value;
-		fps = NO_FPS; // override default
+		wait_us = value * 1000;
 	}
 
 	if (parsed_args[ARG_repeat].u_obj != MP_ROM_NONE) {
@@ -140,15 +155,35 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		repeat = mp_obj_is_true(parsed_args[ARG_repeat].u_obj);
 	}
 
+	if (parsed_args[ARG_reverse].u_obj != MP_ROM_NONE) {
+		if (!mp_obj_is_bool(parsed_args[ARG_reverse].u_obj))
+			mp_raise_TypeError(MP_ERROR_TEXT("reverse must be a bool"));
+
+		reverse = mp_obj_is_true(parsed_args[ARG_reverse].u_obj);
+	}
+
 	if (type == OutputType::DEFAULTS) {
 		profile_ = profile;
-		fps_ = fps;
-		wait_ms_ = wait_ms;
+		wait_us_ = wait_us;
 		repeat_ = repeat;
+		reverse_ = reverse;
 		return MP_ROM_NONE;
 	}
 
+	size_t length = MAX_LEDS;
 	// ssize_t rotate = parsed_args[ARG_rotate].u_int;
+
+	if (parsed_args[ARG_length].u_obj != MP_ROM_NONE) {
+		if (!mp_obj_is_int(parsed_args[ARG_length].u_obj))
+			mp_raise_TypeError(MP_ERROR_TEXT("length must be an int"));
+
+		mp_int_t value = mp_obj_get_int(parsed_args[ARG_length].u_obj);
+
+		if (value < 0)
+			mp_raise_TypeError(MP_ERROR_TEXT("length must be positive"));
+
+		length = std::min(length, (size_t)value);
+	}
 
 	return MP_ROM_NONE;
 }

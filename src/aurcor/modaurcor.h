@@ -68,13 +68,13 @@ public:
 
 private:
 	static constexpr enum led_profile_id DEFAULT_PROFILE = LED_PROFILE_NORMAL;
-	static constexpr uint16_t NO_FPS = 0;
 	static constexpr mp_int_t MIN_FPS = 1;
 	static constexpr mp_int_t MAX_FPS = 1000;
-	static constexpr uint16_t NO_WAIT_MS = 0;
 	static constexpr mp_int_t MIN_WAIT_MS = 1;
 	static constexpr mp_int_t MAX_WAIT_MS = 1000;
+	static constexpr uint32_t DEFAULT_WAIT_US = 0;
 	static constexpr bool DEFAULT_REPEAT = false;
+	static constexpr bool DEFAULT_REVERSE = false;
 
 	friend mp_obj_t ::aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_hsl(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
@@ -82,9 +82,9 @@ private:
 	static PyModule& current();
 
 	enum led_profile_id profile_{DEFAULT_PROFILE};
-	uint16_t fps_{NO_FPS};
-	uint16_t wait_ms_{NO_WAIT_MS};
+	uint32_t wait_us_{0};
 	bool repeat_{DEFAULT_REPEAT};
+	bool reverse_{DEFAULT_REVERSE};
 };
 
 } // namespace micropython
