@@ -30,6 +30,7 @@
 
 #include "app/fs.h"
 #include "app/json.h"
+#include "aurcor/util.h"
 
 #ifndef PSTR_ALIGN
 # define PSTR_ALIGN 4
@@ -155,12 +156,8 @@ LEDProfile::Result LEDProfile::set(int index, int r, int g, int b) {
 	if (!valid_index(index))
 		return Result::OUT_OF_RANGE;
 
-	r = std::min(std::max(0, r), UINT8_MAX);
-	g = std::min(std::max(0, g), UINT8_MAX);
-	b = std::min(std::max(0, b), UINT8_MAX);
-
 	std::unique_lock data_lock{data_mutex_};
-	Ratio ratio{(uint8_t)r, (uint8_t)g, (uint8_t)b};
+	Ratio ratio{int_to_u8(r), int_to_u8(g), int_to_u8(b)};
 
 	remove(ratios_.find(index));
 	return add(index, ratio);
