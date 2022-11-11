@@ -22,15 +22,15 @@
 #include <algorithm>
 
 extern "C" {
+	# include <py/binary.h>
 	# include <py/runtime.h>
 	# include <py/obj.h>
-	# include <py/objstr.h>
-	# include <py/objtuple.h>
 	# include <py/qstr.h>
 }
 
 # include "aurcor/led_profile.h"
 # include "aurcor/led_profiles.h"
+# include "aurcor/memory_pool.h"
 # include "aurcor/micropython.h"
 #endif
 
@@ -56,6 +56,9 @@ mp_obj_t aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *k
 namespace aurcor {
 
 namespace micropython {
+
+PyModule::PyModule(MemoryBlock *led_buffer) : led_buffer_(led_buffer) {
+}
 
 inline PyModule& PyModule::current() {
 	return aurcor::MicroPython::current().modaurcor_;
@@ -170,10 +173,25 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		return MP_ROM_NONE;
 	}
 
-	size_t length = MAX_LEDS;
-	// ssize_t rotate = parsed_args[ARG_rotate].u_int;
+	ssize_t rotate_length = parsed_args[ARG_rotate].u_int;
+	auto values = parsed_args[ARG_values].u_obj;
+	uint8_t *buffer = current().led_buffer_->begin();
+	const size_t max_bytes = std::min(MAX_LEDS * BYTES_PER_LED, // TODO get current bus length
+		current().led_buffer_->size());
+	size_t in_bytes = max_bytes;
+	size_t out_bytes = 0;
 
-	if (parsed_args[ARG_length].u_obj != MP_ROM_NONE) {
+	mp_buffer_info_t bufinfo;
+	bool byte_array = mp_get_buffer(values, &bufinfo, MP_BUFFER_READ) && is_byte_array(bufinfo);
+
+	if (byte_array) {
+		in_bytes = std::min(in_bytes, bufinfo.len);
+
+		if (type == OutputType::HSL)
+			mp_raise_ValueError(MP_ERROR_TEXT("can't use byte array for HSL values"));
+	}
+
+	if (parsed_args[ARG_length].u_obj != MP_OBJ_NULL) {
 		if (!mp_obj_is_int(parsed_args[ARG_length].u_obj))
 			mp_raise_TypeError(MP_ERROR_TEXT("length must be an int"));
 
@@ -182,10 +200,147 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		if (value < 0)
 			mp_raise_TypeError(MP_ERROR_TEXT("length must be positive"));
 
-		length = std::min(length, (size_t)value);
+		in_bytes = std::min(in_bytes, (size_t)value * BYTES_PER_LED);
+	}
+
+	if (byte_array) {
+		const size_t buf_bytes = bufinfo.len;
+		const size_t rotate_bytes = rotate_length > 0
+			? ((size_t)rotate_length * BYTES_PER_LED)
+			: (buf_bytes - (size_t)std::abs(rotate_length) * BYTES_PER_LED);
+
+		if (rotate_bytes > buf_bytes)
+			mp_raise_ValueError(MP_ERROR_TEXT("can't rotate by more than the length of byte array"));
+
+		if (!reverse) {
+			if (rotate_bytes != 0) {
+				size_t available_bytes = std::min(in_bytes, buf_bytes - rotate_bytes);
+
+				append_bytes(buffer, type, bufinfo, rotate_bytes, available_bytes, out_bytes);
+				out_bytes += available_bytes;
+				in_bytes -= available_bytes;
+			}
+
+			if (in_bytes > 0) {
+				append_bytes(buffer, type, bufinfo, 0, in_bytes, out_bytes);
+				out_bytes += in_bytes;
+			}
+		} else {
+			if (rotate_bytes != 0) {
+				size_t available_bytes = std::min(in_bytes, rotate_bytes);
+
+				in_bytes -= available_bytes;
+				for (size_t i = rotate_bytes; available_bytes > 0; i -= BYTES_PER_LED) {
+					append_bytes(buffer, type, bufinfo, i, BYTES_PER_LED, out_bytes);
+					available_bytes -= BYTES_PER_LED;
+				}
+			}
+
+			for (size_t i = buf_bytes; in_bytes > 0; i -= BYTES_PER_LED) {
+				append_bytes(buffer, type, bufinfo, i, BYTES_PER_LED, out_bytes);
+				out_bytes += BYTES_PER_LED;
+				in_bytes -= BYTES_PER_LED;
+			}
+
+		}
+	} else if (rotate_length != 0 || reverse) {
+		const size_t values_length = mp_obj_get_int(mp_obj_len(values));
+		const size_t abs_rotate_length = rotate_length > 0
+			? (size_t)rotate_length
+			: (values_length - (size_t)std::abs(rotate_length));
+		size_t in_length = std::min(in_bytes / BYTES_PER_LED, values_length);
+		auto values_subscr = mp_obj_get_type(values)->subscr;
+
+		if (values_subscr == nullptr) {
+			mp_obj_subscr(values, 0, MP_OBJ_SENTINEL);
+			mp_raise_TypeError(MP_ERROR_TEXT("values must be subscriptable"));
+		}
+
+		if (reverse) {
+			if (rotate_length != 0) {
+				size_t available_length = std::min(in_length, abs_rotate_length);
+
+				in_length -= available_length;
+				for (size_t i = abs_rotate_length; available_length > 0; i--) {
+					append_led(buffer, type, values_subscr(values, MP_ROM_INT(i - 1), MP_OBJ_SENTINEL), out_bytes);
+					out_bytes += BYTES_PER_LED;
+					available_length--;
+				}
+			}
+
+			for (size_t i = values_length; in_length > 0; i--) {
+				append_led(buffer, type, values_subscr(values, MP_ROM_INT(i - 1), MP_OBJ_SENTINEL), out_bytes);
+				out_bytes += BYTES_PER_LED;
+				in_length--;
+			}
+		} else {
+			size_t available_length = std::min(in_length, values_length - abs_rotate_length);
+
+			for (size_t i = abs_rotate_length; available_length > 0; i++) {
+				append_led(buffer, type, values_subscr(values, MP_ROM_INT(i), MP_OBJ_SENTINEL), out_bytes);
+				out_bytes += BYTES_PER_LED;
+				available_length--;
+			}
+			in_length -= available_length;
+
+			for (size_t i = 0; in_length > 0; i++) {
+				append_led(buffer, type, values_subscr(values, MP_ROM_INT(i), MP_OBJ_SENTINEL), out_bytes);
+				out_bytes += BYTES_PER_LED;
+				in_length--;
+			}
+		}
+	} else {
+		size_t in_length = in_bytes / BYTES_PER_LED;
+		mp_obj_iter_buf_t iter_buf;
+		mp_obj_t iterable = mp_getiter(values, &iter_buf);
+
+		while (in_length > 0) {
+			mp_obj_t item = mp_iternext(iterable);
+
+			if (item == MP_OBJ_STOP_ITERATION)
+				break;
+
+			append_led(buffer, type, item, out_bytes);
+			out_bytes += BYTES_PER_LED;
+			in_length--;
+		}
+	}
+
+	if (repeat && out_bytes > 0) {
+		while (out_bytes < max_bytes) {
+			size_t available_bytes = std::min(out_bytes, max_bytes - out_bytes);
+
+			::memcpy(&buffer[out_bytes], &buffer[0], available_bytes);
+			out_bytes += available_bytes;
+		}
 	}
 
 	return MP_ROM_NONE;
+}
+
+inline void PyModule::append_bytes(uint8_t *buffer, OutputType type,
+		const mp_buffer_info_t &bufinfo, size_t offset, size_t bytes,
+		size_t out_bytes) {
+	auto src = reinterpret_cast<uint8_t *>(bufinfo.buf);
+
+	if (type == OutputType::RGB) {
+		::memcpy(&buffer[out_bytes], &src[offset], bytes);
+	} else { /* OutputType::HSL */
+		while (bytes > 0) {
+			hsl_to_rgb(src, offset, buffer, out_bytes);
+			offset += BYTES_PER_LED;
+			out_bytes += BYTES_PER_LED;
+			bytes -= BYTES_PER_LED;
+		}
+	}
+}
+
+void PyModule::append_led(uint8_t *buffer, OutputType type, mp_obj_t item, size_t offset) {
+	// TODO parse item
+}
+
+void PyModule::hsl_to_rgb(uint8_t *src, size_t src_offset, uint8_t *dst, size_t dst_offset) {
+	// TODO convert HSL to RGB
 }
 
 } // namespace micropython

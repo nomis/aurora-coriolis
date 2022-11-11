@@ -23,6 +23,7 @@ extern "C" {
 #endif
 
 #ifndef NO_QSTR
+# include <py/binary.h>
 # include <py/obj.h>
 #endif
 
@@ -49,7 +50,9 @@ MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj);
 #ifndef NO_QSTR
 # include <uuid/log.h>
 
-# include "aurcor/led_profiles.h"
+# include "led_bus.h"
+# include "led_profiles.h"
+# include "memory_pool.h"
 #endif
 
 namespace aurcor {
@@ -64,9 +67,12 @@ public:
 		DEFAULTS,
 	};
 
+	PyModule(MemoryBlock *led_buffer);
+
 	mp_obj_t output_leds(OutputType type, size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 
 private:
+	static constexpr size_t BYTES_PER_LED = LEDBus::BYTES_PER_LED;
 	static constexpr enum led_profile_id DEFAULT_PROFILE = LED_PROFILE_NORMAL;
 	static constexpr mp_int_t MIN_FPS = 1;
 	static constexpr mp_int_t MAX_FPS = 1000;
@@ -81,6 +87,24 @@ private:
 	friend mp_obj_t ::aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	static PyModule& current();
 
+	static inline bool is_byte_array(const mp_buffer_info_t &bufinfo) {
+		switch (bufinfo.typecode) {
+		case BYTEARRAY_TYPECODE:
+		case 'b':
+		case 'B':
+			return true;
+		}
+
+		return false;
+	}
+
+	static void append_bytes(uint8_t *buffer, OutputType type,
+		const mp_buffer_info_t &bufinfo, size_t offset, size_t bytes,
+		size_t out_bytes);
+	static void append_led(uint8_t *buffer, OutputType type, mp_obj_t item, size_t offset);
+	static void hsl_to_rgb(uint8_t *src, size_t src_offset, uint8_t *dst, size_t dst_offset);
+
+	MemoryBlock *led_buffer_;
 	enum led_profile_id profile_{DEFAULT_PROFILE};
 	uint32_t wait_us_{0};
 	bool repeat_{DEFAULT_REPEAT};

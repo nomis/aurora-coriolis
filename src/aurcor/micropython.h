@@ -93,7 +93,7 @@ protected:
 	virtual void shutdown() = 0;
 	bool stop();
 
-	inline bool heap_available() const { return heap_ && pystack_; }
+	inline bool memory_blocks_available() const { return heap_ && pystack_ && ledbufs_; }
 	inline bool running() const { return running_; }
 
 	virtual void state_copy();
@@ -119,6 +119,7 @@ private:
 	static thread_local MicroPython *self_;
 	static std::shared_ptr<MemoryPool> heaps_;
 	static std::shared_ptr<MemoryPool> pystacks_;
+	static std::shared_ptr<MemoryPool> ledbufs_;
 
 	void running_thread();
 
@@ -140,6 +141,7 @@ private:
 
 	std::unique_ptr<MemoryBlock> heap_;
 	std::unique_ptr<MemoryBlock> pystack_;
+	std::unique_ptr<MemoryBlock> ledbuf_;
 	std::thread thread_;
 	bool started_{false};
 	std::mutex active_;

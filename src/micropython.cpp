@@ -50,6 +50,7 @@ extern "C" {
 #include <uuid/log.h>
 
 #include "app/gcc.h"
+#include "aurcor/led_bus.h"
 #include "aurcor/mp_print.h"
 
 #ifndef PSTR_ALIGN
@@ -72,24 +73,30 @@ std::shared_ptr<MemoryPool> MicroPython::heaps_ = std::make_shared<MemoryPool>(
 	MicroPython::HEAP_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 std::shared_ptr<MemoryPool> MicroPython::pystacks_ = std::make_shared<MemoryPool>(
 	MicroPython::PYSTACK_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+std::shared_ptr<MemoryPool> MicroPython::ledbufs_ = std::make_shared<MemoryPool>(
+	LEDBus::MAX_BYTES, MALLOC_CAP_DEFAULT | MALLOC_CAP_8BIT);
 
 void MicroPython::setup(size_t pool_count) {
 	heaps_->resize(pool_count);
 	pystacks_->resize(pool_count);
+	ledbufs_->resize(pool_count);
 }
 
 MicroPython::MicroPython(const std::string &name)
 		: name_(name), heap_(std::move(heaps_->allocate())),
-		pystack_(std::move(pystacks_->allocate())) {
+		pystack_(std::move(pystacks_->allocate())),
+		ledbuf_(std::move(ledbufs_->allocate())),
+		modaurcor_(ledbuf_.get()) {
 	system_exit_exc_.base.type = &mp_type_SystemExit;
 	system_exit_exc_.traceback_alloc = 0;
 	system_exit_exc_.traceback_len = 0;
 	system_exit_exc_.traceback_data = NULL;
 	system_exit_exc_.args = (mp_obj_tuple_t *)&mp_const_empty_tuple_obj;
 
-	if (!heap_available()) {
+	if (!memory_blocks_available()) {
 		heap_.reset();
 		pystack_.reset();
+		ledbuf_.reset();
 	}
 }
 
@@ -245,6 +252,7 @@ bool MicroPython::stop() {
 			thread_.join();
 			heap_.reset();
 			pystack_.reset();
+			ledbufs_.reset();
 			logger_.trace(F("[%s] Thread stopped"), name_.c_str());
 		} else if (!stopped_) {
 			logger_.trace(F("[%s] Waiting for thread to stop"), name_.c_str());
@@ -309,8 +317,8 @@ MicroPythonShell::MicroPythonShell(const std::string &name)
 void MicroPythonShell::start(Shell &shell) {
 	auto self = shared_from_this();
 
-	if (!heap_available()) {
-		shell.printfln(F("No heap available"));
+	if (!memory_blocks_available()) {
+		shell.printfln(F("Out of memory"));
 		return;
 	}
 
