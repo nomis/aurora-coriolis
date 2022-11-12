@@ -129,14 +129,10 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 
 		mp_int_t value = mp_obj_get_int(parsed_args[ARG_fps].u_obj);
 
-		if (value != 0 && (value < MIN_FPS || value > MAX_FPS))
+		if (value < MIN_FPS || value > MAX_FPS)
 			mp_raise_ValueError(MP_ERROR_TEXT("fps out of range"));
 
-		if (value == 0) {
-			wait_us = 0;
-		} else {
-			wait_us = 1000000 / value;
-		}
+		wait_us = 1000000 / value;
 	}
 
 	if (parsed_args[ARG_wait_ms].u_obj != MP_ROM_NONE) {
