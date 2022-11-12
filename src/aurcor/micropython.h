@@ -194,8 +194,8 @@ private:
 	bool shell_foreground(uuid::console::Shell &shell, bool stop);
 	bool interrupt_char(int c);
 
-	IOBuffer<uint8_t,STDIN_LEN> stdin_;
-	IOBuffer<uint8_t,STDOUT_LEN> stdout_;
+	IOBuffer stdin_{STDIN_LEN};
+	IOBuffer stdout_{STDOUT_LEN};
 
 	typeof(mp_interrupt_char) *interrupt_char_{nullptr};
 };
