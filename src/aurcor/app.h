@@ -22,6 +22,7 @@
 
 #include <initializer_list>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "../app/app.h"
@@ -47,8 +48,11 @@ public:
 	void start() override;
 	void loop() override;
 
+	std::vector<std::string> bus_names() const;
+	std::shared_ptr<LEDBus> bus(const std::string &name);
+
 private:
-	std::vector<std::unique_ptr<LEDBus>> buses_;
+	std::vector<std::shared_ptr<LEDBus>> buses_;
 };
 
 } // namespace aurcor

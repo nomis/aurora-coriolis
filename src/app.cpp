@@ -23,6 +23,10 @@
 #endif
 
 #include <memory>
+#include <string>
+#include <vector>
+
+#include <uuid/common.h>
 
 #include "app/gcc.h"
 #include "aurcor/constants.h"
@@ -40,15 +44,15 @@ void App::init() {
 	app::App::init();
 
 #if defined(ARDUINO_LOLIN_S2_MINI)
-	buses_.push_back(std::make_unique<UARTLEDBus>(0, F("led0"),  1, 39));
-	buses_.push_back(std::make_unique<UARTLEDBus>(1, F("led1"), 14, 40));
-	buses_.push_back(std::make_unique<NullLEDBus>(F("null0")));
-	buses_.push_back(std::make_unique<NullLEDBus>(F("null1")));
+	buses_.push_back(std::make_shared<UARTLEDBus>(0, F("led0"),  1, 39));
+	buses_.push_back(std::make_shared<UARTLEDBus>(1, F("led1"), 14, 40));
+	buses_.push_back(std::make_shared<NullLEDBus>(F("null0")));
+	buses_.push_back(std::make_shared<NullLEDBus>(F("null1")));
 #else
-	buses_.push_back(std::make_unique<NullLEDBus>(F("null0")));
-	buses_.push_back(std::make_unique<NullLEDBus>(F("null1")));
-	buses_.push_back(std::make_unique<NullLEDBus>(F("null2")));
-	buses_.push_back(std::make_unique<NullLEDBus>(F("null3")));
+	buses_.push_back(std::make_shared<NullLEDBus>(F("null0")));
+	buses_.push_back(std::make_shared<NullLEDBus>(F("null1")));
+	buses_.push_back(std::make_shared<NullLEDBus>(F("null2")));
+	buses_.push_back(std::make_shared<NullLEDBus>(F("null3")));
 #endif
 
 	MicroPython::setup(buses_.size());
@@ -66,12 +70,31 @@ void App::start() {
 #endif
 
 	// TODO make this configurable
-	for (auto& bus : buses_)
+	for (auto &bus : buses_)
 		bus->length(MAX_LEDS);
 }
 
 void App::loop() {
 	app::App::loop();
+}
+
+std::vector<std::string> App::bus_names() const {
+	std::vector<std::string> names;
+
+	names.reserve(buses_.size());
+
+	for (auto &bus : buses_)
+		names.emplace_back(std::move(uuid::read_flash_string(bus->name())));
+
+	return names;
+}
+
+std::shared_ptr<LEDBus> App::bus(const std::string &name) {
+	for (auto &bus : buses_)
+		if (uuid::read_flash_string(bus->name()) == name)
+			return bus;
+
+	return {};
 }
 
 } // namespace aurcor

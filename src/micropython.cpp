@@ -46,11 +46,16 @@ extern "C" {
 	#include <shared/runtime/pyexec.h>
 }
 
+#include <uuid/common.h>
 #include <uuid/console.h>
 #include <uuid/log.h>
 
 #include "app/gcc.h"
+#include "aurcor/io_buffer.h"
 #include "aurcor/led_bus.h"
+#include "aurcor/modaurcor.h"
+#include "aurcor/modulogging.h"
+#include "aurcor/memory_pool.h"
 #include "aurcor/mp_print.h"
 
 #ifndef PSTR_ALIGN
@@ -82,11 +87,13 @@ void MicroPython::setup(size_t pool_count) {
 	ledbufs_->resize(pool_count);
 }
 
-MicroPython::MicroPython(const std::string &name)
-		: name_(name), heap_(std::move(heaps_->allocate())),
+MicroPython::MicroPython(const std::string &name,
+		std::shared_ptr<LEDBus> bus)
+		: name_(name + "/" + uuid::read_flash_string(bus->name())),
+		heap_(std::move(heaps_->allocate())),
 		pystack_(std::move(pystacks_->allocate())),
 		ledbuf_(std::move(ledbufs_->allocate())),
-		modaurcor_(ledbuf_.get()) {
+		modaurcor_(ledbuf_.get(), std::move(bus)) {
 	system_exit_exc_.base.type = &mp_type_SystemExit;
 	system_exit_exc_.traceback_alloc = 0;
 	system_exit_exc_.traceback_len = 0;
@@ -310,8 +317,8 @@ void MicroPython::AccessState::disable() {
 	}
 }
 
-MicroPythonShell::MicroPythonShell(const std::string &name)
-		: MicroPython(name) {
+MicroPythonShell::MicroPythonShell(const std::string &name,
+		std::shared_ptr<LEDBus> bus) : MicroPython(name, bus) {
 }
 
 void MicroPythonShell::start(Shell &shell) {

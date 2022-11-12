@@ -57,7 +57,8 @@ namespace aurcor {
 
 namespace micropython {
 
-PyModule::PyModule(MemoryBlock *led_buffer) : led_buffer_(led_buffer) {
+PyModule::PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus)
+		: led_buffer_(led_buffer), bus_(std::move(bus)) {
 }
 
 inline PyModule& PyModule::current() {
@@ -171,9 +172,8 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 
 	ssize_t rotate_length = parsed_args[ARG_rotate].u_int;
 	auto values = parsed_args[ARG_values].u_obj;
-	uint8_t *buffer = current().led_buffer_->begin();
-	const size_t max_bytes = std::min(MAX_LEDS * BYTES_PER_LED, // TODO get current bus length
-		current().led_buffer_->size());
+	uint8_t *buffer = led_buffer_->begin();
+	const size_t max_bytes = std::min(bus_->length() * BYTES_PER_LED, led_buffer_->size());
 	size_t in_bytes = max_bytes;
 	size_t out_bytes = 0;
 
@@ -310,6 +310,8 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 			out_bytes += available_bytes;
 		}
 	}
+
+	bus_->write(buffer, out_bytes);
 
 	return MP_ROM_NONE;
 }

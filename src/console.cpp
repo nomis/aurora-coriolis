@@ -56,7 +56,7 @@ namespace aurcor {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic error "-Wunused-const-variable"
 MAKE_PSTR_WORD(mpy)
-//MAKE_PSTR(xxx, "<xxx>")
+MAKE_PSTR(bus_mandatory, "<bus>")
 //MAKE_PSTR(xxx, "[xxx]")
 #pragma GCC diagnostic pop
 
@@ -71,9 +71,19 @@ static inline App &to_app(Shell &shell) {
 static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	#define NO_ARGUMENTS std::vector<std::string>{}
 
-	commands->add_command(ShellContext::MAIN, CommandFlags::USER, flash_string_vector{F_(mpy)},
-			[=] (Shell &shell __attribute__((unused)), const std::vector<std::string> &arguments __attribute__((unused))) {
-		std::make_shared<MicroPythonShell>(to_app_shell(shell).console_name())->start(shell);
+	commands->add_command(ShellContext::MAIN, CommandFlags::USER,
+		flash_string_vector{F_(mpy)}, flash_string_vector{F_(bus_mandatory)},
+			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+		auto bus = to_app(shell).bus(arguments[0]);
+
+		if (bus) {
+			std::make_shared<MicroPythonShell>(to_app_shell(shell).console_name(), bus)->start(shell);
+		} else {
+			shell.printfln(F("Bus \"%s\" not found"), arguments[0].c_str());
+		}
+	},
+	[] (Shell &shell, const std::vector<std::string> &arguments __attribute__((unused))) -> std::vector<std::string> {
+		return to_app(shell).bus_names();
 	});
 }
 

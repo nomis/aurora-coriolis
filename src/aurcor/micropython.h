@@ -49,6 +49,8 @@ extern "C" {
 
 namespace aurcor {
 
+class LEDBus;
+
 class MicroPython {
 	friend aurcor::micropython::PyModule;
 	friend aurcor::micropython::ULogging;
@@ -86,7 +88,7 @@ protected:
 
 	static uuid::log::Logger logger_;
 
-	MicroPython(const std::string &name);
+	MicroPython(const std::string &name, std::shared_ptr<LEDBus> bus);
 
 	void start();
 	virtual void main() = 0;
@@ -171,7 +173,7 @@ public:
 	static constexpr size_t STDIN_LEN = 32;
 	static constexpr size_t STDOUT_LEN = 128;
 
-	MicroPythonShell(const std::string &name);
+	MicroPythonShell(const std::string &name, std::shared_ptr<LEDBus> bus);
 
 	void start(uuid::console::Shell &shell);
 

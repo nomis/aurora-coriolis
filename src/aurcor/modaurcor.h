@@ -52,10 +52,13 @@ MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj);
 
 # include "led_bus.h"
 # include "led_profiles.h"
-# include "memory_pool.h"
+
+# include <memory>
 #endif
 
 namespace aurcor {
+
+class MemoryBlock;
 
 namespace micropython {
 
@@ -67,7 +70,7 @@ public:
 		DEFAULTS,
 	};
 
-	PyModule(MemoryBlock *led_buffer);
+	PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus);
 
 	mp_obj_t output_leds(OutputType type, size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 
@@ -105,6 +108,7 @@ private:
 	static void hsb_to_rgb(uint8_t *src, size_t src_offset, uint8_t *dst, size_t dst_offset);
 
 	MemoryBlock *led_buffer_;
+	std::shared_ptr<LEDBus> bus_;
 	enum led_profile_id profile_{DEFAULT_PROFILE};
 	uint32_t wait_us_{0};
 	bool repeat_{DEFAULT_REPEAT};
