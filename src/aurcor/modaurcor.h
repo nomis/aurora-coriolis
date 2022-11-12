@@ -101,9 +101,6 @@ private:
 		return false;
 	}
 
-	static void append_bytes(uint8_t *buffer, OutputType type,
-		const mp_buffer_info_t &bufinfo, size_t offset, size_t bytes,
-		size_t out_bytes);
 	static void append_led(uint8_t *buffer, OutputType type, mp_obj_t item, size_t offset);
 	static void hsb_to_rgb(uint8_t *src, size_t src_offset, uint8_t *dst, size_t dst_offset);
 

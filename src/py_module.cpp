@@ -200,6 +200,7 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 	}
 
 	if (byte_array) {
+		const uint8_t *input = reinterpret_cast<uint8_t *>(bufinfo.buf);
 		const size_t buf_bytes = bufinfo.len;
 		const size_t rotate_bytes = rotate_length > 0
 			? ((size_t)rotate_length * BYTES_PER_LED)
@@ -212,13 +213,13 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 			if (rotate_bytes != 0) {
 				size_t available_bytes = std::min(in_bytes, buf_bytes - rotate_bytes);
 
-				append_bytes(buffer, type, bufinfo, rotate_bytes, available_bytes, out_bytes);
+				std::memcpy(&buffer[out_bytes], &input[rotate_bytes], available_bytes);
 				out_bytes += available_bytes;
 				in_bytes -= available_bytes;
 			}
 
 			if (in_bytes > 0) {
-				append_bytes(buffer, type, bufinfo, 0, in_bytes, out_bytes);
+				std::memcpy(&buffer[out_bytes], &input[0], in_bytes);
 				out_bytes += in_bytes;
 			}
 		} else {
@@ -227,13 +228,14 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 
 				in_bytes -= available_bytes;
 				for (size_t i = rotate_bytes; available_bytes > 0; i -= BYTES_PER_LED) {
-					append_bytes(buffer, type, bufinfo, i, BYTES_PER_LED, out_bytes);
+					std::memcpy(&buffer[out_bytes], &input[i], BYTES_PER_LED);
+					out_bytes += BYTES_PER_LED;
 					available_bytes -= BYTES_PER_LED;
 				}
 			}
 
 			for (size_t i = buf_bytes; in_bytes > 0; i -= BYTES_PER_LED) {
-				append_bytes(buffer, type, bufinfo, i, BYTES_PER_LED, out_bytes);
+				std::memcpy(&buffer[out_bytes], &input[i], BYTES_PER_LED);
 				out_bytes += BYTES_PER_LED;
 				in_bytes -= BYTES_PER_LED;
 			}
@@ -314,23 +316,6 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 	bus_->write(buffer, out_bytes);
 
 	return MP_ROM_NONE;
-}
-
-inline void PyModule::append_bytes(uint8_t *buffer, OutputType type,
-		const mp_buffer_info_t &bufinfo, size_t offset, size_t bytes,
-		size_t out_bytes) {
-	auto src = reinterpret_cast<uint8_t *>(bufinfo.buf);
-
-	if (type == OutputType::RGB) {
-		std::memcpy(&buffer[out_bytes], &src[offset], bytes);
-	} else { /* OutputType::HSB */
-		while (bytes > 0) {
-			hsb_to_rgb(src, offset, buffer, out_bytes);
-			offset += BYTES_PER_LED;
-			out_bytes += BYTES_PER_LED;
-			bytes -= BYTES_PER_LED;
-		}
-	}
 }
 
 void PyModule::append_led(uint8_t *buffer, OutputType type, mp_obj_t item, size_t offset) {
