@@ -381,50 +381,15 @@ void PyModule::hsv_to_rgb(mp_int_t hue360, mp_float_t saturation, mp_float_t val
 	mp_float_t hi;
 	mp_float_t hf = std::modf(hue360 / 60.0, &hi);
 	mp_float_t s = float_0to1(saturation);
-	mp_float_t v = float_0to1(value);
-	mp_float_t p = v * (1 - s);
-	mp_float_t q = v * (1 - s * hf);
-	mp_float_t t = v * (1 - s * (1 - hf));
-	mp_float_t r = 0;
-	mp_float_t g = 0;
-	mp_float_t b = 0;
+	mp_float_t v = float_0to1(value) * 255;
+	int_fast8_t k = (hue360 / 60) % 6;
+	int_fast8_t q = k >> 1;
+	int_fast8_t p = (0b010010 >> (k & 0b110)) & 0b11;
+	int_fast8_t t = (0b001001 >> (k & 0b110)) & 0b11;
 
-	switch (std::lround(hi) % 6) {
-	case 0:
-		r = v;
-		g = t;
-		b = p;
-		break;
-	case 1:
-		r = q;
-		g = v;
-		b = p;
-		break;
-	case 2:
-		r = p;
-		g = v;
-		b = t;
-		break;
-	case 3:
-		r = p;
-		g = q;
-		b = v;
-		break;
-	case 4:
-		r = t;
-		g = p;
-		b = v;
-		break;
-	case 5:
-		r = v;
-		g = p;
-		b = q;
-		break;
-	}
-
-	rgb[0] = int_to_u8(r * 255);
-	rgb[1] = int_to_u8(g * 255);
-	rgb[2] = int_to_u8(b * 255);
+	rgb[p] = int_to_u8(std::lround(v * (1 - s)));
+	rgb[q] = int_to_u8(std::lround((k & 1) ? v * (1 - s * hf) : v));
+	rgb[t] = int_to_u8(std::lround((k & 1) ? v : v * (1 - s * (1 - hf))));
 }
 
 void PyModule::exp_hsv_to_rgb(mp_float_t expanded_hue1, mp_float_t saturation, mp_float_t value, uint8_t *rgb) {
