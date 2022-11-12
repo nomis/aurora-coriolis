@@ -38,8 +38,8 @@ extern const aurcor_version_t aurcor_version_obj;
 mp_obj_t aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_rgb_obj);
 
-mp_obj_t aurcor_output_hsl(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
-MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_hsl_obj);
+mp_obj_t aurcor_output_hsb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_hsb_obj);
 
 mp_obj_t aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj);
@@ -63,7 +63,7 @@ class PyModule {
 public:
 	enum class OutputType {
 		RGB,
-		HSL,
+		HSB,
 		DEFAULTS,
 	};
 
@@ -83,7 +83,7 @@ private:
 	static constexpr bool DEFAULT_REVERSE = false;
 
 	friend mp_obj_t ::aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
-	friend mp_obj_t ::aurcor_output_hsl(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	friend mp_obj_t ::aurcor_output_hsb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	static PyModule& current();
 
@@ -102,7 +102,7 @@ private:
 		const mp_buffer_info_t &bufinfo, size_t offset, size_t bytes,
 		size_t out_bytes);
 	static void append_led(uint8_t *buffer, OutputType type, mp_obj_t item, size_t offset);
-	static void hsl_to_rgb(uint8_t *src, size_t src_offset, uint8_t *dst, size_t dst_offset);
+	static void hsb_to_rgb(uint8_t *src, size_t src_offset, uint8_t *dst, size_t dst_offset);
 
 	MemoryBlock *led_buffer_;
 	enum led_profile_id profile_{DEFAULT_PROFILE};

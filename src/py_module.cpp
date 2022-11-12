@@ -43,8 +43,8 @@ mp_obj_t aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs
 	return PyModule::current().output_leds(PyModule::OutputType::RGB, n_args, args, kwargs);
 }
 
-mp_obj_t aurcor_output_hsl(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
-	return PyModule::current().output_leds(PyModule::OutputType::HSL, n_args, args, kwargs);
+mp_obj_t aurcor_output_hsb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	return PyModule::current().output_leds(PyModule::OutputType::HSB, n_args, args, kwargs);
 }
 
 mp_obj_t aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
@@ -325,9 +325,9 @@ inline void PyModule::append_bytes(uint8_t *buffer, OutputType type,
 
 	if (type == OutputType::RGB) {
 		::memcpy(&buffer[out_bytes], &src[offset], bytes);
-	} else { /* OutputType::HSL */
+	} else { /* OutputType::HSB */
 		while (bytes > 0) {
-			hsl_to_rgb(src, offset, buffer, out_bytes);
+			hsb_to_rgb(src, offset, buffer, out_bytes);
 			offset += BYTES_PER_LED;
 			out_bytes += BYTES_PER_LED;
 			bytes -= BYTES_PER_LED;
@@ -339,8 +339,8 @@ void PyModule::append_led(uint8_t *buffer, OutputType type, mp_obj_t item, size_
 	// TODO parse item
 }
 
-void PyModule::hsl_to_rgb(uint8_t *src, size_t src_offset, uint8_t *dst, size_t dst_offset) {
-	// TODO convert HSL to RGB
+void PyModule::hsb_to_rgb(uint8_t *src, size_t src_offset, uint8_t *dst, size_t dst_offset) {
+	// TODO convert HSB to RGB
 }
 
 } // namespace micropython
