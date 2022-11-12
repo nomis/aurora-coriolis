@@ -377,8 +377,8 @@ void PyModule::append_led(uint8_t *buffer, OutputType type, mp_obj_t item, size_
 	// TODO parse item
 }
 
-void PyModule::hsv_to_rgb(mp_int_t hue360, mp_float_t saturation, mp_float_t value, uint8_t *rgb) {
-	hue360 %= 360;
+void PyModule::hsv_to_rgb(mp_float_t hue360, mp_float_t saturation, mp_float_t value, uint8_t *rgb) {
+	hue360 = std::fmod(hue360, (mp_float_t)360.0);
 
 	mp_float_t hi;
 	mp_float_t hf = std::modf(hue360 / 60.0, &hi);
@@ -391,7 +391,7 @@ void PyModule::hsv_to_rgb(mp_int_t hue360, mp_float_t saturation, mp_float_t val
 	mp_float_t g = 0;
 	mp_float_t b = 0;
 
-	switch (hue360 / 60) {
+	switch ((std::lround(hi) / 60) % 6) {
 	case 0:
 		r = v;
 		g = t;
@@ -429,17 +429,16 @@ void PyModule::hsv_to_rgb(mp_int_t hue360, mp_float_t saturation, mp_float_t val
 	rgb[2] = int_to_u8(b * 255);
 }
 
-void PyModule::hsv_to_rgb(mp_float_t expanded_hue1, mp_float_t saturation, mp_float_t value, uint8_t *rgb) {
+void PyModule::exp_hsv_to_rgb(mp_float_t expanded_hue1, mp_float_t saturation, mp_float_t value, uint8_t *rgb) {
 	mp_float_t integral;
-	mp_int_t hue360;
+	mp_float_t hue360;
 
 	expanded_hue1 = std::modf(expanded_hue1, &integral);
 
 	if (expanded_hue1 < EXPANDED_HUE_F_RANGE1) {
-		hue360 = std::lround(expanded_hue1 * EXPANDED_HUE_MULTIPLIER1);
+		hue360 = expanded_hue1 * EXPANDED_HUE_MULTIPLIER1;
 	} else {
-		hue360 = EXPANDED_HUE_I_RANGE1 + std::lround(
-			(expanded_hue1 - EXPANDED_HUE_F_RANGE1) * EXPANDED_HUE_MULTIPLIER2);
+		hue360 = EXPANDED_HUE_F_RANGE1 + (expanded_hue1 - EXPANDED_HUE_F_RANGE1) * EXPANDED_HUE_MULTIPLIER2;
 	}
 
 	hsv_to_rgb(hue360, saturation, value, rgb);
@@ -482,7 +481,7 @@ void PyModule::hsv_to_rgb(size_t n_args, const mp_obj_t *args, uint8_t *rgb) {
 	if (mp_obj_is_int(args[0])) {
 		PyModule::hsv_to_rgb(mp_obj_get_int(args[0]), saturation, value, rgb);
 	} else if (mp_obj_is_float(args[0])) {
-		PyModule::hsv_to_rgb(mp_obj_get_float(args[0]), saturation, value, rgb);
+		PyModule::exp_hsv_to_rgb(mp_obj_get_float(args[0]), saturation, value, rgb);
 	} else {
 		mp_raise_TypeError(MP_ERROR_TEXT("hue must be an int or a float"));
 	}

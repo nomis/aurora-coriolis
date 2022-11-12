@@ -92,8 +92,8 @@ public:
 		return false;
 	}
 
-	static void hsv_to_rgb(mp_int_t hue360, mp_float_t saturation, mp_float_t value, uint8_t *rgb);
-	static void hsv_to_rgb(mp_float_t expanded_hue1, mp_float_t saturation, mp_float_t value, uint8_t *rgb);
+	static void hsv_to_rgb(mp_float_t hue360, mp_float_t saturation, mp_float_t value, uint8_t *rgb);
+	static void exp_hsv_to_rgb(mp_float_t expanded_hue1, mp_float_t saturation, mp_float_t value, uint8_t *rgb);
 	static void hsv_to_rgb(size_t n_args, const mp_obj_t *args, uint8_t *rgb);
 
 	PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus);
