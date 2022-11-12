@@ -19,19 +19,23 @@
 #include "aurcor/modaurcor.h"
 
 #ifndef NO_QSTR
-#include <algorithm>
+# include <algorithm>
+# include <array>
+# include <cmath>
 
 extern "C" {
 	# include <py/binary.h>
 	# include <py/runtime.h>
 	# include <py/obj.h>
 	# include <py/qstr.h>
+	# include <py/smallint.h>
 }
 
 # include "aurcor/led_profile.h"
 # include "aurcor/led_profiles.h"
 # include "aurcor/memory_pool.h"
 # include "aurcor/micropython.h"
+# include "aurcor/util.h"
 #endif
 
 using aurcor::MicroPython;
@@ -39,12 +43,63 @@ using aurcor::micropython::PyModule;
 
 extern "C" {
 
+mp_obj_t aurcor_hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args) {
+	enum { ARG_buffer, ARG_offset };
+	mp_buffer_info_t bufinfo;
+	size_t offset;
+
+	mp_get_buffer_raise(args[ARG_buffer], &bufinfo, MP_BUFFER_WRITE);
+
+	if (!PyModule::is_byte_array(bufinfo))
+		mp_raise_TypeError(MP_ERROR_TEXT("buffer must be a byte array"));
+
+	if (!mp_obj_is_int(args[ARG_offset])) {
+			mp_raise_TypeError(MP_ERROR_TEXT("offset must be an int"));
+	} else {
+		mp_int_t value = mp_obj_get_int(args[ARG_offset]);
+
+		offset = (size_t)value;
+
+		if (value < 0 || offset > bufinfo.len)
+			mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("buffer index out of range"));
+	}
+
+	if (bufinfo.len - offset < PyModule::BYTES_PER_LED)
+		mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("buffer index out of range"));
+
+	PyModule::hsv_to_rgb(n_args - 2, &args[2], &reinterpret_cast<uint8_t *>(bufinfo.buf)[offset]);
+
+	return MP_ROM_NONE;
+}
+
+mp_obj_t aurcor_hsv_to_rgb_int(size_t n_args, const mp_obj_t *args) {
+	std::array<uint8_t,PyModule::BYTES_PER_LED> rgb_bytes;
+
+	PyModule::hsv_to_rgb(n_args, args, rgb_bytes.data());
+
+	static_assert(MP_SMALL_INT_FITS(0xFFFFFF), "small int overflow");
+	return MP_OBJ_NEW_SMALL_INT((rgb_bytes[0] << 16) | (rgb_bytes[1] << 8) | rgb_bytes[2]);
+}
+
+mp_obj_t aurcor_hsv_to_rgb_tuple(size_t n_args, const mp_obj_t *args) {
+	std::array<uint8_t,PyModule::BYTES_PER_LED> rgb_bytes;
+	std::array<mp_obj_t,PyModule::BYTES_PER_LED> rgb_tuple;
+
+	PyModule::hsv_to_rgb(n_args, args, rgb_bytes.data());
+
+	rgb_tuple[0] = MP_OBJ_NEW_SMALL_INT(rgb_bytes[0]);
+	rgb_tuple[1] = MP_OBJ_NEW_SMALL_INT(rgb_bytes[1]);
+	rgb_tuple[2] = MP_OBJ_NEW_SMALL_INT(rgb_bytes[2]);
+
+	return mp_obj_new_tuple(rgb_tuple.size(), rgb_tuple.data());
+}
+
 mp_obj_t aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
 	return PyModule::current().output_leds(PyModule::OutputType::RGB, n_args, args, kwargs);
 }
 
-mp_obj_t aurcor_output_hsb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
-	return PyModule::current().output_leds(PyModule::OutputType::HSB, n_args, args, kwargs);
+mp_obj_t aurcor_output_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	return PyModule::current().output_leds(PyModule::OutputType::HSV, n_args, args, kwargs);
 }
 
 mp_obj_t aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
@@ -80,8 +135,8 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 	static constexpr size_t N_AFTER_DEFAULTS = 1;
 	static const mp_arg_t allowed_args[] = {
 		// BEFORE_DEFAULTS
-		{MP_QSTR_,            MP_ARG_REQUIRED | MP_ARG_OBJ,   {u_obj: MP_OBJ_NULL}},
-		{MP_QSTR_,            MP_ARG_OBJ,                     {u_obj: MP_OBJ_NULL}},
+		{MP_QSTR_values,      MP_ARG_REQUIRED | MP_ARG_OBJ,   {u_obj: MP_OBJ_NULL}},
+		{MP_QSTR_length,      MP_ARG_OBJ,                     {u_obj: MP_OBJ_NULL}},
 
 		{MP_QSTR_profile,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 		{MP_QSTR_fps,         MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
@@ -322,8 +377,115 @@ void PyModule::append_led(uint8_t *buffer, OutputType type, mp_obj_t item, size_
 	// TODO parse item
 }
 
-void PyModule::hsb_to_rgb(uint8_t *src, size_t src_offset, uint8_t *dst, size_t dst_offset) {
-	// TODO convert HSB to RGB
+void PyModule::hsv_to_rgb(mp_int_t hue360, mp_float_t saturation, mp_float_t value, uint8_t *rgb) {
+	hue360 %= 360;
+
+	mp_float_t hi;
+	mp_float_t hf = std::modf(hue360 / 60.0, &hi);
+	mp_float_t s = float_0to1(saturation);
+	mp_float_t v = float_0to1(value);
+	mp_float_t p = v * (1 - s);
+	mp_float_t q = v * (1 - s * hf);
+	mp_float_t t = v * (1 - s * (1 - hf));
+	mp_float_t r = 0;
+	mp_float_t g = 0;
+	mp_float_t b = 0;
+
+	switch (hue360 / 60) {
+	case 0:
+		r = v;
+		g = t;
+		b = p;
+		break;
+	case 1:
+		r = q;
+		g = v;
+		b = p;
+		break;
+	case 2:
+		r = p;
+		g = v;
+		b = t;
+		break;
+	case 3:
+		r = p;
+		g = q;
+		b = v;
+		break;
+	case 4:
+		r = t;
+		g = p;
+		b = v;
+		break;
+	case 5:
+		r = v;
+		g = p;
+		b = q;
+		break;
+	}
+
+	rgb[0] = int_to_u8(r * 255);
+	rgb[1] = int_to_u8(g * 255);
+	rgb[2] = int_to_u8(b * 255);
+}
+
+void PyModule::hsv_to_rgb(mp_float_t expanded_hue1, mp_float_t saturation, mp_float_t value, uint8_t *rgb) {
+	mp_float_t integral;
+	mp_int_t hue360;
+
+	expanded_hue1 = std::modf(expanded_hue1, &integral);
+
+	if (expanded_hue1 < EXPANDED_HUE_F_RANGE1) {
+		hue360 = std::lround(expanded_hue1 * EXPANDED_HUE_MULTIPLIER1);
+	} else {
+		hue360 = EXPANDED_HUE_I_RANGE1 + std::lround(
+			(expanded_hue1 - EXPANDED_HUE_F_RANGE1) * EXPANDED_HUE_MULTIPLIER2);
+	}
+
+	hsv_to_rgb(hue360, saturation, value, rgb);
+}
+
+void PyModule::hsv_to_rgb(size_t n_args, const mp_obj_t *args, uint8_t *rgb) {
+	mp_float_t saturation, value;
+
+	if (n_args == 1) {
+		saturation = 1.0;
+		value = 1.0;
+	} else if (n_args == 2) {
+		saturation = 1.0;
+
+		if (mp_obj_is_int(args[1])) {
+			value = mp_obj_get_int(args[1]) / MAX_VALUE;
+		} else if (mp_obj_is_float(args[1])) {
+			value = mp_obj_get_float(args[1]);
+		} else {
+			mp_raise_TypeError(MP_ERROR_TEXT("value must be an int or a float"));
+		}
+	} else if (n_args == 3) {
+		if (mp_obj_is_int(args[1])) {
+			saturation = mp_obj_get_int(args[1]) / MAX_SATURATION;
+		} else if (mp_obj_is_float(args[1])) {
+			saturation = mp_obj_get_float(args[1]);
+		} else {
+			mp_raise_TypeError(MP_ERROR_TEXT("saturation must be an int or a float"));
+		}
+
+		if (mp_obj_is_int(args[2])) {
+			value = mp_obj_get_int(args[2]) / MAX_VALUE;
+		} else if (mp_obj_is_float(args[2])) {
+			value = mp_obj_get_float(args[2]);
+		} else {
+			mp_raise_TypeError(MP_ERROR_TEXT("value must be an int or a float"));
+		}
+	}
+
+	if (mp_obj_is_int(args[0])) {
+		PyModule::hsv_to_rgb(mp_obj_get_int(args[0]), saturation, value, rgb);
+	} else if (mp_obj_is_float(args[0])) {
+		PyModule::hsv_to_rgb(mp_obj_get_float(args[0]), saturation, value, rgb);
+	} else {
+		mp_raise_TypeError(MP_ERROR_TEXT("hue must be an int or a float"));
+	}
 }
 
 } // namespace micropython

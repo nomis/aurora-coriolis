@@ -21,10 +21,18 @@
 #include <algorithm>
 #include <cstdint>
 
+extern "C" {
+    #include <py/mpconfig.h>
+}
+
 namespace aurcor {
 
 static inline uint8_t int_to_u8(int value) {
     return std::max(0, std::min(UINT8_MAX, value));
+}
+
+static inline mp_float_t float_0to1(mp_float_t value) {
+    return std::max((mp_float_t)0.0, std::min((mp_float_t)1.0, value));
 }
 
 } // namespace aurcor

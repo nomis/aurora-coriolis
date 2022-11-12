@@ -67,7 +67,7 @@ mp_obj_t ulogging_exception(size_t n_args, const mp_obj_t *args, mp_map_t *kwarg
 MP_DECLARE_CONST_FUN_OBJ_KW(ulogging_exception_obj);
 
 mp_obj_t ulogging_disable(size_t n_args, const mp_obj_t *args);
-MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(ulogging_disable_obj);
+MP_DECLARE_CONST_FUN_OBJ_VAR(ulogging_disable_obj);
 
 mp_obj_t ulogging_getEffectiveLevel();
 MP_DECLARE_CONST_FUN_OBJ_0(ulogging_getEffectiveLevel_obj);

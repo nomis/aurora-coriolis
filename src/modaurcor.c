@@ -50,8 +50,11 @@ const mp_obj_module_t aurcor_profiles_module = {
  */
 // MP_REGISTER_MODULE(MP_QSTR_aurcor_dot_profiles, aurcor_profiles_module);
 
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_hsv_to_rgb_buffer_obj, 3, 5, aurcor_hsv_to_rgb_buffer);
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_hsv_to_rgb_int_obj, 1, 3, aurcor_hsv_to_rgb_int);
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_hsv_to_rgb_tuple_obj, 1, 3, aurcor_hsv_to_rgb_tuple);
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_rgb_obj, 1, aurcor_output_rgb);
-MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_hsb_obj, 1, aurcor_output_hsb);
+MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_hsv_obj, 1, aurcor_output_hsv);
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj, 0, aurcor_output_defaults);
 
 STATIC const mp_rom_map_elem_t aurcor_module_globals_table[] = {
@@ -67,8 +70,12 @@ STATIC const mp_rom_map_elem_t aurcor_module_globals_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR_time),              MP_ROM_PTR(&mp_utime_time_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_timens),            MP_ROM_PTR(&mp_utime_time_ns_obj) },
 
+	{ MP_ROM_QSTR(MP_QSTR_hsv_to_rgb_buffer), MP_ROM_PTR(&aurcor_hsv_to_rgb_buffer_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_hsv_to_rgb_int),    MP_ROM_PTR(&aurcor_hsv_to_rgb_int_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_hsv_to_rgb_tuple),  MP_ROM_PTR(&aurcor_hsv_to_rgb_tuple_obj) },
+
 	{ MP_ROM_QSTR(MP_QSTR_output_rgb),        MP_ROM_PTR(&aurcor_output_rgb_obj) },
-	{ MP_ROM_QSTR(MP_QSTR_output_hsb),        MP_ROM_PTR(&aurcor_output_hsb_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_output_hsv),        MP_ROM_PTR(&aurcor_output_hsv_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_output_defaults),   MP_ROM_PTR(&aurcor_output_defaults_obj) },
 };
 
