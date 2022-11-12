@@ -259,7 +259,7 @@ bool MicroPython::stop() {
 			thread_.join();
 			heap_.reset();
 			pystack_.reset();
-			ledbufs_.reset();
+			ledbuf_.reset();
 			logger_.trace(F("[%s] Thread stopped"), name_.c_str());
 		} else if (!stopped_) {
 			logger_.trace(F("[%s] Waiting for thread to stop"), name_.c_str());
