@@ -92,7 +92,7 @@ public:
 		return false;
 	}
 
-	static void hsv_to_rgb(mp_float_t hue360, mp_float_t saturation, mp_float_t value, uint8_t *rgb);
+	static void hsv_to_rgb(mp_int_t hue360, mp_float_t saturation, mp_float_t value, uint8_t *rgb);
 	static void exp_hsv_to_rgb(mp_float_t expanded_hue1, mp_float_t saturation, mp_float_t value, uint8_t *rgb);
 	static void hsv_to_rgb(size_t n_args, const mp_obj_t *args, uint8_t *rgb);
 
@@ -118,7 +118,7 @@ private:
 	static constexpr mp_float_t MAX_SATURATION = 100;
 	static constexpr mp_float_t MAX_VALUE = 100;
 	static constexpr mp_int_t EXPANDED_MAX_HUE = MAX_HUE + EXPANDED_HUE_I_RANGE1 * (EXPANDED_HUE_TIMES - 1);
-	static constexpr mp_float_t EXPANDED_HUE_F_RANGE1 = (EXPANDED_HUE_I_RANGE1 * EXPANDED_HUE_TIMES) / (float)EXPANDED_MAX_HUE;
+	static constexpr mp_float_t EXPANDED_HUE_F_RANGE1 = (EXPANDED_HUE_I_RANGE1 * EXPANDED_HUE_TIMES) / (mp_float_t)EXPANDED_MAX_HUE;
 	static constexpr mp_float_t EXPANDED_HUE_MULTIPLIER1 = EXPANDED_HUE_I_RANGE1 / EXPANDED_HUE_F_RANGE1;
 	static constexpr mp_float_t EXPANDED_HUE_F_RANGE2 = 1 - EXPANDED_HUE_F_RANGE1;
 	static constexpr mp_float_t EXPANDED_HUE_MULTIPLIER2 = (MAX_HUE - EXPANDED_HUE_I_RANGE1) / EXPANDED_HUE_F_RANGE2;

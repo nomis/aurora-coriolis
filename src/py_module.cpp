@@ -377,7 +377,7 @@ void PyModule::append_led(uint8_t *buffer, OutputType type, mp_obj_t item, size_
 	// TODO parse item
 }
 
-void PyModule::hsv_to_rgb(mp_float_t hue360, mp_float_t saturation, mp_float_t value, uint8_t *rgb) {
+void PyModule::hsv_to_rgb(mp_int_t hue360, mp_float_t saturation, mp_float_t value, uint8_t *rgb) {
 	mp_float_t hi;
 	mp_float_t hf = std::modf(hue360 / 60.0, &hi);
 	mp_float_t s = float_0to1(saturation);
@@ -429,14 +429,14 @@ void PyModule::hsv_to_rgb(mp_float_t hue360, mp_float_t saturation, mp_float_t v
 
 void PyModule::exp_hsv_to_rgb(mp_float_t expanded_hue1, mp_float_t saturation, mp_float_t value, uint8_t *rgb) {
 	mp_float_t integral;
-	mp_float_t hue360;
+	mp_int_t hue360;
 
 	expanded_hue1 = std::modf(expanded_hue1, &integral);
 
 	if (expanded_hue1 < EXPANDED_HUE_F_RANGE1) {
-		hue360 = expanded_hue1 * EXPANDED_HUE_MULTIPLIER1;
+		hue360 = std::lround(expanded_hue1 * EXPANDED_HUE_MULTIPLIER1);
 	} else {
-		hue360 = EXPANDED_HUE_I_RANGE1 + (expanded_hue1 - EXPANDED_HUE_F_RANGE1) * EXPANDED_HUE_MULTIPLIER2;
+		hue360 = EXPANDED_HUE_I_RANGE1 + std::lround((expanded_hue1 - EXPANDED_HUE_F_RANGE1) * EXPANDED_HUE_MULTIPLIER2);
 	}
 
 	hsv_to_rgb(hue360, saturation, value, rgb);
@@ -467,7 +467,7 @@ void PyModule::hsv_to_rgb(size_t n_args, const mp_obj_t *args, uint8_t *rgb) {
 	}
 
 	if (mp_obj_is_int(args[0])) {
-		PyModule::hsv_to_rgb(mp_obj_get_int(args[0]) % MAX_HUE, saturation, value, rgb);
+		PyModule::hsv_to_rgb(mp_obj_get_int(args[0]), saturation, value, rgb);
 	} else if (mp_obj_is_float(args[0])) {
 		PyModule::exp_hsv_to_rgb(mp_obj_get_float(args[0]), saturation, value, rgb);
 	} else {
