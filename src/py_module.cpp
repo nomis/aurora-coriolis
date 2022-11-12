@@ -306,7 +306,7 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		while (out_bytes < max_bytes) {
 			size_t available_bytes = std::min(out_bytes, max_bytes - out_bytes);
 
-			::memcpy(&buffer[out_bytes], &buffer[0], available_bytes);
+			std::memcpy(&buffer[out_bytes], &buffer[0], available_bytes);
 			out_bytes += available_bytes;
 		}
 	}
@@ -320,7 +320,7 @@ inline void PyModule::append_bytes(uint8_t *buffer, OutputType type,
 	auto src = reinterpret_cast<uint8_t *>(bufinfo.buf);
 
 	if (type == OutputType::RGB) {
-		::memcpy(&buffer[out_bytes], &src[offset], bytes);
+		std::memcpy(&buffer[out_bytes], &src[offset], bytes);
 	} else { /* OutputType::HSB */
 		while (bytes > 0) {
 			hsb_to_rgb(src, offset, buffer, out_bytes);

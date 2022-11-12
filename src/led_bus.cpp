@@ -105,9 +105,17 @@ ByteBufferLEDBus::ByteBufferLEDBus(const __FlashStringHelper *name) : LEDBus(nam
 
 void ByteBufferLEDBus::start(const uint8_t *data, size_t size) {
 	const size_t max_bytes = length() * BYTES_PER_LED;
+	const bool reverse_order = reverse();
 
 	size = std::min(max_bytes, size);
-	std::memcpy(&buffer_[0], data, size);
+
+	if (reverse_order) {
+		for (size_t out_bytes = size - BYTES_PER_LED, in_bytes = 0; in_bytes < size;
+				out_bytes -= BYTES_PER_LED, in_bytes += BYTES_PER_LED)
+			std::memcpy(&buffer_[out_bytes], &data[in_bytes], BYTES_PER_LED);
+	} else {
+		std::memcpy(&buffer_[0], data, size);
+	}
 
 	if (size < max_bytes) {
 		/*
@@ -119,7 +127,11 @@ void ByteBufferLEDBus::start(const uint8_t *data, size_t size) {
 		 * information. The original values need to be buffered somewhere and
 		 * that is delegated to the script by not allowing partial writes.
 		 */
-		std::memset(&buffer_[size], 0, max_bytes - size);
+		if (reverse_order) {
+			std::memset(&buffer_[0], 0, max_bytes - size);
+		} else {
+			std::memset(&buffer_[size], 0, max_bytes - size);
+		}
 	}
 
 	pos_ = &buffer_[0];

@@ -49,6 +49,8 @@ public:
 	const __FlashStringHelper *name() const { return name_; }
 	inline size_t length() const { return length_; }
 	inline void length(size_t length) { length_ = std::min(length, MAX_LEDS); }
+	inline bool reverse() const { return reverse_; }
+	inline void reverse(bool reverse) { reverse_ = reverse; }
 
 	inline LEDProfile& profile(enum led_profile_id id) { return profiles_.get(id); }
 	inline const LEDProfile& profile(enum led_profile_id id) const { return profiles_.get(id); }
@@ -73,8 +75,9 @@ private:
 	LEDBus& operator=(const LEDBus&) = delete;
 
 	const __FlashStringHelper *name_;
-	std::atomic<size_t> length_{0};
 	SemaphoreHandle_t semaphore_{nullptr};
+	std::atomic<size_t> length_{0};
+	std::atomic<bool> reverse_{false};
 	std::atomic<bool> busy_{false};
 	uint64_t last_update_us_{0};
 	mutable LEDProfiles profiles_;
