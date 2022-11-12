@@ -63,7 +63,7 @@ int IOBuffer::read(bool wait) {
 	}
 }
 
-int IOBuffer::read(const uint8_t *&buf, bool wait) {
+int IOBuffer::read_available(const uint8_t *&buf, bool wait) {
 	std::unique_lock lock{mutex_};
 	size_t available;
 
@@ -87,7 +87,13 @@ int IOBuffer::read(const uint8_t *&buf, bool wait) {
 	return available;
 }
 
-void IOBuffer::take(size_t count) {
+void IOBuffer::read_consume(size_t count) {
+	if (buf_.size() - read_ > count) {
+		read_ += count;
+	} else {
+		read_ = count - (buf_.size() - read_);
+	}
+
 	std::lock_guard lock{mutex_};
 	take_locked(count);
 }
@@ -100,7 +106,8 @@ size_t IOBuffer::write_available() {
 void IOBuffer::write(int c) {
 	if (c != -1) {
 		push(c);
-		give(1);
+		std::lock_guard lock{mutex_};
+		give_locked(1);
 	}
 }
 
@@ -129,6 +136,11 @@ size_t IOBuffer::write(const uint8_t *buf, size_t count, bool wait) {
 		available = count;
 
 	std::memcpy(&buf_[write_], buf, available);
+	if (buf_.size() - write_ > available) {
+		write_ += available;
+	} else {
+		write_ = available - (buf_.size() - write_);
+	}
 	lock.lock();
 	give_locked(available);
 	return available;
@@ -162,12 +174,6 @@ uint8_t IOBuffer::pop() {
 }
 
 void IOBuffer::take_locked(size_t count) {
-	if (buf_.size() - read_ > count) {
-		read_ += count;
-	} else {
-		read_ = count - (buf_.size() - read_);
-	}
-
 	if (used_ == buf_.size())
 		cv_write_.notify_all();
 	used_ -= count;
@@ -191,18 +197,7 @@ void IOBuffer::push(uint8_t c) {
 	}
 }
 
-void IOBuffer::give(size_t count) {
-	std::lock_guard lock{mutex_};
-	give_locked(count);
-}
-
 void IOBuffer::give_locked(size_t count) {
-	if (buf_.size() - write_ > count) {
-		write_ += count;
-	} else {
-		write_ = count - (buf_.size() - write_);
-	}
-
 	if (used_ == 0)
 		cv_read_.notify_all();
 	used_ += count;

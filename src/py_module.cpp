@@ -22,6 +22,7 @@
 # include <algorithm>
 # include <array>
 # include <cmath>
+# include <cstring>
 
 extern "C" {
 	# include <py/binary.h>

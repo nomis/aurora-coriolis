@@ -18,11 +18,9 @@
 
 #pragma once
 
-#include <atomic>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <mutex>
 #include <vector>
 
@@ -34,8 +32,9 @@ public:
 
 	size_t read_available();
 	int read(bool wait);
-	int read(const uint8_t *&buf, bool wait);
-	void take(size_t count);
+
+	int read_available(const uint8_t *&buf, bool wait);
+	void read_consume(size_t count);
 
 	size_t write_available();
 	void write(int c);
@@ -50,17 +49,16 @@ private:
 
 	size_t write_available_locked();
 	void push(uint8_t c);
-	void give(size_t count);
 	void give_locked(size_t count);
 
 	std::vector<uint8_t> buf_;
 	std::mutex mutex_;
 	std::condition_variable cv_read_;
 	std::condition_variable cv_write_;
-	std::atomic<size_t> read_{0};
-	std::atomic<size_t> write_{0};
-	std::atomic<size_t> used_{0};
-	std::atomic<bool> stop_{false};
+	size_t read_{0};
+	size_t write_{0};
+	size_t used_{0};
+	bool stop_{false};
 };
 
 } // namespace aurcor

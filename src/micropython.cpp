@@ -375,11 +375,11 @@ bool MicroPythonShell::shell_foreground(Shell &shell, bool stop_) {
 	}
 
 	const uint8_t *buf;
-	auto len = stdout_.read(buf, false);
+	auto len = stdout_.read_available(buf, false);
 
 	if (len > 0) {
 		shell.write(buf, len);
-		stdout_.take(len);
+		stdout_.read_consume(len);
 	}
 
 	if (stop_ || (!running() && stdout_.read_available() == 0)) {
