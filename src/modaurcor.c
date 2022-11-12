@@ -22,6 +22,7 @@
 # include <py/runtime.h>
 # include <py/obj.h>
 # include <py/qstr.h>
+# include <extmod/utime_mphal.h>
 #endif
 
 #include "aurcor/constants.h"
@@ -60,6 +61,11 @@ STATIC const mp_rom_map_elem_t aurcor_module_globals_table[] = {
 
 	{ MP_ROM_QSTR(MP_QSTR_version),           MP_ROM_PTR(&aurcor_version_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_profiles),          MP_ROM_PTR(&aurcor_profiles_module) },
+
+	{ MP_ROM_QSTR(MP_QSTR_ticks_ms),          MP_ROM_PTR(&mp_utime_ticks_ms_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_ticks_us),          MP_ROM_PTR(&mp_utime_ticks_us_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_time),              MP_ROM_PTR(&mp_utime_time_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_timens),            MP_ROM_PTR(&mp_utime_time_ns_obj) },
 
 	{ MP_ROM_QSTR(MP_QSTR_output_rgb),        MP_ROM_PTR(&aurcor_output_rgb_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_output_hsb),        MP_ROM_PTR(&aurcor_output_hsb_obj) },
