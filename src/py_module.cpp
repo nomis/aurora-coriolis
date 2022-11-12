@@ -187,8 +187,8 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 	if (byte_array) {
 		in_bytes = std::min(in_bytes, bufinfo.len);
 
-		if (type == OutputType::HSL)
-			mp_raise_ValueError(MP_ERROR_TEXT("can't use byte array for HSL values"));
+		if (type != OutputType::RGB)
+			mp_raise_ValueError(MP_ERROR_TEXT("can only use byte array for RGB values"));
 	}
 
 	if (parsed_args[ARG_length].u_obj != MP_OBJ_NULL) {
