@@ -33,6 +33,7 @@ extern "C" {
 # include <uuid/log.h>
 
 # include "aurcor/micropython.h"
+# include "aurcor/util.h"
 #endif
 
 using aurcor::MicroPython;

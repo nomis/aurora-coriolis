@@ -23,7 +23,15 @@
 
 extern "C" {
 	#include <py/mpconfig.h>
+	#include <py/objtuple.h>
 }
+
+#define TUPLE_FIXED0(tuple, alloc) \
+	struct { \
+		mp_obj_base_t base; \
+		size_t len; \
+		mp_obj_t items[alloc]; \
+	} tuple = { &mp_type_tuple, 0, { 0 } }
 
 namespace aurcor {
 
