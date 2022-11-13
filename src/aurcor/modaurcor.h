@@ -53,6 +53,15 @@ MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_hsv_obj);
 mp_obj_t aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj);
 
+mp_obj_t aurcor_time(void);
+MP_DECLARE_CONST_FUN_OBJ_0(aurcor_time_obj);
+
+mp_obj_t aurcor_time_ms(void);
+MP_DECLARE_CONST_FUN_OBJ_0(aurcor_time_ms_obj);
+
+mp_obj_t aurcor_time_us(void);
+MP_DECLARE_CONST_FUN_OBJ_0(aurcor_time_us_obj);
+
 #ifdef __cplusplus
 } // extern "C"
 

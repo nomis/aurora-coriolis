@@ -120,3 +120,10 @@ extern void mp_hal_end_atomic_section(void);
 
 #define MICROPY_BEGIN_ATOMIC_SECTION() mp_hal_begin_atomic_section()
 #define MICROPY_END_ATOMIC_SECTION(state) mp_hal_end_atomic_section()
+
+// Seconds since the Epoch.
+int32_t mp_hal_time_s(void);
+// Milliseconds since the Epoch.
+int64_t mp_hal_time_ms(void);
+// Microseconds since the Epoch.
+int64_t mp_hal_time_us(void);

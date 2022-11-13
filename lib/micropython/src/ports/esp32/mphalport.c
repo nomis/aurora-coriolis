@@ -149,6 +149,30 @@ int32_t mp_hal_time_s(void) {
     return seconds;
 }
 
+int64_t mp_hal_time_ms(void) {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    int32_t seconds = tv.tv_sec;
+    #if !MICROPY_EPOCH_IS_1970
+    seconds = (uint32_t)seconds - TIMEUTILS_SECONDS_1970_TO_2000;
+    #endif
+    int64_t ms = seconds * 1000LL;
+    ms += tv.tv_usec / 1000LL;
+    return ms;
+}
+
+int64_t mp_hal_time_us(void) {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    int32_t seconds = tv.tv_sec;
+    #if !MICROPY_EPOCH_IS_1970
+    seconds = (uint32_t)seconds - TIMEUTILS_SECONDS_1970_TO_2000;
+    #endif
+    int64_t us = seconds * 1000000LL;
+    us += tv.tv_usec;
+    return us;
+}
+
 int64_t mp_hal_time_ns(void) {
     struct timeval tv;
     gettimeofday(&tv, NULL);

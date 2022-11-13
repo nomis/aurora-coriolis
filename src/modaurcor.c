@@ -57,6 +57,24 @@ MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_rgb_obj, 1, aurcor_output_rgb);
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_hsv_obj, 1, aurcor_output_hsv);
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj, 0, aurcor_output_defaults);
 
+// Returns the number of milliseconds since the Epoch, as an integer.
+mp_obj_t aurcor_time(void) {
+	return mp_obj_new_int(mp_hal_time_s());
+}
+MP_DEFINE_CONST_FUN_OBJ_0(aurcor_time_obj, aurcor_time);
+
+// Returns the number of milliseconds since the Epoch, as an integer.
+mp_obj_t aurcor_time_ms(void) {
+	return mp_obj_new_int_from_ll(mp_hal_time_ms());
+}
+MP_DEFINE_CONST_FUN_OBJ_0(aurcor_time_ms_obj, aurcor_time_ms);
+
+// Returns the number of microseconds since the Epoch, as an integer.
+mp_obj_t aurcor_time_us(void) {
+	return mp_obj_new_int_from_ll(mp_hal_time_us());
+}
+MP_DEFINE_CONST_FUN_OBJ_0(aurcor_time_us_obj, aurcor_time_us);
+
 STATIC const mp_rom_map_elem_t aurcor_module_globals_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR___name__),          MP_ROM_QSTR(MP_QSTR_aurcor) },
 
@@ -65,10 +83,13 @@ STATIC const mp_rom_map_elem_t aurcor_module_globals_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR_version),           MP_ROM_PTR(&aurcor_version_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_profiles),          MP_ROM_PTR(&aurcor_profiles_module) },
 
-	{ MP_ROM_QSTR(MP_QSTR_ticks_ms),          MP_ROM_PTR(&mp_utime_ticks_ms_obj) },
-	{ MP_ROM_QSTR(MP_QSTR_ticks_us),          MP_ROM_PTR(&mp_utime_ticks_us_obj) },
-	{ MP_ROM_QSTR(MP_QSTR_time),              MP_ROM_PTR(&mp_utime_time_obj) },
-	{ MP_ROM_QSTR(MP_QSTR_timens),            MP_ROM_PTR(&mp_utime_time_ns_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_ticks32_add),       MP_ROM_PTR(&mp_utime_ticks_add_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_ticks32_diff),      MP_ROM_PTR(&mp_utime_ticks_diff_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_ticks32_ms),        MP_ROM_PTR(&mp_utime_ticks_ms_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_ticks64_us),        MP_ROM_PTR(&mp_utime_ticks_us_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_time),              MP_ROM_PTR(&aurcor_time_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_time_ms),           MP_ROM_PTR(&aurcor_time_ms_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_time_us),           MP_ROM_PTR(&aurcor_time_us_obj) },
 
 	{ MP_ROM_QSTR(MP_QSTR_hsv_to_rgb_buffer), MP_ROM_PTR(&aurcor_hsv_to_rgb_buffer_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_hsv_to_rgb_int),    MP_ROM_PTR(&aurcor_hsv_to_rgb_int_obj) },
