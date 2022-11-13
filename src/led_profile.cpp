@@ -37,6 +37,7 @@
 #endif
 
 using app::FS;
+using uuid::log::Level;
 
 static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "led-profile";
 
@@ -84,7 +85,7 @@ void LEDProfile::print(uuid::console::Shell &shell, size_t limit) const {
 	}
 }
 
-void LEDProfile::transform(char *data, size_t size) const {
+void LEDProfile::transform(uint8_t *data, size_t size) const {
 	std::shared_lock data_lock{data_mutex_};
 	index_t index = 0;
 	Ratio ratio = DEFAULT_RATIO;
@@ -289,11 +290,12 @@ std::string LEDProfile::make_filename(const __FlashStringHelper *bus_name,
 }
 
 LEDProfile::Result LEDProfile::load(const __FlashStringHelper *bus_name,
-		const __FlashStringHelper *profile_name) {
+		const __FlashStringHelper *profile_name, bool automatic) {
 	auto filename = make_filename(bus_name, profile_name);
 	std::unique_lock data_lock{data_mutex_};
 
-	logger_.notice(F("Reading profile from file %s"), filename.c_str());
+	logger_.log(automatic ? Level::DEBUG : Level::NOTICE,
+		F("Reading profile from file %s"), filename.c_str());
 
 	const char mode[2] = {'r', '\0'};
 	auto file = FS.open(filename.c_str(), mode);
@@ -323,7 +325,8 @@ LEDProfile::Result LEDProfile::load(const __FlashStringHelper *bus_name,
 			return result;
 		}
 	} else {
-		logger_.err(F("Unable to open profile file %s for reading"), filename.c_str());
+		logger_.log(automatic ? Level::DEBUG : Level::ERR,
+			F("Unable to open profile file %s for reading"), filename.c_str());
 		return Result::IO_ERROR;
 	}
 }

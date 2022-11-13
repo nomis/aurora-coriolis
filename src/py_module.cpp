@@ -371,6 +371,8 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		}
 	}
 
+	bus_->profile(profile).transform(buffer, out_bytes);
+
 	bus_->write(buffer, out_bytes);
 
 	return MP_ROM_NONE;

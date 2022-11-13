@@ -82,7 +82,7 @@ LEDProfile::Result LEDProfiles::auto_load(enum led_profile_id id, bool reload) {
 		lock.unlock();
 	}
 
-	return profiles_[profile].load(bus_name_, FPSTR(names_[profile]));
+	return profiles_[profile].load(bus_name_, FPSTR(names_[profile]), !reload);
 }
 
 } // namespace aurcor

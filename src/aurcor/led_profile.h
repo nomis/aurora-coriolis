@@ -60,7 +60,7 @@ public:
 	~LEDProfile() = default;
 
 	void print(uuid::console::Shell &shell, size_t limit = MAX_LEDS) const;
-	void transform(char *data, size_t size) const;
+	void transform(uint8_t *data, size_t size) const;
 
 	std::vector<int> indexes() const;
 	Result get(int index, uint8_t &r, uint8_t &g, uint8_t &b) const;
@@ -80,7 +80,7 @@ public:
 
 protected:
 	Result load(const __FlashStringHelper *bus_name,
-		const __FlashStringHelper *profile_name);
+		const __FlashStringHelper *profile_name, bool automatic);
 	Result save(const __FlashStringHelper *bus_name,
 		const __FlashStringHelper *profile_name);
 
