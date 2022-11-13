@@ -89,9 +89,9 @@ private:
 	static_assert(TX_FIFO_MIN_SPACE >= TX_WORDS_PER_BYTE,
 		"Must be enough space for at least one byte of data when the interrupt is raised");
 
-	static constexpr uint64_t TX_FIFO_MAX_US = 1000000 /
+	static constexpr size_t TX_FIFO_MAX_US = 1000000 /
 		(BAUD_RATE / (TX_FIFO_SIZE * (TX_START_BITS + TX_BITS_PER_WORD + TX_STOP_BITS)));
-	static constexpr uint64_t TX_BYTE_US = 1000000 /
+	static constexpr size_t TX_BYTE_US = 1000000 /
 		(BAUD_RATE / (TX_WORDS_PER_BYTE * (TX_START_BITS + TX_BITS_PER_WORD + TX_STOP_BITS)));
 
 	static_assert(ledbus::UARTPatternTable::WORDS_PER_BYTE == TX_WORDS_PER_BYTE,
@@ -104,7 +104,7 @@ private:
 	const uintptr_t uart_fifo_reg_;
 	const uintptr_t uart_status_reg_;
 	uint64_t next_tx_start_us_{0};
-	uint32_t next_tx_delay_us_{0};
+	size_t next_tx_delay_us_{0};
 	intr_handle_t interrupt_;
 	bool ok_;
 };

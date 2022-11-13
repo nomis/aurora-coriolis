@@ -40,7 +40,7 @@ public:
 	static constexpr size_t BYTES_PER_LED = 3;
 	static constexpr size_t MAX_BYTES = MAX_LEDS * BYTES_PER_LED;
 	static constexpr unsigned long UPDATE_RATE_HZ = 800000;
-	static constexpr uint64_t RESET_TIME_US = 280;
+	static constexpr size_t RESET_TIME_US = 280;
 	static constexpr TickType_t SEMAPHORE_TIMEOUT_TICKS = 30 * 1000 * portTICK_PERIOD_MS;
 
 	LEDBus(const __FlashStringHelper *name);

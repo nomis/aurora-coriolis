@@ -374,7 +374,7 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 	bus_->profile(profile).transform(buffer, out_bytes);
 
 	if (wait_us) {
-		uint64_t start_us = bus_->last_update_us() + wait_us;
+		uint64_t start_us = bus_->last_update_us() + wait_us - TIMING_DELAY_US;
 		uint64_t now_us = current_time_us();
 
 		if (start_us > now_us)

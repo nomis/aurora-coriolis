@@ -140,12 +140,13 @@ public:
 	mp_obj_t output_leds(OutputType type, size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 
 private:
+	static constexpr size_t TIMING_DELAY_US = 10;
 	static constexpr enum led_profile_id DEFAULT_PROFILE = LED_PROFILE_NORMAL;
 	static constexpr mp_int_t MIN_WAIT_MS = 10;
 	static constexpr mp_int_t MAX_WAIT_MS = 1000;
 	static constexpr mp_int_t MIN_FPS = 1000 / MAX_WAIT_MS;
 	static constexpr mp_int_t MAX_FPS = 1000 / MIN_WAIT_MS;
-	static constexpr uint32_t DEFAULT_WAIT_US = 0;
+	static constexpr size_t DEFAULT_WAIT_US = 0;
 	static constexpr bool DEFAULT_REPEAT = false;
 	static constexpr bool DEFAULT_REVERSE = false;
 	static constexpr bool DEFAULT_EXP_HUE = false;
@@ -172,7 +173,7 @@ private:
 	MemoryBlock *led_buffer_;
 	std::shared_ptr<LEDBus> bus_;
 	enum led_profile_id profile_{DEFAULT_PROFILE};
-	uint32_t wait_us_{0};
+	size_t wait_us_{0};
 	bool repeat_{DEFAULT_REPEAT};
 	bool reverse_{DEFAULT_REVERSE};
 	bool exp_hue_{DEFAULT_EXP_HUE};

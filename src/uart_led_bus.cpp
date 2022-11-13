@@ -107,7 +107,7 @@ void UARTLEDBus::transmit() {
 	}
 
 	if (ok_) {
-		next_tx_delay_us_ = RESET_TIME_US + std::min(TX_FIFO_MAX_US, TX_BYTE_US * bytes_) + 1;
+		next_tx_delay_us_ = RESET_TIME_US + std::min(TX_FIFO_MAX_US, TX_BYTE_US * bytes_) + 1U;
 		uart_ll_ena_intr_mask(&hw_, UART_INTR_TXFIFO_EMPTY);
 	} else {
 		bytes_ = 0;
