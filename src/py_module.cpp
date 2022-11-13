@@ -101,7 +101,7 @@ PyModule::PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus)
 }
 
 inline PyModule& PyModule::current() {
-	return aurcor::MicroPython::current().modaurcor_;
+	return MicroPython::current().modaurcor_;
 }
 
 mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {

@@ -106,8 +106,6 @@ void UARTLEDBus::transmit() {
 		asm volatile ("nop");
 	}
 
-	last_update_us_ = now;
-
 	if (ok_) {
 		next_tx_delay_us_ = RESET_TIME_US + std::min(TX_FIFO_MAX_US, TX_BYTE_US * bytes_) + 1;
 		uart_ll_ena_intr_mask(&hw_, UART_INTR_TXFIFO_EMPTY);

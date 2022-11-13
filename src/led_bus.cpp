@@ -71,6 +71,7 @@ void LEDBus::write(const uint8_t *data, size_t size) {
 	}
 
 	busy_ = true;
+	last_update_us_ = current_time_us();
 
 	start(data, size);
 }
@@ -94,7 +95,6 @@ NullLEDBus::NullLEDBus(const __FlashStringHelper *name) : LEDBus(name) {
 }
 
 void NullLEDBus::start(const uint8_t *data, size_t length) {
-	last_update_us_ = current_time_us();
 	finish();
 }
 

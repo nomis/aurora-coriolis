@@ -61,8 +61,6 @@ public:
 	bool ready() const;
 	void write(const uint8_t *data, size_t size); /* data is in RGB order */
 
-	uint64_t last_update_us_{0};
-
 protected:
 	virtual void start(const uint8_t *data, size_t size) = 0;
 	void finish();
@@ -81,6 +79,7 @@ private:
 	std::atomic<size_t> length_{0};
 	std::atomic<bool> reverse_{false};
 	std::atomic<bool> busy_{false};
+	uint64_t last_update_us_{0};
 	mutable LEDProfiles profiles_;
 };
 
