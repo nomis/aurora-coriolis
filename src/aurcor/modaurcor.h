@@ -36,23 +36,30 @@ typedef struct {
 extern const aurcor_version_t aurcor_version_obj;
 
 mp_obj_t aurcor_hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args);
-MP_DECLARE_CONST_FUN_OBJ_VAR(aurcor_hsv_to_rgb_buffer_obj);
+MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_hsv_to_rgb_buffer_obj);
 
 mp_obj_t aurcor_hsv_to_rgb_int(size_t n_args, const mp_obj_t *args);
-MP_DECLARE_CONST_FUN_OBJ_VAR(aurcor_hsv_to_rgb_int_obj);
+MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_hsv_to_rgb_int_obj);
 
 mp_obj_t aurcor_hsv_to_rgb_tuple(size_t n_args, const mp_obj_t *args);
-MP_DECLARE_CONST_FUN_OBJ_VAR(aurcor_hsv_to_rgb_tuple_obj);
+MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_hsv_to_rgb_tuple_obj);
 
 
 mp_obj_t aurcor_exp_hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args);
-MP_DECLARE_CONST_FUN_OBJ_VAR(aurcor_exp_hsv_to_rgb_buffer_obj);
+MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_exp_hsv_to_rgb_buffer_obj);
 
 mp_obj_t aurcor_exp_hsv_to_rgb_int(size_t n_args, const mp_obj_t *args);
-MP_DECLARE_CONST_FUN_OBJ_VAR(aurcor_exp_hsv_to_rgb_int_obj);
+MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_exp_hsv_to_rgb_int_obj);
 
 mp_obj_t aurcor_exp_hsv_to_rgb_tuple(size_t n_args, const mp_obj_t *args);
-MP_DECLARE_CONST_FUN_OBJ_VAR(aurcor_exp_hsv_to_rgb_tuple_obj);
+MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_exp_hsv_to_rgb_tuple_obj);
+
+
+mp_obj_t aurcor_rgb_to_hsv_tuple(size_t n_args, const mp_obj_t *args);
+MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_rgb_to_hsv_tuple_obj);
+
+mp_obj_t aurcor_rgb_to_exp_hsv_tuple(size_t n_args, const mp_obj_t *args);
+MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_rgb_to_exp_hsv_tuple_obj);
 
 
 mp_obj_t aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
@@ -83,6 +90,7 @@ MP_DECLARE_CONST_FUN_OBJ_0(aurcor_time_us_obj);
 # include "led_bus.h"
 # include "led_profiles.h"
 
+# include <array>
 # include <memory>
 #endif
 
@@ -114,13 +122,18 @@ public:
 		return false;
 	}
 
-	static void hsv_to_rgb(mp_int_t hue360, mp_int_t saturation, mp_int_t value, uint8_t *rgb);
-	static void exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation, mp_int_t value, uint8_t *rgb);
+	static void hsv_to_rgb(mp_int_t hue360, mp_int_t saturation, mp_int_t value, std::array<uint8_t,3> &rgb);
+	static void exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation, mp_int_t value, std::array<uint8_t,3> &rgb);
 
-	static void hsv_to_rgb(size_t n_args, const mp_obj_t *args, bool exp, uint8_t *rgb);
-	static mp_obj_t hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args, bool exp);
+	static void hsv_to_rgb(size_t n_args, const mp_obj_t *args, bool exp, std::array<uint8_t,3> &rgb);
+	static void hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args, bool exp);
 	static mp_obj_t hsv_to_rgb_int(size_t n_args, const mp_obj_t *args, bool exp);
 	static mp_obj_t hsv_to_rgb_tuple(size_t n_args, const mp_obj_t *args, bool exp);
+
+	static void rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3> &hsv);
+	static void rgb_to_exp_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3> &hsv);
+
+	static mp_obj_t rgb_to_hsv_tuple(size_t n_args, const mp_obj_t *args, bool exp);
 
 	PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus);
 

@@ -45,11 +45,13 @@ using aurcor::micropython::PyModule;
 extern "C" {
 
 mp_obj_t aurcor_hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args) {
-	return PyModule::hsv_to_rgb_buffer(n_args, args, false);
+	PyModule::hsv_to_rgb_buffer(n_args, args, false);
+	return MP_ROM_NONE;
 }
 
 mp_obj_t aurcor_exp_hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args) {
-	return PyModule::hsv_to_rgb_buffer(n_args, args, true);
+	PyModule::hsv_to_rgb_buffer(n_args, args, true);
+	return MP_ROM_NONE;
 }
 
 mp_obj_t aurcor_hsv_to_rgb_int(size_t n_args, const mp_obj_t *args) {
@@ -66,6 +68,14 @@ mp_obj_t aurcor_hsv_to_rgb_tuple(size_t n_args, const mp_obj_t *args) {
 
 mp_obj_t aurcor_exp_hsv_to_rgb_tuple(size_t n_args, const mp_obj_t *args) {
 	return PyModule::hsv_to_rgb_tuple(n_args, args, true);
+}
+
+mp_obj_t aurcor_rgb_to_hsv_tuple(size_t n_args, const mp_obj_t *args) {
+	return PyModule::rgb_to_hsv_tuple(n_args, args, false);
+}
+
+mp_obj_t aurcor_rgb_to_exp_hsv_tuple(size_t n_args, const mp_obj_t *args) {
+	return PyModule::rgb_to_hsv_tuple(n_args, args, true);
 }
 
 mp_obj_t aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
@@ -370,7 +380,8 @@ void PyModule::append_led(uint8_t *buffer, OutputType type, mp_obj_t item, size_
 	// TODO parse item
 }
 
-void PyModule::hsv_to_rgb(mp_int_t hue360, mp_int_t saturation, mp_int_t value, uint8_t *rgb) {
+void PyModule::hsv_to_rgb(mp_int_t hue360, mp_int_t saturation, mp_int_t value,
+		std::array<uint8_t,3> &rgb) {
 	mp_float_t hi;
 	mp_float_t hf = std::modf(hue360 / (mp_float_t)60.0, &hi);
 	mp_float_t s = saturation / (mp_float_t)MAX_SATURATION;
@@ -385,7 +396,8 @@ void PyModule::hsv_to_rgb(mp_int_t hue360, mp_int_t saturation, mp_int_t value, 
 	rgb[t] = int_to_u8(std::lround((k & 1) ? v : v * (1 - s * (1 - hf))));
 }
 
-void PyModule::exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation, mp_int_t value, uint8_t *rgb) {
+inline void PyModule::exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation,
+		mp_int_t value, std::array<uint8_t,3> &rgb) {
 	mp_int_t hue360;
 
 	if (expanded_hue < EXPANDED_HUE_LEFT_RANGE) {
@@ -397,7 +409,8 @@ void PyModule::exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation, mp_int
 	hsv_to_rgb(hue360, saturation, value, rgb);
 }
 
-void PyModule::hsv_to_rgb(size_t n_args, const mp_obj_t *args, bool exp, uint8_t *rgb) {
+void PyModule::hsv_to_rgb(size_t n_args, const mp_obj_t *args, bool exp,
+		std::array<uint8_t,3> &rgb) {
 	mp_int_t hue = mp_obj_get_int(args[0]);
 	mp_int_t saturation = MAX_SATURATION;
 	mp_int_t value = MAX_VALUE;
@@ -418,7 +431,7 @@ void PyModule::hsv_to_rgb(size_t n_args, const mp_obj_t *args, bool exp, uint8_t
 	}
 }
 
-mp_obj_t PyModule::hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args, bool exp) {
+void PyModule::hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args, bool exp) {
 	enum { ARG_buffer, ARG_offset };
 	mp_buffer_info_t bufinfo;
 	size_t offset;
@@ -442,31 +455,117 @@ mp_obj_t PyModule::hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args, bool e
 	if (bufinfo.len - offset < BYTES_PER_LED)
 		mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("buffer index out of range"));
 
-	hsv_to_rgb(n_args - 2, &args[2], exp, &reinterpret_cast<uint8_t *>(bufinfo.buf)[offset]);
-
-	return MP_ROM_NONE;
+	hsv_to_rgb(n_args - 2, &args[2], exp, *reinterpret_cast<std::array<uint8_t,3>*>(
+		&reinterpret_cast<uint8_t*>(bufinfo.buf)[offset]));
 }
 
 mp_obj_t PyModule::hsv_to_rgb_int(size_t n_args, const mp_obj_t *args, bool exp) {
-	std::array<uint8_t,BYTES_PER_LED> rgb_bytes;
+	std::array<uint8_t,3> rgb_bytes;
 
-	hsv_to_rgb(n_args, args, exp, rgb_bytes.data());
+	hsv_to_rgb(n_args, args, exp, rgb_bytes);
 
 	static_assert(MP_SMALL_INT_FITS(0xFFFFFF), "small int overflow");
 	return MP_OBJ_NEW_SMALL_INT((rgb_bytes[0] << 16) | (rgb_bytes[1] << 8) | rgb_bytes[2]);
 }
 
 mp_obj_t PyModule::hsv_to_rgb_tuple(size_t n_args, const mp_obj_t *args, bool exp) {
-	std::array<uint8_t,BYTES_PER_LED> rgb_bytes;
-	std::array<mp_obj_t,BYTES_PER_LED> rgb_tuple;
+	std::array<uint8_t,3> rgb_bytes;
+	mp_obj_tuple_t *tuple = reinterpret_cast<mp_obj_tuple_t *>(mp_obj_new_tuple(rgb_bytes.size(), nullptr));
 
-	hsv_to_rgb(n_args, args, exp, rgb_bytes.data());
+	hsv_to_rgb(n_args, args, exp, rgb_bytes);
 
-	rgb_tuple[0] = MP_OBJ_NEW_SMALL_INT(rgb_bytes[0]);
-	rgb_tuple[1] = MP_OBJ_NEW_SMALL_INT(rgb_bytes[1]);
-	rgb_tuple[2] = MP_OBJ_NEW_SMALL_INT(rgb_bytes[2]);
+	for (size_t i = 0; i < rgb_bytes.size(); i++)
+		tuple->items[i] = MP_OBJ_NEW_SMALL_INT(rgb_bytes[i]);
 
-	return mp_obj_new_tuple(rgb_tuple.size(), rgb_tuple.data());
+	return tuple;
+}
+
+void PyModule::rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3> &hsv) {
+	enum { HSV_hue, HSV_saturation, HSV_value };
+	uint8_t max = r;
+
+	if (g > max) max = g;
+	if (b > max) max = b;
+
+	if (max == 0) {
+		hsv[HSV_value] = 0;
+		hsv[HSV_saturation] = 0;
+		hsv[HSV_hue] = 0;
+		return;
+	}
+
+	hsv[HSV_value] = std::lround(max * ((mp_float_t)MAX_VALUE / (mp_float_t)UINT8_MAX));
+
+	uint8_t min = r;
+
+	if (g < min) min = g;
+	if (b < min) min = b;
+
+	uint8_t c = max - min;
+
+	if (c == 0) {
+		hsv[HSV_saturation] = 0;
+		hsv[HSV_hue] = 0;
+		return;
+	}
+
+	hsv[HSV_saturation] = std::lround((c * MAX_VALUE) / (mp_float_t)max);
+
+	mp_int_t h1;
+	mp_int_t h2;
+
+	if (r == max) {
+		h1 = (b == min) ? 0 : 360;
+		h2 = g - b;
+	} else if (g == max) {
+		h1 = 120;
+		h2 = b - r;
+	} else {
+		h1 = 240;
+		h2 = r - g;
+	}
+
+	hsv[HSV_hue] = std::lround(h1 + (60 * h2) / (mp_float_t)c);
+}
+
+inline void PyModule::rgb_to_exp_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3> &hsv) {
+	rgb_to_hsv(r, g, b, hsv);
+
+	if (hsv[0] < EXPANDED_HUE_SIZE) {
+		hsv[0] *= EXPANDED_HUE_TIMES;
+	} else {
+		hsv[0] += EXPANDED_HUE_RIGHT_OFFSET;
+	}
+}
+
+mp_obj_t PyModule::rgb_to_hsv_tuple(size_t n_args, const mp_obj_t *args, bool exp) {
+	uint8_t r, g, b;
+	std::array<mp_int_t,3> hsv;
+	mp_obj_tuple_t *tuple = reinterpret_cast<mp_obj_tuple_t *>(mp_obj_new_tuple(hsv.size(), nullptr));
+
+	if (n_args == 1) {
+		mp_int_t value = mp_obj_get_int(args[0]);
+		r = (value >> 16) & 0xFF;
+		g = (value >> 8) & 0xFF;
+		b = value & 0xFF;
+	} else if (n_args == 3) {
+		r = int_to_u8(mp_obj_get_int(args[0]));
+		g = int_to_u8(mp_obj_get_int(args[1]));
+		b = int_to_u8(mp_obj_get_int(args[2]));
+	} else {
+		mp_raise_TypeError(MP_ERROR_TEXT("must provide 1 combined int or 3 separate r/g/b ints"));
+	}
+
+	if (exp) {
+		PyModule::rgb_to_exp_hsv(r, g, b, hsv);
+	} else {
+		PyModule::rgb_to_hsv(r, g, b, hsv);
+	}
+
+	for (size_t i = 0; i < hsv.size(); i++)
+		tuple->items[i] = MP_OBJ_NEW_SMALL_INT(hsv[i]);
+
+	return tuple;
 }
 
 } // namespace micropython

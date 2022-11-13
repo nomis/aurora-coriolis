@@ -58,6 +58,9 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_exp_hsv_to_rgb_buffer_obj, 3, 5, aurc
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_exp_hsv_to_rgb_int_obj, 1, 3, aurcor_exp_hsv_to_rgb_int);
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_exp_hsv_to_rgb_tuple_obj, 1, 3, aurcor_exp_hsv_to_rgb_tuple);
 
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_rgb_to_hsv_tuple_obj, 1, 3, aurcor_rgb_to_hsv_tuple);
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_rgb_to_exp_hsv_tuple_obj, 1, 3, aurcor_rgb_to_exp_hsv_tuple);
+
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_rgb_obj, 1, aurcor_output_rgb);
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_hsv_obj, 1, aurcor_output_hsv);
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj, 0, aurcor_output_defaults);
@@ -106,6 +109,8 @@ STATIC const mp_rom_map_elem_t aurcor_module_globals_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR_exp_hsv_to_rgb_buffer), MP_ROM_PTR(&aurcor_exp_hsv_to_rgb_buffer_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_exp_hsv_to_rgb_int),    MP_ROM_PTR(&aurcor_exp_hsv_to_rgb_int_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_exp_hsv_to_rgb_tuple),  MP_ROM_PTR(&aurcor_exp_hsv_to_rgb_tuple_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_rgb_to_hsv_tuple),      MP_ROM_PTR(&aurcor_rgb_to_hsv_tuple_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_rgb_to_exp_hsv_tuple),  MP_ROM_PTR(&aurcor_rgb_to_exp_hsv_tuple_obj) },
 
 	{ MP_ROM_QSTR(MP_QSTR_output_rgb),        MP_ROM_PTR(&aurcor_output_rgb_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_output_hsv),        MP_ROM_PTR(&aurcor_output_hsv_obj) },
