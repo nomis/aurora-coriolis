@@ -2,3 +2,4 @@
 /pio_local.ini
 /*.sublime-*
 /data/
+/coverage/

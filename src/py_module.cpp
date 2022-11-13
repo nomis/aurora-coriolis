@@ -39,6 +39,12 @@ extern "C" {
 # include "aurcor/util.h"
 #endif
 
+#ifdef ENV_NATIVE
+# define INLINE
+#else
+# define INLINE inline
+#endif
+
 using aurcor::MicroPython;
 using aurcor::micropython::PyModule;
 
@@ -406,7 +412,7 @@ void PyModule::hsv_to_rgb(mp_int_t hue360, mp_int_t saturation, mp_int_t value,
 	rgb[t] = int_to_u8(std::lround((k & 1) ? v : v * (1 - s * (1 - hf))));
 }
 
-inline void PyModule::exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation,
+INLINE void PyModule::exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation,
 		mp_int_t value, std::array<uint8_t,3> &rgb) {
 	mp_int_t hue360;
 
@@ -538,7 +544,7 @@ void PyModule::rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3
 	hsv[HSV_hue] = std::lround(h1 + (60 * h2) / (mp_float_t)c);
 }
 
-inline void PyModule::rgb_to_exp_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3> &hsv) {
+INLINE void PyModule::rgb_to_exp_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3> &hsv) {
 	rgb_to_hsv(r, g, b, hsv);
 
 	if (hsv[0] < EXPANDED_HUE_SIZE) {

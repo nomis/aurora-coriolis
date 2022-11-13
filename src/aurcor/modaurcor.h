@@ -103,6 +103,10 @@ namespace micropython {
 class PyModule {
 public:
 	static constexpr size_t BYTES_PER_LED = LEDBus::BYTES_PER_LED;
+	static constexpr mp_int_t HUE_RANGE = AURCOR_HUE_RANGE;
+	static constexpr mp_int_t MAX_SATURATION = AURCOR_MAX_SATURATION;
+	static constexpr mp_int_t MAX_VALUE = AURCOR_MAX_VALUE;
+	static constexpr mp_int_t EXPANDED_HUE_RANGE = AURCOR_EXP_HUE_RANGE;
 
 	enum class OutputType {
 		RGB,
@@ -151,11 +155,6 @@ private:
 	static constexpr bool DEFAULT_REVERSE = false;
 	static constexpr bool DEFAULT_EXP_HUE = false;
 
-	static constexpr mp_int_t HUE_RANGE = AURCOR_HUE_RANGE;
-	static constexpr mp_int_t MAX_SATURATION = AURCOR_MAX_SATURATION;
-	static constexpr mp_int_t MAX_VALUE = AURCOR_MAX_VALUE;
-
-	static constexpr mp_int_t EXPANDED_HUE_RANGE = AURCOR_EXP_HUE_RANGE;
 	static constexpr mp_int_t EXPANDED_HUE_TIMES = AURCOR_EXP_HUE_TIMES;
 	static constexpr mp_int_t EXPANDED_HUE_SIZE = AURCOR_EXP_HUE_SIZE;
 	static constexpr mp_int_t EXPANDED_HUE_LEFT_RANGE = EXPANDED_HUE_SIZE * EXPANDED_HUE_TIMES;
