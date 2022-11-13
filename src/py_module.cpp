@@ -385,8 +385,8 @@ void PyModule::hsv_to_rgb(mp_int_t hue360, mp_float_t saturation, mp_float_t val
 	mp_float_t v = float_0to1(value) * 255;
 	int_fast8_t k = (hue360 / 60) % 6;
 	int_fast8_t q = k >> 1;
-	int_fast8_t p = (0b010010 >> (k & 0b110)) & 0b11;
-	int_fast8_t t = (0b001001 >> (k & 0b110)) & 0b11;
+	int_fast8_t p = (0b010010 >> (q << 1)) & 0b11;
+	int_fast8_t t = (0b001001 >> (q << 1)) & 0b11;
 
 	rgb[p] = int_to_u8(std::lround(v * (1 - s)));
 	rgb[q] = int_to_u8(std::lround((k & 1) ? v * (1 - s * hf) : v));
