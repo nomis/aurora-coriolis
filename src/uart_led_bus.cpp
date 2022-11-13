@@ -30,6 +30,8 @@
 
 #include <array>
 
+#include "aurcor/util.h"
+
 namespace aurcor {
 
 namespace ledbus {
@@ -98,9 +100,13 @@ UARTLEDBus::~UARTLEDBus() {
 }
 
 void UARTLEDBus::transmit() {
-	while ((uint64_t)esp_timer_get_time() < next_tx_start_us_) {
+	uint64_t now;
+
+	while ((now = current_time_us()) < next_tx_start_us_) {
 		asm volatile ("nop");
 	}
+
+	last_update_us_ = now;
 
 	if (ok_) {
 		next_tx_delay_us_ = RESET_TIME_US + std::min(TX_FIFO_MAX_US, TX_BYTE_US * bytes_) + 1;
@@ -139,7 +145,7 @@ IRAM_ATTR void UARTLEDBus::interrupt_handler(void *arg) {
 	}
 
 	if (bytes == 0) {
-		self->next_tx_start_us_ = esp_timer_get_time() + self->next_tx_delay_us_;
+		self->next_tx_start_us_ = current_time_us() + self->next_tx_delay_us_;
 		uart_ll_disable_intr_mask(&self->hw_, UART_INTR_TXFIFO_EMPTY);
 		self->finish_isr();
 	} else {

@@ -28,6 +28,8 @@
 
 #include <uuid/log.h>
 
+#include "aurcor/util.h"
+
 #ifndef PSTR_ALIGN
 # define PSTR_ALIGN 4
 #endif
@@ -55,10 +57,6 @@ LEDBus::~LEDBus() {
 	}
 }
 
-uint64_t LEDBus::last_update_us() const {
-	return last_update_us_;
-}
-
 bool LEDBus::ready() const {
 	return !busy_;
 }
@@ -73,7 +71,6 @@ void LEDBus::write(const uint8_t *data, size_t size) {
 	}
 
 	busy_ = true;
-	last_update_us_ = esp_timer_get_time();
 
 	start(data, size);
 }
@@ -97,6 +94,7 @@ NullLEDBus::NullLEDBus(const __FlashStringHelper *name) : LEDBus(name) {
 }
 
 void NullLEDBus::start(const uint8_t *data, size_t length) {
+	last_update_us_ = current_time_us();
 	finish();
 }
 

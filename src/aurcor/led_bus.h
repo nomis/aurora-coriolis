@@ -57,9 +57,11 @@ public:
 	inline LEDProfile::Result load_profile(enum led_profile_id id) { return profiles_.load(id); }
 	inline LEDProfile::Result save_profile(enum led_profile_id id) { return profiles_.save(id); }
 
-	uint64_t last_update_us() const;
+	inline uint64_t last_update_us() const { return last_update_us_; }
 	bool ready() const;
 	void write(const uint8_t *data, size_t size); /* data is in RGB order */
+
+	uint64_t last_update_us_{0};
 
 protected:
 	virtual void start(const uint8_t *data, size_t size) = 0;
@@ -79,7 +81,6 @@ private:
 	std::atomic<size_t> length_{0};
 	std::atomic<bool> reverse_{false};
 	std::atomic<bool> busy_{false};
-	uint64_t last_update_us_{0};
 	mutable LEDProfiles profiles_;
 };
 
