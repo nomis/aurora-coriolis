@@ -111,10 +111,10 @@ public:
 
 private:
 	static constexpr enum led_profile_id DEFAULT_PROFILE = LED_PROFILE_NORMAL;
-	static constexpr mp_int_t MIN_FPS = 1;
-	static constexpr mp_int_t MAX_FPS = 1000;
-	static constexpr mp_int_t MIN_WAIT_MS = 1;
+	static constexpr mp_int_t MIN_WAIT_MS = 10;
 	static constexpr mp_int_t MAX_WAIT_MS = 1000;
+	static constexpr mp_int_t MIN_FPS = 1000 / MAX_WAIT_MS;
+	static constexpr mp_int_t MAX_FPS = 1000 / MIN_WAIT_MS;
 	static constexpr uint32_t DEFAULT_WAIT_US = 0;
 	static constexpr bool DEFAULT_REPEAT = false;
 	static constexpr bool DEFAULT_REVERSE = false;
