@@ -131,6 +131,7 @@ private:
 	static constexpr mp_float_t EXPANDED_HUE_MULTIPLIER1 = EXPANDED_HUE_I_RANGE1 / EXPANDED_HUE_F_RANGE1;
 	static constexpr mp_float_t EXPANDED_HUE_F_RANGE2 = 1 - EXPANDED_HUE_F_RANGE1;
 	static constexpr mp_float_t EXPANDED_HUE_MULTIPLIER2 = (MAX_HUE - EXPANDED_HUE_I_RANGE1) / EXPANDED_HUE_F_RANGE2;
+	static constexpr mp_float_t EXPANDED_HUE_OFFSET2 = EXPANDED_HUE_F_RANGE1 - (EXPANDED_HUE_I_RANGE1 / EXPANDED_HUE_MULTIPLIER2);
 
 	friend mp_obj_t ::aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
