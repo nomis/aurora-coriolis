@@ -36,6 +36,8 @@
 
 #define AURCOR_HUE_RANGE 360
 #define AURCOR_EXP_HUE_RANGE (AURCOR_HUE_RANGE + (AURCOR_EXP_HUE_SIZE) * ((AURCOR_EXP_HUE_TIMES) - 1))
+#define AURCOR_MAX_SATURATION 100
+#define AURCOR_MAX_VALUE 100
 
 #ifdef __cplusplus
 # include <cstddef>

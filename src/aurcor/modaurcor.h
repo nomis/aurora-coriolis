@@ -44,6 +44,17 @@ MP_DECLARE_CONST_FUN_OBJ_VAR(aurcor_hsv_to_rgb_int_obj);
 mp_obj_t aurcor_hsv_to_rgb_tuple(size_t n_args, const mp_obj_t *args);
 MP_DECLARE_CONST_FUN_OBJ_VAR(aurcor_hsv_to_rgb_tuple_obj);
 
+
+mp_obj_t aurcor_exp_hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args);
+MP_DECLARE_CONST_FUN_OBJ_VAR(aurcor_exp_hsv_to_rgb_buffer_obj);
+
+mp_obj_t aurcor_exp_hsv_to_rgb_int(size_t n_args, const mp_obj_t *args);
+MP_DECLARE_CONST_FUN_OBJ_VAR(aurcor_exp_hsv_to_rgb_int_obj);
+
+mp_obj_t aurcor_exp_hsv_to_rgb_tuple(size_t n_args, const mp_obj_t *args);
+MP_DECLARE_CONST_FUN_OBJ_VAR(aurcor_exp_hsv_to_rgb_tuple_obj);
+
+
 mp_obj_t aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_rgb_obj);
 
@@ -52,6 +63,7 @@ MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_hsv_obj);
 
 mp_obj_t aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj);
+
 
 mp_obj_t aurcor_time(void);
 MP_DECLARE_CONST_FUN_OBJ_0(aurcor_time_obj);
@@ -87,6 +99,7 @@ public:
 	enum class OutputType {
 		RGB,
 		HSV,
+		EXP_HSV,
 		DEFAULTS,
 	};
 
@@ -101,9 +114,13 @@ public:
 		return false;
 	}
 
-	static void hsv_to_rgb(mp_int_t hue360, mp_float_t saturation, mp_float_t value, uint8_t *rgb);
-	static void exp_hsv_to_rgb(mp_float_t expanded_hue1, mp_float_t saturation, mp_float_t value, uint8_t *rgb);
-	static void hsv_to_rgb(size_t n_args, const mp_obj_t *args, uint8_t *rgb);
+	static void hsv_to_rgb(mp_int_t hue360, mp_int_t saturation, mp_int_t value, uint8_t *rgb);
+	static void exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation, mp_int_t value, uint8_t *rgb);
+
+	static void hsv_to_rgb(size_t n_args, const mp_obj_t *args, bool exp, uint8_t *rgb);
+	static mp_obj_t hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args, bool exp);
+	static mp_obj_t hsv_to_rgb_int(size_t n_args, const mp_obj_t *args, bool exp);
+	static mp_obj_t hsv_to_rgb_tuple(size_t n_args, const mp_obj_t *args, bool exp);
 
 	PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus);
 
@@ -118,19 +135,19 @@ private:
 	static constexpr uint32_t DEFAULT_WAIT_US = 0;
 	static constexpr bool DEFAULT_REPEAT = false;
 	static constexpr bool DEFAULT_REVERSE = false;
+	static constexpr bool DEFAULT_EXP_HUE = false;
 
-	static constexpr mp_int_t MAX_HUE = AURCOR_HUE_RANGE;
-	static constexpr mp_float_t MAX_SATURATION = 100;
-	static constexpr mp_float_t MAX_VALUE = 100;
+	static constexpr mp_int_t HUE_RANGE = AURCOR_HUE_RANGE;
+	static constexpr mp_int_t MAX_SATURATION = AURCOR_MAX_SATURATION;
+	static constexpr mp_int_t MAX_VALUE = AURCOR_MAX_VALUE;
 
-	static constexpr mp_int_t EXPANDED_HUE_I_RANGE1 = AURCOR_EXP_HUE_SIZE;
+	static constexpr mp_int_t EXPANDED_HUE_RANGE = AURCOR_EXP_HUE_RANGE;
 	static constexpr mp_int_t EXPANDED_HUE_TIMES = AURCOR_EXP_HUE_TIMES;
-	static constexpr mp_int_t EXPANDED_MAX_HUE = AURCOR_EXP_HUE_RANGE;
-	static constexpr mp_float_t EXPANDED_HUE_F_RANGE1 = (EXPANDED_HUE_I_RANGE1 * EXPANDED_HUE_TIMES) / (mp_float_t)EXPANDED_MAX_HUE;
-	static constexpr mp_float_t EXPANDED_HUE_MULTIPLIER1 = EXPANDED_HUE_I_RANGE1 / EXPANDED_HUE_F_RANGE1;
-	static constexpr mp_float_t EXPANDED_HUE_F_RANGE2 = 1 - EXPANDED_HUE_F_RANGE1;
-	static constexpr mp_float_t EXPANDED_HUE_MULTIPLIER2 = (MAX_HUE - EXPANDED_HUE_I_RANGE1) / EXPANDED_HUE_F_RANGE2;
-	static constexpr mp_float_t EXPANDED_HUE_OFFSET2 = EXPANDED_HUE_F_RANGE1 - (EXPANDED_HUE_I_RANGE1 / EXPANDED_HUE_MULTIPLIER2);
+	static constexpr mp_int_t EXPANDED_HUE_SIZE = AURCOR_EXP_HUE_SIZE;
+	static constexpr mp_int_t EXPANDED_HUE_LEFT_RANGE = EXPANDED_HUE_SIZE * EXPANDED_HUE_TIMES;
+	static constexpr mp_int_t EXPANDED_HUE_RIGHT_OFFSET = EXPANDED_HUE_SIZE * (EXPANDED_HUE_TIMES - 1);
+	static_assert(EXPANDED_HUE_TIMES > 1, "Invalid expanded hue times");
+	static_assert(EXPANDED_HUE_SIZE == (EXPANDED_HUE_SIZE % HUE_RANGE), "Invalid expanded hue size");
 
 	friend mp_obj_t ::aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
@@ -145,6 +162,7 @@ private:
 	uint32_t wait_us_{0};
 	bool repeat_{DEFAULT_REPEAT};
 	bool reverse_{DEFAULT_REVERSE};
+	bool exp_hue_{DEFAULT_EXP_HUE};
 };
 
 } // namespace micropython
