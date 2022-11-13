@@ -119,14 +119,13 @@ private:
 	static constexpr bool DEFAULT_REPEAT = false;
 	static constexpr bool DEFAULT_REVERSE = false;
 
-	/* Make the range of 0-60 hues 2 times as long as normal */
-	static constexpr mp_int_t EXPANDED_HUE_I_RANGE1 = 60;
-	static constexpr mp_int_t EXPANDED_HUE_TIMES = 2;
-
-	static constexpr mp_int_t MAX_HUE = 360;
+	static constexpr mp_int_t MAX_HUE = AURCOR_HUE_RANGE;
 	static constexpr mp_float_t MAX_SATURATION = 100;
 	static constexpr mp_float_t MAX_VALUE = 100;
-	static constexpr mp_int_t EXPANDED_MAX_HUE = MAX_HUE + EXPANDED_HUE_I_RANGE1 * (EXPANDED_HUE_TIMES - 1);
+
+	static constexpr mp_int_t EXPANDED_HUE_I_RANGE1 = AURCOR_EXP_HUE_SIZE;
+	static constexpr mp_int_t EXPANDED_HUE_TIMES = AURCOR_EXP_HUE_TIMES;
+	static constexpr mp_int_t EXPANDED_MAX_HUE = AURCOR_EXP_HUE_RANGE;
 	static constexpr mp_float_t EXPANDED_HUE_F_RANGE1 = (EXPANDED_HUE_I_RANGE1 * EXPANDED_HUE_TIMES) / (mp_float_t)EXPANDED_MAX_HUE;
 	static constexpr mp_float_t EXPANDED_HUE_MULTIPLIER1 = EXPANDED_HUE_I_RANGE1 / EXPANDED_HUE_F_RANGE1;
 	static constexpr mp_float_t EXPANDED_HUE_F_RANGE2 = 1 - EXPANDED_HUE_F_RANGE1;

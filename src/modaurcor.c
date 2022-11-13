@@ -79,6 +79,8 @@ STATIC const mp_rom_map_elem_t aurcor_module_globals_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR___name__),          MP_ROM_QSTR(MP_QSTR_aurcor) },
 
 	{ MP_ROM_QSTR(MP_QSTR_MAX_LEDS),          MP_ROM_INT(AURCOR_MAX_LEDS) },
+	{ MP_ROM_QSTR(MP_QSTR_HUE_RANGE),         MP_ROM_INT(AURCOR_HUE_RANGE) },
+	{ MP_ROM_QSTR(MP_QSTR_EXP_HUE_RANGE),     MP_ROM_INT(AURCOR_EXP_HUE_RANGE) },
 
 	{ MP_ROM_QSTR(MP_QSTR_version),           MP_ROM_PTR(&aurcor_version_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_profiles),          MP_ROM_PTR(&aurcor_profiles_module) },

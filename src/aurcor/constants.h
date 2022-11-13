@@ -26,6 +26,17 @@
 # define AURCOR_MIN_RATIO_LEDS 50
 #endif
 
+/* Make the range of 0-60 hues 2 times as long as normal */
+#ifndef AURCOR_EXP_HUE_SIZE
+# define AURCOR_EXP_HUE_SIZE 60
+#endif
+#ifndef AURCOR_EXP_HUE_TIMES
+# define AURCOR_EXP_HUE_TIMES 2
+#endif
+
+#define AURCOR_HUE_RANGE 360
+#define AURCOR_EXP_HUE_RANGE (AURCOR_HUE_RANGE + (AURCOR_EXP_HUE_SIZE) * ((AURCOR_EXP_HUE_TIMES) - 1))
+
 #ifdef __cplusplus
 # include <cstddef>
 
