@@ -44,8 +44,17 @@ void App::init() {
 	app::App::init();
 
 #if defined(ARDUINO_LOLIN_S2_MINI)
-	buses_.push_back(std::make_shared<UARTLEDBus>(0, F("led0"),  1, 39));
-	buses_.push_back(std::make_shared<UARTLEDBus>(1, F("led1"), 14, 40));
+	/*
+	 * Reserved: Power/Boot (0 45 46) USB (19 20) Flash/SPIRAM (26 27 28 29 30 31 32)
+	 * LED: 15
+	 * Pull-up: 18 (10kΩ)
+	 * Default: UART0 (RX-44 TX-43) UART1 (RX-18 TX-17)
+	 *
+	 * Usable: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 16 17 21 33 34 35 36 37 38 39 40
+	 * Null: 18 41 42 43 44
+	 */
+	buses_.push_back(std::make_shared<UARTLEDBus>(0, F("led0"), 41, 39));
+	buses_.push_back(std::make_shared<UARTLEDBus>(1, F("led1"), 42, 40));
 	buses_.push_back(std::make_shared<NullLEDBus>(F("null0")));
 	buses_.push_back(std::make_shared<NullLEDBus>(F("null1")));
 #else
