@@ -44,8 +44,12 @@
 
 namespace aurcor {
 
+static constexpr size_t MIN_LEDS = 1;
 static constexpr size_t MAX_LEDS = AURCOR_MAX_LEDS;
 static constexpr size_t MIN_RATIO_LEDS = AURCOR_MIN_RATIO_LEDS;
+
+static_assert(MIN_LEDS > 0, "Must have at least one LED");
+static_assert(MAX_LEDS > 0, "Must have at least one LED");
 
 } // namespace aurcor
 

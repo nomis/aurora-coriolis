@@ -48,7 +48,7 @@ public:
 
 	const __FlashStringHelper *name() const { return name_; }
 	inline size_t length() const { return length_; }
-	inline void length(size_t length) { length_ = std::min(length, MAX_LEDS); }
+	inline void length(size_t length) { length_ = std::max(MIN_LEDS, std::min(MAX_LEDS, length)); }
 	inline bool reverse() const { return reverse_; }
 	inline void reverse(bool reverse) { reverse_ = reverse; }
 
@@ -76,7 +76,7 @@ private:
 
 	const __FlashStringHelper *name_;
 	SemaphoreHandle_t semaphore_{nullptr};
-	std::atomic<size_t> length_{0};
+	std::atomic<size_t> length_{1};
 	std::atomic<bool> reverse_{false};
 	std::atomic<bool> busy_{false};
 	uint64_t last_update_us_{0};

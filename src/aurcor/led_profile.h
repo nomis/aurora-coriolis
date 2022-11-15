@@ -86,6 +86,7 @@ protected:
 
 private:
 	static constexpr size_t MAX_RATIOS = (MAX_LEDS + MIN_RATIO_LEDS - 1) / MIN_RATIO_LEDS;
+	static_assert(MAX_RATIOS > 0, "Must allow at least one ratio configuration entry");
 	static constexpr size_t BUFFER_SIZE = JSON_ARRAY_SIZE(MAX_RATIOS)
 		+ MAX_RATIOS * (JSON_ARRAY_SIZE(2) + JSON_ARRAY_SIZE(3));
 #ifdef ENV_NATIVE
