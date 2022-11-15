@@ -115,7 +115,11 @@ private:
 		}
 	} __attribute__((packed));
 
-	static constexpr Ratio DEFAULT_RATIO{UINT8_MAX, UINT8_MAX, UINT8_MAX};
+	/*
+	 * Default to very dim LEDs to avoid overloading the power supply if the
+	 * profile is scaled to limit power use and there's an error loading it.
+	 */
+	static constexpr Ratio DEFAULT_RATIO{8, 8, 8};
 
 	static bool valid_index(int index) {
 		return index >= MIN_INDEX
@@ -134,6 +138,7 @@ private:
 	}
 
 	Result add(index_t index, const Ratio &ratio);
+	Result add_default();
 	Result remove(const std::map<index_t,Ratio>::iterator &it);
 	Ratio get(index_t index) const;
 	Result copy(int src, int dst, bool move);

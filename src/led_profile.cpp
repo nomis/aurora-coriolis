@@ -120,6 +120,30 @@ LEDProfile::Result LEDProfile::add(index_t index, const Ratio &ratio) {
 	return Result::OK;
 }
 
+/*
+ * Default to very dim LEDs after a parse error to avoid overloading the power
+ * supply if the profile is scaled to limit power use and there's an error
+ * loading it.
+ */
+LEDProfile::Result LEDProfile::add_default() {
+	if (!ratios_.empty()) {
+		auto it = ratios_.end();
+
+		--it;
+
+		index_t index = it->first;
+
+		if (index < MAX_INDEX) {
+			return add(index + 1, DEFAULT_RATIO);
+		} else {
+			return Result::FULL;
+		}
+	}
+
+	return Result::OK;
+}
+
+
 LEDProfile::Result LEDProfile::remove(const std::map<index_t,Ratio>::iterator &it) {
 	if (it != ratios_.end()) {
 		ratios_.erase(it);
@@ -250,7 +274,7 @@ bool LEDProfile::compact(size_t limit) {
 			auto it = ratios_.end();
 
 			do {
-				it--;
+				--it;
 
 				if (next != ratios_.end() && next->second == it->second) {
 					remove(next);
@@ -357,6 +381,7 @@ LEDProfile::Result inline LEDProfile::load_ratio_configs(JsonArray &array) {
 			if (VERBOSE)
 				logger_.trace(F("Ratio config entry is not an array"));
 
+			add_default();
 			downgrade_result(result, Result::PARSE_ERROR);
 			continue;
 		}
@@ -375,13 +400,17 @@ LEDProfile::Result inline LEDProfile::load_ratio_config(JsonArray &array) {
 	auto it = array.begin();
 
 	if (downgrade_result(result,
-			get_ratio_config_index(array, it, index)) != Result::OK)
+			get_ratio_config_index(array, it, index)) != Result::OK) {
+		add_default();
 		return result;
+	}
 
 	++it;
 	if (downgrade_result(result,
-			get_ratio_config_ratio(array, it, ratio)) != Result::OK)
+			get_ratio_config_ratio(array, it, ratio)) != Result::OK) {
+		add(index, DEFAULT_RATIO);
 		return result;
+	}
 
 	downgrade_result(result, add(index, ratio));
 
