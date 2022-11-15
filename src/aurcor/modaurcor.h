@@ -162,6 +162,9 @@ private:
 	static_assert(EXPANDED_HUE_TIMES > 1, "Invalid expanded hue times");
 	static_assert(EXPANDED_HUE_SIZE == (EXPANDED_HUE_SIZE % HUE_RANGE), "Invalid expanded hue size");
 
+	static constexpr bool HSV_TO_RGB_USE_FLOAT = false;
+	static constexpr bool RGB_TO_HSV_USE_FLOAT = false;
+
 	friend mp_obj_t ::aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);

@@ -55,4 +55,13 @@ static inline uint8_t int_to_u8(int value) {
 	return int_constrain(value, UINT8_MAX);
 }
 
+/* Increase precision of integer division without using floating point */
+static inline constexpr int int_divide(int divided, int divisor, unsigned int bits) {
+	return ((divided << (bits + 1U)) / divisor + (1 << bits)) >> (bits + 1U);
+}
+
+static inline constexpr unsigned int uint_divide(unsigned int divided, unsigned int divisor, unsigned int bits) {
+	return ((divided << (bits + 1U)) / divisor + (1U << bits)) >> (bits + 1U);
+}
+
 } // namespace aurcor

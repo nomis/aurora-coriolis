@@ -396,18 +396,41 @@ void PyModule::append_led(uint8_t *buffer, OutputType type, mp_obj_t item, size_
 
 void PyModule::hsv_to_rgb(mp_int_t hue360, mp_int_t saturation, mp_int_t value,
 		std::array<uint8_t,3> &rgb) {
-	mp_float_t hi;
-	mp_float_t hf = std::modf(hue360 / (mp_float_t)60.0, &hi);
-	mp_float_t s = saturation / (mp_float_t)MAX_SATURATION;
-	mp_float_t v = value * ((mp_float_t)UINT8_MAX / (mp_float_t)MAX_VALUE);
-	int_fast8_t k = (hue360 / 60) % 6;
-	int_fast8_t q = k >> 1;
-	int_fast8_t p = (0b010010 >> (q << 1)) & 0b11;
-	int_fast8_t t = (0b001001 >> (q << 1)) & 0b11;
+	if (HSV_TO_RGB_USE_FLOAT) {
+		mp_float_t hi;
+		mp_float_t hf = std::modf(hue360 / (mp_float_t)(HUE_RANGE / 6), &hi);
+		mp_float_t s = saturation / (mp_float_t)MAX_SATURATION;
+		mp_float_t v = value * (UINT8_MAX / (mp_float_t)MAX_VALUE);
+		int_fast8_t k = (hue360 / (HUE_RANGE / 6)) % 6;
+		int_fast8_t q = k >> 1;
+		int_fast8_t p = (0b010010 >> (q << 1)) & 0b11;
+		int_fast8_t t = (0b001001 >> (q << 1)) & 0b11;
 
-	rgb[p] = int_to_u8(std::lround(v * (1 - s)));
-	rgb[q] = int_to_u8(std::lround((k & 1) ? v * (1 - s * hf) : v));
-	rgb[t] = int_to_u8(std::lround((k & 1) ? v : v * (1 - s * (1 - hf))));
+		rgb[p] = int_to_u8(std::lround(v * (1 - s)));
+		rgb[q] = int_to_u8(std::lround((k & 1) ? v * (1 - s * hf) : v));
+		rgb[t] = int_to_u8(std::lround((k & 1) ? v : v * (1 - s * (1 - hf))));
+	} else {
+		static constexpr const int HF_PRECISION = 1000;
+		static constexpr const int V_PRECISION = 32;
+		mp_int_t hf = uint_divide((hue360 % (HUE_RANGE / 6)) * HF_PRECISION, HUE_RANGE / 6, 1);
+		mp_int_t vp = uint_divide(value * UINT8_MAX * V_PRECISION, MAX_VALUE, 1);
+		uint8_t v = uint_divide(vp, V_PRECISION, 1);
+		int_fast8_t k = (hue360 / (HUE_RANGE / 6)) % 6;
+		int_fast8_t q = k >> 1;
+		int_fast8_t p = (0b010010 >> (q << 1)) & 0b11;
+		int_fast8_t t = (0b001001 >> (q << 1)) & 0b11;
+
+		rgb[p] = uint_divide(vp * (MAX_SATURATION - saturation), V_PRECISION * MAX_SATURATION, 1);
+		if (k & 1) {
+			rgb[t] = v;
+			rgb[q] = uint_divide(vp * ((MAX_SATURATION * HF_PRECISION) - (saturation * hf)),
+				V_PRECISION * MAX_SATURATION * HF_PRECISION, 1);
+		} else {
+			rgb[q] = v;
+			rgb[t] = uint_divide(vp * ((MAX_SATURATION * HF_PRECISION) - (saturation * (HF_PRECISION - hf))),
+				V_PRECISION * MAX_SATURATION * HF_PRECISION, 1);
+		}
+	}
 }
 
 inline void PyModule::exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation,
@@ -508,7 +531,11 @@ void PyModule::rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3
 		return;
 	}
 
-	hsv[HSV_value] = std::lround(max * ((mp_float_t)MAX_VALUE / (mp_float_t)UINT8_MAX));
+	if (RGB_TO_HSV_USE_FLOAT) {
+		hsv[HSV_value] = std::lround(max * ((mp_float_t)MAX_VALUE / (mp_float_t)UINT8_MAX));
+	} else {
+		hsv[HSV_value] = uint_divide(max * MAX_VALUE, UINT8_MAX, 1);
+	}
 
 	uint8_t min = r;
 
@@ -523,23 +550,31 @@ void PyModule::rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3
 		return;
 	}
 
-	hsv[HSV_saturation] = std::lround((c * MAX_VALUE) / (mp_float_t)max);
+	if (RGB_TO_HSV_USE_FLOAT) {
+		hsv[HSV_saturation] = std::lround((c * MAX_VALUE) / (mp_float_t)max);
+	} else {
+		hsv[HSV_saturation] = uint_divide(c * MAX_VALUE, max, 1);
+	}
 
 	mp_int_t h1;
 	mp_int_t h2;
 
 	if (r == max) {
-		h1 = (b == min) ? 0 : 360;
+		h1 = (b == min) ? 0 : HUE_RANGE;
 		h2 = g - b;
 	} else if (g == max) {
-		h1 = 120;
+		h1 = HUE_RANGE / 3;
 		h2 = b - r;
 	} else {
-		h1 = 240;
+		h1 = HUE_RANGE / 3 * 2;
 		h2 = r - g;
 	}
 
-	hsv[HSV_hue] = std::lround(h1 + (60 * h2) / (mp_float_t)c);
+	if (RGB_TO_HSV_USE_FLOAT) {
+		hsv[HSV_hue] = std::lround(h1 + ((HUE_RANGE / 6) * h2) / (mp_float_t)c);
+	} else {
+		hsv[HSV_hue] = h1 + int_divide((HUE_RANGE / 6) * h2, c, 8);
+	}
 }
 
 inline void PyModule::rgb_to_exp_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3> &hsv) {
