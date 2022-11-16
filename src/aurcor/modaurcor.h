@@ -68,6 +68,9 @@ MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_rgb_obj);
 mp_obj_t aurcor_output_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_hsv_obj);
 
+mp_obj_t aurcor_output_exp_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_exp_hsv_obj);
+
 mp_obj_t aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj);
 
@@ -153,7 +156,6 @@ private:
 	static constexpr size_t DEFAULT_WAIT_US = 0;
 	static constexpr bool DEFAULT_REPEAT = false;
 	static constexpr bool DEFAULT_REVERSE = false;
-	static constexpr bool DEFAULT_EXP_HUE = false;
 
 	static constexpr mp_int_t EXPANDED_HUE_TIMES = AURCOR_EXP_HUE_TIMES;
 	static constexpr mp_int_t EXPANDED_HUE_SIZE = AURCOR_EXP_HUE_SIZE;
@@ -167,6 +169,7 @@ private:
 
 	friend mp_obj_t ::aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	friend mp_obj_t ::aurcor_output_exp_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	static PyModule& current();
 
@@ -178,7 +181,6 @@ private:
 	size_t wait_us_{0};
 	bool repeat_{DEFAULT_REPEAT};
 	bool reverse_{DEFAULT_REVERSE};
-	bool exp_hue_{DEFAULT_EXP_HUE};
 };
 
 } // namespace micropython

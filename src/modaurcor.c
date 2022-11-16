@@ -63,6 +63,7 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_rgb_to_exp_hsv_tuple_obj, 1, 3, aurco
 
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_rgb_obj, 1, aurcor_output_rgb);
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_hsv_obj, 1, aurcor_output_hsv);
+MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_exp_hsv_obj, 1, aurcor_output_exp_hsv);
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj, 0, aurcor_output_defaults);
 
 // Returns the number of milliseconds since the Epoch, as an integer.
@@ -114,6 +115,7 @@ STATIC const mp_rom_map_elem_t aurcor_module_globals_table[] = {
 
 	{ MP_ROM_QSTR(MP_QSTR_output_rgb),        MP_ROM_PTR(&aurcor_output_rgb_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_output_hsv),        MP_ROM_PTR(&aurcor_output_hsv_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_output_exp_hsv),    MP_ROM_PTR(&aurcor_output_exp_hsv_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_output_defaults),   MP_ROM_PTR(&aurcor_output_defaults_obj) },
 };
 

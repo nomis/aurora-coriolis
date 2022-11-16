@@ -90,6 +90,10 @@ mp_obj_t aurcor_output_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs
 	return PyModule::current().output_leds(PyModule::OutputType::HSV, n_args, args, kwargs);
 }
 
+mp_obj_t aurcor_output_exp_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	return PyModule::current().output_leds(PyModule::OutputType::EXP_HSV, n_args, args, kwargs);
+}
+
 mp_obj_t aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
 	return PyModule::current().output_leds(PyModule::OutputType::DEFAULTS, n_args, args, kwargs);
 }
@@ -118,7 +122,6 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		ARG_wait_ms,
 		ARG_repeat,
 		ARG_reverse,
-		ARG_exp_hue,
 
 		ARG_rotate,
 	};
@@ -134,7 +137,6 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		{MP_QSTR_wait_ms,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 		{MP_QSTR_repeat,      MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 		{MP_QSTR_reverse,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
-		{MP_QSTR_exp_hue,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 
 		// AFTER_DEFAULTS
 		{MP_QSTR_rotate,      MP_ARG_KW_ONLY | MP_ARG_INT,    {u_int: 0}},
@@ -152,7 +154,6 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 	auto wait_us = set_defaults ? DEFAULT_WAIT_US : wait_us_;
 	auto repeat = set_defaults ? DEFAULT_REPEAT : repeat_;
 	auto reverse = set_defaults ? DEFAULT_REPEAT : reverse_;
-	auto exp_hue = set_defaults ? DEFAULT_EXP_HUE : exp_hue_;
 
 	if (parsed_args[ARG_profile].u_obj != MP_ROM_NONE) {
 		if (!mp_obj_is_int(parsed_args[ARG_profile].u_obj))
@@ -210,27 +211,13 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		reverse = mp_obj_is_true(parsed_args[ARG_reverse].u_obj);
 	}
 
-	if (parsed_args[ARG_exp_hue].u_obj != MP_ROM_NONE) {
-		if (!mp_obj_is_bool(parsed_args[ARG_exp_hue].u_obj))
-			mp_raise_TypeError(MP_ERROR_TEXT("exp_hue must be a bool"));
-
-		if (type == OutputType::RGB)
-			mp_raise_TypeError(MP_ERROR_TEXT("can't specify exp_hue for RGB values"));
-
-		exp_hue = mp_obj_is_true(parsed_args[ARG_exp_hue].u_obj);
-	}
-
 	if (type == OutputType::DEFAULTS) {
 		profile_ = profile;
 		wait_us_ = wait_us;
 		repeat_ = repeat;
 		reverse_ = reverse;
-		exp_hue_ = exp_hue;
 		return MP_ROM_NONE;
 	}
-
-	if (type == OutputType::HSV && exp_hue)
-		type = OutputType::EXP_HSV;
 
 	ssize_t rotate_length = parsed_args[ARG_rotate].u_int;
 	auto values = parsed_args[ARG_values].u_obj;
