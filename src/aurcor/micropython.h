@@ -90,9 +90,9 @@ protected:
 
 	MicroPython(const std::string &name, std::shared_ptr<LEDBus> bus);
 
-	void start();
+	bool start();
 	virtual void main() = 0;
-	virtual void shutdown() = 0;
+	virtual void shutdown();
 	bool stop();
 
 	inline bool memory_blocks_available() const { return heap_ && pystack_ && ledbufs_; }
@@ -105,7 +105,7 @@ protected:
 	void abort();
 
 	friend int ::mp_hal_stdin_rx_chr(void);
-	virtual int mp_hal_stdin_rx_chr(void) = 0;
+	virtual int mp_hal_stdin_rx_chr(void);
 
 	friend void ::mp_hal_stdout_tx_strn(const char *str, size_t len);
 	virtual void mp_hal_stdout_tx_strn(const uint8_t *str, size_t len) = 0;

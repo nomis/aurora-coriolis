@@ -106,13 +106,17 @@ MicroPython::MicroPython(const std::string &name,
 	}
 }
 
-void MicroPython::start() {
-	if (started_)
-		return;
+bool MicroPython::start() {
+	if (started_ || !memory_blocks_available())
+		return false;
+
+	logger_.trace(F("[%s] Starting thread"), name_.c_str());
 
 	started_ = true;
 	running_ = true;
 	thread_ = std::thread{&MicroPython::running_thread, this};
+
+	return true;
 }
 
 void MicroPython::running_thread() {
@@ -242,6 +246,9 @@ void MicroPython::abort() {
 	::nlr_raise(MP_OBJ_FROM_PTR(&system_exit_exc_));
 }
 
+void MicroPython::shutdown() {
+}
+
 bool MicroPython::stop() {
 	if (!started_)
 		return true;
@@ -328,9 +335,10 @@ void MicroPythonShell::start(Shell &shell) {
 		return;
 	}
 
-	logger_.trace(F("[%s] Starting thread"), name_.c_str());
-
-	MicroPython::start();
+	if (!MicroPython::start()) {
+		shell.printfln(F("Failed to start"));
+		return;
+	}
 
 	shell.block_with([self] (Shell &shell, bool stop) -> bool {
 		return self->shell_foreground(shell, stop);
@@ -506,6 +514,10 @@ extern "C" ::mp_import_stat_t mp_import_stat(const char *path) {
 extern "C" int mp_hal_stdin_rx_chr(void) {
 	// Return values must be in the uint8_t range (-1 is not special)
 	return MicroPython::current().mp_hal_stdin_rx_chr();
+}
+
+int aurcor::MicroPython::mp_hal_stdin_rx_chr(void) {
+	mp_raise_OSError(MP_ENODEV);
 }
 
 int aurcor::MicroPythonShell::mp_hal_stdin_rx_chr(void) {
