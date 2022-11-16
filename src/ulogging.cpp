@@ -160,6 +160,7 @@ mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
 
 		mp_obj_print_helper(print->context(), message, PRINT_STR);
 	}
+	mp_obj_print_helper(print->context(), MP_OBJ_NEW_QSTR(MP_QSTR__0x0a_), PRINT_STR);
 
 	if (parsed_args[ARG_exc_info].u_obj != MP_OBJ_NULL)
 		exc_info = mp_obj_is_true(parsed_args[ARG_exc_info].u_obj);
