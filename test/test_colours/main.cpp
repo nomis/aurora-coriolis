@@ -895,11 +895,11 @@ static void test_fp_hsv_to_rgb() {
 
 	float percent1 = (float)diff1 / (diff1 + exact1) * 100;
 	TEST_PRINTF("value: total = %u exact = %u diff = %u (%g%%)", exact1 + diff1, exact1, diff1, percent1);
-	TEST_ASSERT(percent1 < 1.0f);
+	TEST_ASSERT(percent1 < 0.75f);
 
 	float percent3 = (float)diff3 / (diff3 + exact3) * 100;
 	TEST_PRINTF("rgb: total = %u exact = %u diff = %u (%g%%)", exact3 + diff3, exact3, diff3, percent3);
-	TEST_ASSERT(percent3 < 3.0f);
+	TEST_ASSERT(percent3 < 2.25f);
 }
 
 /* Check integer calculations are as good as floating point calculations */

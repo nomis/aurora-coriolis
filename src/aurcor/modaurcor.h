@@ -126,7 +126,7 @@ public:
 		return false;
 	}
 
-	static void hsv_to_rgb(mp_int_t hue360, mp_int_t saturation, mp_int_t value, std::array<uint8_t,3> &rgb);
+	static void hsv_to_rgb(mp_int_t hue, mp_int_t saturation, mp_int_t value, std::array<uint8_t,3> &rgb);
 	static void exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation, mp_int_t value, std::array<uint8_t,3> &rgb);
 
 	static void hsv_to_rgb(size_t n_args, const mp_obj_t *args, bool exp, std::array<uint8_t,3> &rgb);
