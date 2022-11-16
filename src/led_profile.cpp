@@ -41,14 +41,11 @@ using uuid::log::Level;
 
 static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "led-profile";
 
-static const char __pstr__print_header1[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM =
-	"LEDs         Red Green Blue";
-static const char __pstr__print_header2[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM =
-	"------------ --- ----- ----";
-static const char __pstr__print_row[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM =
-	"%5u..%-5u" " %3u  %3u  %3u";
+static const char *print_header1 =	"LEDs         Red Green Blue";
+static const char *print_header2 = "------------ --- ----- ----";
+static const char *print_row     = "%5u..%-5u" " %3u  %3u  %3u";
 
-static const char __pstr__directory_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "/profiles";
+static const char *directory_name = "/profiles";
 
 namespace aurcor {
 
@@ -61,15 +58,15 @@ void LEDProfile::print(uuid::console::Shell &shell, size_t limit) const {
 	Ratio ratio = DEFAULT_RATIO;
 
 	if (limit > 0) {
-		shell.printfln(FPSTR(__pstr__print_header1));
-		shell.printfln(FPSTR(__pstr__print_header2));
+		shell.println(print_header1);
+		shell.println(print_header2);
 	}
 
 	for (auto it = ratios_.cbegin(); limit-- > 0; index++) {
 		if (it != ratios_.cend()) {
 			if (it->first == index) {
 				if (index > 0) {
-					shell.printfln(FPSTR(__pstr__print_row), begin, index - 1,
+					shell.printfln(print_row, begin, index - 1,
 						ratio.r, ratio.g, ratio.b);
 
 					begin = index;
@@ -78,8 +75,8 @@ void LEDProfile::print(uuid::console::Shell &shell, size_t limit) const {
 				++it;
 			}
 		} else {
-			shell.printfln(FPSTR(__pstr__print_row), begin, index + limit,
-					ratio.r, ratio.g, ratio.b);
+			shell.printfln(print_row, begin, index + limit,
+				ratio.r, ratio.g, ratio.b);
 			break;
 		}
 	}
@@ -299,30 +296,28 @@ bool LEDProfile::compact(size_t limit) {
 	return removed > 0;
 }
 
-std::string LEDProfile::make_filename(const __FlashStringHelper *bus_name,
-		const __FlashStringHelper *profile_name) {
+std::string LEDProfile::make_filename(const char *bus_name, const char *profile_name) {
 	std::string filename;
 
-	filename.append(uuid::read_flash_string(FPSTR(__pstr__directory_name)));
-	filename.append(1, 	'/');
-	filename.append(uuid::read_flash_string(bus_name));
-	filename.append(1, 	'.');
-	filename.append(uuid::read_flash_string(profile_name));
-	filename.append(uuid::read_flash_string(F(".json")));
+	filename.append(directory_name);
+	filename.append(" ");
+	filename.append(bus_name);
+	filename.append(" ");
+	filename.append(profile_name);
+	filename.append(".json");
 
 	return filename;
 }
 
-LEDProfile::Result LEDProfile::load(const __FlashStringHelper *bus_name,
-		const __FlashStringHelper *profile_name, bool automatic) {
+LEDProfile::Result LEDProfile::load(const char *bus_name, const char *profile_name,
+		bool automatic) {
 	auto filename = make_filename(bus_name, profile_name);
 	std::unique_lock data_lock{data_mutex_};
 
 	logger_.log(automatic ? Level::DEBUG : Level::NOTICE,
 		F("Reading profile from file %s"), filename.c_str());
 
-	const char mode[2] = {'r', '\0'};
-	auto file = FS.open(filename.c_str(), mode);
+	auto file = FS.open(filename.c_str(), "r");
 	if (file) {
 		app::JsonDocument doc{BUFFER_SIZE};
 
@@ -511,16 +506,14 @@ LEDProfile::Result inline LEDProfile::get_ratio_config_ratio_value(
 	return Result::OK;
 }
 
-LEDProfile::Result LEDProfile::save(const __FlashStringHelper *bus_name,
-		const __FlashStringHelper *profile_name) {
-	auto dirname = uuid::read_flash_string(FPSTR(__pstr__directory_name));
+LEDProfile::Result LEDProfile::save(const char *bus_name, const char *profile_name) {
 	auto filename = make_filename(bus_name, profile_name);
 	std::shared_lock data_lock{data_mutex_};
 
 	logger_.notice(F("Writing profile to file %s"), filename.c_str());
 
-	if (!FS.mkdir(dirname.c_str())) {
-		logger_.err(F("Unable to create directory %s"), dirname.c_str());
+	if (!FS.mkdir(directory_name)) {
+		logger_.err(F("Unable to create directory %s"), directory_name);
 		return Result::IO_ERROR;
 	}
 

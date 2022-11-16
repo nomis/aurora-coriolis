@@ -55,7 +55,7 @@ public:
 	static constexpr size_t MIN_ID = 0;
 	static constexpr size_t MAX_ID = NUM_LED_PROFILES - 1;
 
-	LEDProfiles(const __FlashStringHelper *bus_name_);
+	LEDProfiles(const char *bus_name_);
 	~LEDProfiles() = default;
 
 	LEDProfile& get(enum led_profile_id id);
@@ -67,7 +67,7 @@ private:
 
 	LEDProfile::Result auto_load(enum led_profile_id id, bool reload);
 
-	const __FlashStringHelper *bus_name_;
+	const char *bus_name_;
 	std::mutex mutex_;
 	std::array<LEDProfile,NUM_LED_PROFILES> profiles_;
 	std::bitset<NUM_LED_PROFILES> loaded_{};

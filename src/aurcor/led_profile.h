@@ -79,10 +79,8 @@ public:
 	bool modified() const { return modified_; }
 
 protected:
-	Result load(const __FlashStringHelper *bus_name,
-		const __FlashStringHelper *profile_name, bool automatic);
-	Result save(const __FlashStringHelper *bus_name,
-		const __FlashStringHelper *profile_name);
+	Result load(const char *bus_name, const char *profile_name, bool automatic);
+	Result save(const char *bus_name, const char *profile_name);
 
 private:
 	static constexpr size_t MAX_RATIOS = (MAX_LEDS + MIN_RATIO_LEDS - 1) / MIN_RATIO_LEDS;
@@ -144,8 +142,7 @@ private:
 	Ratio get(index_t index) const;
 	Result copy(int src, int dst, bool move);
 
-	static std::string make_filename(const __FlashStringHelper *bus_name,
-		const __FlashStringHelper *profile_name);
+	static std::string make_filename(const char *bus_name, const char *profile_name);
 
 	Result load(app::JsonDocument &doc);
 	Result load_ratio_configs(ArduinoJson::JsonArray &array);

@@ -46,7 +46,6 @@ extern "C" {
 	#include <shared/runtime/pyexec.h>
 }
 
-#include <uuid/common.h>
 #include <uuid/console.h>
 #include <uuid/log.h>
 
@@ -89,7 +88,7 @@ void MicroPython::setup(size_t pool_count) {
 
 MicroPython::MicroPython(const std::string &name,
 		std::shared_ptr<LEDBus> bus)
-		: name_(name + "/" + uuid::read_flash_string(bus->name())),
+		: name_(name + "/" + bus->name()),
 		heap_(std::move(heaps_->allocate())),
 		pystack_(std::move(pystacks_->allocate())),
 		ledbuf_(std::move(ledbufs_->allocate())),
@@ -132,35 +131,35 @@ void MicroPython::running_thread() {
 	}
 
 	if (!::setjmp(abort_)) {
-		where_ = F("mp_stack_ctrl_init");
+		where_ = "mp_stack_ctrl_init";
 		mp_stack_ctrl_init();
 	} else {
 		goto done;
 	}
 
 	if (!::setjmp(abort_)) {
-		where_ = F("mp_stack_set_limit");
+		where_ = "mp_stack_set_limit";
 		mp_stack_set_limit(TASK_STACK_LIMIT);
 	} else {
 		goto done;
 	}
 
 	if (!::setjmp(abort_)) {
-		where_ = F("gc_init");
+		where_ = "gc_init";
 		gc_init(heap_->begin(), heap_->end());
 	} else {
 		goto done;
 	}
 
 	if (!::setjmp(abort_)) {
-		where_ = F("mp_pystack_init");
+		where_ = "mp_pystack_init";
 		mp_pystack_init(pystack_->begin(), pystack_->end());
 	} else {
 		goto done;
 	}
 
 	if (!::setjmp(abort_)) {
-		where_ = F("mp_init");
+		where_ = "mp_init";
 		mp_init();
 
 		{
@@ -171,7 +170,7 @@ void MicroPython::running_thread() {
 		if (running_ && !::setjmp(abort_)) {
 			logger_.trace(F("[%s] MicroPython running"), name_.c_str());
 
-			where_ = F("main");
+			where_ = "main";
 			main();
 
 			logger_.trace(F("[%s] MicroPython shutdown"), name_.c_str());
@@ -183,17 +182,17 @@ void MicroPython::running_thread() {
 		}
 
 		if (!::setjmp(abort_)) {
-			where_ = F("gc_sweep_all");
+			where_ = "gc_sweep_all";
 			gc_sweep_all();
 		}
 
 		if (!::setjmp(abort_)) {
-			where_ = F("mp_deinit");
+			where_ = "mp_deinit";
 			mp_deinit();
 		}
 	} else {
 		if (!::setjmp(abort_)) {
-			where_ = F("gc_sweep_all");
+			where_ = "gc_sweep_all";
 			gc_sweep_all();
 		}
 	}
@@ -441,7 +440,7 @@ void aurcor::MicroPython::nlr_jump_fail(void *val) {
 	uintptr_t address = (uintptr_t)val;
 	bool valid = false;
 
-	logger_.log(level, logger_.facility(), F("[%s] MicroPython aborted in %S(): %p"),
+	logger_.log(level, logger_.facility(), F("[%s] MicroPython aborted in %s(): %p"),
 		name_.c_str(), where_, val);
 
 #if defined(ARDUINO_ARCH_ESP32)

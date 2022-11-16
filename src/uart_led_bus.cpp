@@ -41,7 +41,7 @@ static IRAM_ATTR constexpr const UARTPatternTable uart_pattern_table{};
 } // namespace ledbus
 
 #ifndef ENV_NATIVE
-UARTLEDBus::UARTLEDBus(unsigned int uart_num, const __FlashStringHelper *name,
+UARTLEDBus::UARTLEDBus(unsigned int uart_num, const char *name,
 			uint8_t rx_pin, uint8_t tx_pin) : ByteBufferLEDBus(name),
 			periph_(uart_periph_signal[uart_num]),
 			hw_(*(UART_LL_GET_HW(uart_num))),

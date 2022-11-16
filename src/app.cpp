@@ -53,15 +53,15 @@ void App::init() {
 	 * Usable: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 16 17 21 33 34 35 36 37 38 39 40
 	 * Null: 18 41 42 43 44
 	 */
-	buses_.push_back(std::make_shared<UARTLEDBus>(0, F("led0"), 41, 39));
-	buses_.push_back(std::make_shared<UARTLEDBus>(1, F("led1"), 42, 40));
-	buses_.push_back(std::make_shared<NullLEDBus>(F("null0")));
-	buses_.push_back(std::make_shared<NullLEDBus>(F("null1")));
+	buses_.push_back(std::make_shared<UARTLEDBus>(0, "led0", 41, 39));
+	buses_.push_back(std::make_shared<UARTLEDBus>(1, "led1", 42, 40));
+	buses_.push_back(std::make_shared<NullLEDBus>("null0"));
+	buses_.push_back(std::make_shared<NullLEDBus>("null1"));
 #else
-	buses_.push_back(std::make_shared<NullLEDBus>(F("null0")));
-	buses_.push_back(std::make_shared<NullLEDBus>(F("null1")));
-	buses_.push_back(std::make_shared<NullLEDBus>(F("null2")));
-	buses_.push_back(std::make_shared<NullLEDBus>(F("null3")));
+	buses_.push_back(std::make_shared<NullLEDBus>("null0"));
+	buses_.push_back(std::make_shared<NullLEDBus>("null1"));
+	buses_.push_back(std::make_shared<NullLEDBus>("null2"));
+	buses_.push_back(std::make_shared<NullLEDBus>("null3"));
 #endif
 
 	MicroPython::setup(buses_.size());
@@ -93,14 +93,14 @@ std::vector<std::string> App::bus_names() const {
 	names.reserve(buses_.size());
 
 	for (auto &bus : buses_)
-		names.emplace_back(std::move(uuid::read_flash_string(bus->name())));
+		names.emplace_back(bus->name());
 
 	return names;
 }
 
 std::shared_ptr<LEDBus> App::bus(const std::string &name) {
 	for (auto &bus : buses_)
-		if (uuid::read_flash_string(bus->name()) == name)
+		if (bus->name() == name)
 			return bus;
 
 	return {};

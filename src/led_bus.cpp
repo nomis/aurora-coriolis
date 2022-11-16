@@ -40,7 +40,7 @@ namespace aurcor {
 
 uuid::log::Logger LEDBus::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::LPR};
 
-LEDBus::LEDBus(const __FlashStringHelper *name) : name_(name), profiles_(name) {
+LEDBus::LEDBus(const char *name) : name_(name), profiles_(name) {
 	semaphore_ = xSemaphoreCreateBinary();
 	if (semaphore_) {
 		if (xSemaphoreGive(semaphore_) != pdTRUE) {
@@ -90,7 +90,7 @@ IRAM_ATTR void LEDBus::finish_isr() {
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-NullLEDBus::NullLEDBus(const __FlashStringHelper *name) : LEDBus(name) {
+NullLEDBus::NullLEDBus(const char *name) : LEDBus(name) {
 	length(MAX_LEDS);
 }
 
@@ -98,7 +98,7 @@ void NullLEDBus::start(const uint8_t *data, size_t length) {
 	finish();
 }
 
-ByteBufferLEDBus::ByteBufferLEDBus(const __FlashStringHelper *name) : LEDBus(name) {
+ByteBufferLEDBus::ByteBufferLEDBus(const char *name) : LEDBus(name) {
 }
 
 void ByteBufferLEDBus::start(const uint8_t *data, size_t size) {

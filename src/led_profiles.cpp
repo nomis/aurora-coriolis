@@ -26,16 +26,12 @@
 #include "aurcor/led_bus.h"
 #include "aurcor/led_profile.h"
 
-#ifndef PSTR_ALIGN
-# define PSTR_ALIGN 4
-#endif
-
 namespace aurcor {
 
 namespace ledprofiles {
 
 #define LED_PROFILE(_lc_name, _uc_name) \
-	static const char *lc_name_ ## _lc_name __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = #_lc_name;
+	static const char *lc_name_ ## _lc_name = #_lc_name;
 LED_PROFILES
 #undef LED_PROFILE
 
@@ -48,7 +44,7 @@ LED_PROFILES
 #undef LED_PROFILE
 };
 
-LEDProfiles::LEDProfiles(const __FlashStringHelper *bus_name) : bus_name_(bus_name) {
+LEDProfiles::LEDProfiles(const char *bus_name) : bus_name_(bus_name) {
 
 }
 
@@ -67,7 +63,7 @@ LEDProfile::Result LEDProfiles::save(enum led_profile_id id) {
 	size_t profile = (size_t)id;
 
 	auto_load(id, false);
-	return profiles_[profile].save(bus_name_, FPSTR(names_[profile]));
+	return profiles_[profile].save(bus_name_, names_[profile]);
 }
 
 LEDProfile::Result LEDProfiles::auto_load(enum led_profile_id id, bool reload) {
@@ -82,7 +78,7 @@ LEDProfile::Result LEDProfiles::auto_load(enum led_profile_id id, bool reload) {
 		lock.unlock();
 	}
 
-	return profiles_[profile].load(bus_name_, FPSTR(names_[profile]), !reload);
+	return profiles_[profile].load(bus_name_, names_[profile], !reload);
 }
 
 } // namespace aurcor

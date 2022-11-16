@@ -149,7 +149,7 @@ private:
 	std::mutex active_;
 	std::atomic<bool> running_{false};
 	bool stopped_{false};
-	const __FlashStringHelper *where_;
+	const char *where_;
 	jmp_buf abort_;
 	bool in_nlr_fail_{false};
 

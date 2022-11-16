@@ -43,10 +43,10 @@ public:
 	static constexpr size_t RESET_TIME_US = 280;
 	static constexpr TickType_t SEMAPHORE_TIMEOUT_TICKS = 30 * 1000 * portTICK_PERIOD_MS;
 
-	LEDBus(const __FlashStringHelper *name);
+	LEDBus(const char *name);
 	virtual ~LEDBus();
 
-	const __FlashStringHelper *name() const { return name_; }
+	const char *name() const { return name_; }
 	inline size_t length() const { return length_; }
 	inline void length(size_t length) { length_ = std::max(MIN_LEDS, std::min(MAX_LEDS, length)); }
 	inline bool reverse() const { return reverse_; }
@@ -74,7 +74,7 @@ private:
 	LEDBus& operator=(LEDBus&&) = delete;
 	LEDBus& operator=(const LEDBus&) = delete;
 
-	const __FlashStringHelper *name_;
+	const char *name_;
 	SemaphoreHandle_t semaphore_{nullptr};
 	std::atomic<size_t> length_{1};
 	std::atomic<bool> reverse_{false};
@@ -93,7 +93,7 @@ static inline void write(LEDBus &bus, const std::vector<uint8_t> data) {
 
 class NullLEDBus: public LEDBus {
 public:
-	NullLEDBus(const __FlashStringHelper *name);
+	NullLEDBus(const char *name);
 	virtual ~NullLEDBus() = default;
 
 protected:
@@ -102,7 +102,7 @@ protected:
 
 class ByteBufferLEDBus: public LEDBus {
 public:
-	ByteBufferLEDBus(const __FlashStringHelper *name);
+	ByteBufferLEDBus(const char *name);
 	virtual ~ByteBufferLEDBus() = default;
 
 protected:

@@ -65,8 +65,7 @@ private:
 #ifndef ENV_NATIVE
 class UARTLEDBus: public ByteBufferLEDBus {
 public:
-	UARTLEDBus(unsigned int uart_num, const __FlashStringHelper *name,
-		uint8_t rx_pin, uint8_t tx_pin);
+	UARTLEDBus(unsigned int uart_num, const char *name, uint8_t rx_pin, uint8_t tx_pin);
 	~UARTLEDBus() override;
 
 protected:
