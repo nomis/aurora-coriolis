@@ -27,6 +27,7 @@
 class TestPrint: public aurcor::micropython::LinePrint {
 public:
 	TestPrint(uuid::log::Level level);
+	~TestPrint() override;
 
 protected:
 	void begin_line() override;

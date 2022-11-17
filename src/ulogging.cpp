@@ -137,7 +137,7 @@ mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
 	mp_arg_val_t parsed_args[MP_ARRAY_SIZE(allowed_args)];
 	mp_arg_parse_all(0, nullptr, kwargs, MP_ARRAY_SIZE(allowed_args), allowed_args, parsed_args);
 
-	auto print = MicroPython::current().modulogging_print(level);
+	std::unique_ptr<Print> print = MicroPython::current().modulogging_print(level);
 
 	if (n_args == 1) {
 		mp_obj_print_helper(print->context(), args[0], PRINT_STR);

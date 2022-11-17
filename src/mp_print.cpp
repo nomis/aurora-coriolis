@@ -78,11 +78,6 @@ LineWrapPrint::LineWrapPrint(size_t line_length) {
 	text_.reserve(std::max((size_t)1, line_length) + 1);
 }
 
-LineWrapPrint::~LineWrapPrint() {
-	if (line_started())
-		end_line();
-}
-
 void LineWrapPrint::print_part_line(const char *str, size_t len) {
 	while (len > 0) {
 		size_t available = (text_.capacity() - 1) - text_.size();
@@ -122,6 +117,11 @@ LogPrint::LogPrint(uuid::log::Logger &logger, uuid::log::Level level,
 void LogPrint::print_wrapped_line(const char *text, bool continuation) {
 	logger_.log(level_, logger_.facility(), F("%s%c %s"), prefix_.c_str(),
 		continuation ? CONTINUATION_LINE : NORMAL_LINE, text);
+}
+
+LogPrint::~LogPrint() {
+	if (line_started())
+		end_line();
 }
 
 PlatformPrint::PlatformPrint(uuid::log::Level level)

@@ -42,3 +42,8 @@ void TestPrint::print_part_line(const char *str, size_t len) {
 void TestPrint::end_line() {
 	::mp_hal_stdout_tx_strn("\r\n", 2);
 }
+
+TestPrint::~TestPrint() {
+	if (line_started())
+		end_line();
+}

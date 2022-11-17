@@ -52,6 +52,7 @@ private:
 	std::vector<char> text_;
 };
 
+/* Final derived classes need to call end_line() in destructor */
 class LinePrint: public Print {
 public:
 	LinePrint() = default;
@@ -68,10 +69,10 @@ protected:
 	bool line_{false};
 };
 
+/* Final derived classes need to call end_line() in destructor */
 class LineWrapPrint: public LinePrint {
 public:
 	LineWrapPrint(size_t line_length);
-	~LineWrapPrint() override;
 
 protected:
 	void print_part_line(const char *str, size_t len) final override;
@@ -86,7 +87,7 @@ private:
 	bool continuation_{false};
 };
 
-class LogPrint: public LineWrapPrint {
+class LogPrint final: public LineWrapPrint {
 public:
 	static constexpr size_t MAX_LINE_LENGTH = 100;
 	static constexpr char NORMAL_LINE = '>';
@@ -94,6 +95,7 @@ public:
 
 	LogPrint(uuid::log::Logger &logger, uuid::log::Level level,
 		const std::string &prefix);
+	~LogPrint() override;
 
 protected:
 	void print_wrapped_line(const char *text, bool continuation) override;
@@ -104,7 +106,7 @@ private:
 	const uuid::log::Level level_;
 };
 
-class PlatformPrint: public LinePrint {
+class PlatformPrint final: public LinePrint {
 public:
 	PlatformPrint(uuid::log::Level level);
 	~PlatformPrint() override;
