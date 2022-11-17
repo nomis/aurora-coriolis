@@ -37,6 +37,8 @@ public:
 
 	std::string output_;
 	int ret_{-1};
+	bool force_exit_{false};
+	bool stop_failed_{false};
 
 protected:
 	void main() override;

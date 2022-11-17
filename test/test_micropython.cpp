@@ -40,10 +40,11 @@ extern "C" {
 
 using aurcor::MicroPython;
 
-static uuid::log::PrintHandler logger{Serial};
+static uuid::log::PrintHandler log_handler{Serial};
 
 void TestMicroPython::init() {
-	uuid::log::Logger::register_handler(&logger, uuid::log::Level::ALL);
+	log_handler.maximum_log_messages(SIZE_MAX);
+	uuid::log::Logger::register_handler(&log_handler, uuid::log::Level::ALL);
 	MicroPython::setup(1);
 }
 
@@ -51,7 +52,7 @@ void TestMicroPython::tearDown() {
 	fflush(stderr);
 	fprintf(stdout, "\n");
 	fflush(stdout);
-	logger.loop();
+	log_handler.loop();
 }
 
 TestMicroPython::TestMicroPython(std::shared_ptr<aurcor::LEDBus> bus)
@@ -63,10 +64,28 @@ void TestMicroPython::run(std::string script) {
 
 	TEST_ASSERT_TRUE(MicroPython::start());
 
-	alarm(10);
-	while (running()) { delay(1); }
-	alarm(10);
-	while (!stop()) { delay(1); }
+	unsigned long start = millis();
+	while (running()) {
+		if (millis() - start > 10000) {
+			force_exit_ = true;
+			force_exit();
+		} else {
+			delay(1);
+		}
+	}
+
+	start = millis();
+	while (!stop()) {
+		if (millis() - start > 10000) {
+			stop_failed_ = true;
+			break;
+		} else {
+			delay(1);
+		}
+	}
+
+	TEST_ASSERT_FALSE(force_exit_);
+	TEST_ASSERT_FALSE(stop_failed_);
 }
 
 void TestMicroPython::main() {
