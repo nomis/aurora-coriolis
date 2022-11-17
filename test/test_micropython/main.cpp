@@ -105,6 +105,22 @@ ulogging.info("Hello %s %s World!", 42)
 	TEST_ASSERT_EQUAL_INT(0, mp.print_instances_);
 }
 
+static void test_uncaught_exception() {
+	auto bus = std::make_shared<TestLEDBus>();
+	TestMicroPython mp{bus};
+
+	mp.run(R"python(
+raise Exception()
+	)python", false);
+
+	TEST_ASSERT_EQUAL_STRING(
+		"",
+		mp.output_.c_str());
+	TEST_ASSERT_EQUAL_INT(0, bus->outputs_.size());
+	TEST_ASSERT_EQUAL_INT(-1, mp.ret_);
+	TEST_ASSERT_EQUAL_INT(0, mp.print_instances_);
+}
+
 void tearDown(void) {
 	TestMicroPython::tearDown();
 }
@@ -119,6 +135,7 @@ int main(int argc, char *argv[]) {
 	RUN_TEST(test_stdout);
 	RUN_TEST(test_logging);
 	RUN_TEST(test_logging_exception);
+	RUN_TEST(test_uncaught_exception);
 
 	return UNITY_END();
 }

@@ -59,8 +59,9 @@ TestMicroPython::TestMicroPython(std::shared_ptr<aurcor::LEDBus> bus)
 		: MicroPython("test", bus) {
 }
 
-void TestMicroPython::run(std::string script) {
+void TestMicroPython::run(std::string script, bool safe) {
 	script_ = script;
+	safe_ = safe;
 
 	TEST_ASSERT_TRUE(MicroPython::start());
 
@@ -91,14 +92,15 @@ void TestMicroPython::run(std::string script) {
 void TestMicroPython::main() {
 	nlr_buf_t nlr;
 	nlr.ret_val = nullptr;
-	if (!nlr_push(&nlr)) {
+	if (!safe_ || !nlr_push(&nlr)) {
 		mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, script_.c_str(), script_.length(), 0);
 		mp_parse_tree_t parse_tree = mp_parse(lex, MP_PARSE_FILE_INPUT);
 		mp_obj_t module_fun = mp_compile(&parse_tree, lex->source_name, false);
 
 		mp_call_function_0(module_fun);
 		mp_handle_pending(true);
-		nlr_pop();
+		if (safe_)
+			nlr_pop();
 
 		ret_ = 0;
 	} else {

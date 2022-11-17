@@ -33,7 +33,7 @@ public:
 	TestMicroPython(std::shared_ptr<aurcor::LEDBus> bus);
 	virtual ~TestMicroPython() = default;
 
-	void run(std::string script);
+	void run(std::string script, bool safe = true);
 
 	std::string output_;
 	int ret_{-1};
@@ -51,4 +51,5 @@ protected:
 
 private:
 	std::string script_;
+	bool safe_{true};
 };

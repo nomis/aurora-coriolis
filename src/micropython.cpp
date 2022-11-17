@@ -277,15 +277,32 @@ bool MicroPython::stop() {
 }
 
 void MicroPython::log_exception(mp_obj_t exc, uuid::log::Level level) {
-	std::vector<char> prefix(1 + name_.size() + 3 + 1);
+	nlr_buf_t nlr;
+	nlr.ret_val = nullptr;
 
-	::snprintf_P(prefix.data(), prefix.size(), PSTR("[%s] E"), name_.c_str());
+	{
+		std::vector<char> prefix(1 + name_.size() + 3 + 1);
 
-	LogPrint print{logger_, level, prefix.data()};
+		::snprintf_P(prefix.data(), prefix.size(), PSTR("[%s] E"), name_.c_str());
 
-	mp_stack_set_limit(TASK_EXC_STACK_LIMIT);
-	mp_obj_print_exception(print.context(), exc);
+		LogPrint print{logger_, level, prefix.data()};
+
+		prefix.resize(0);
+		prefix.shrink_to_fit();
+
+		mp_stack_set_limit(TASK_EXC_STACK_LIMIT);
+
+		if (!nlr_push(&nlr)) {
+			mp_obj_print_exception(print.context(), exc);
+			nlr_pop();
+			nlr.ret_val = nullptr;
+		}
+	}
+
 	mp_stack_set_limit(TASK_STACK_LIMIT);
+
+	if (nlr.ret_val)
+		nlr_raise(nlr.ret_val);
 }
 
 MicroPython::AccessState::AccessState(MicroPython &mp)
