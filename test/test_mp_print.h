@@ -26,7 +26,7 @@
 
 class TestPrint: public aurcor::micropython::LinePrint {
 public:
-	TestPrint(uuid::log::Level level);
+	TestPrint(size_t &refcount, uuid::log::Level level);
 	~TestPrint() override;
 
 protected:
@@ -35,5 +35,6 @@ protected:
 	void end_line() override;
 
 private:
+	size_t &refcount_;
 	std::string level_;
 };

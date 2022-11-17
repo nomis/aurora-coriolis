@@ -72,9 +72,9 @@ static void test_logging() {
 	TestMicroPython mp{bus};
 
 	mp.run(R"python(
-import logging
-logging.info("Hello")
-logging.error("World!")
+import ulogging
+ulogging.info("Hello")
+ulogging.error("World!")
 	)python");
 
 	TEST_ASSERT_EQUAL_STRING(
@@ -83,6 +83,26 @@ logging.error("World!")
 		mp.output_.c_str());
 	TEST_ASSERT_EQUAL_INT(0, bus->outputs_.size());
 	TEST_ASSERT_EQUAL_INT(0, mp.ret_);
+	TEST_ASSERT_EQUAL_INT(0, mp.print_instances_);
+}
+
+static void test_logging_exception() {
+	auto bus = std::make_shared<TestLEDBus>();
+	TestMicroPython mp{bus};
+
+	mp.run(R"python(
+import ulogging
+ulogging.info("Hello %s %s World!", 42)
+	)python");
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 3, in <module>\r\n"
+		"TypeError: format string needs more arguments\r\n",
+		mp.output_.c_str());
+	TEST_ASSERT_EQUAL_INT(0, bus->outputs_.size());
+	TEST_ASSERT_EQUAL_INT(1, mp.ret_);
+	TEST_ASSERT_EQUAL_INT(0, mp.print_instances_);
 }
 
 void tearDown(void) {
@@ -98,6 +118,7 @@ int main(int argc, char *argv[]) {
 	RUN_TEST(test_stdin);
 	RUN_TEST(test_stdout);
 	RUN_TEST(test_logging);
+	RUN_TEST(test_logging_exception);
 
 	return UNITY_END();
 }

@@ -39,6 +39,7 @@ public:
 	int ret_{-1};
 	bool force_exit_{false};
 	bool stop_failed_{false};
+	size_t print_instances_{0};
 
 protected:
 	void main() override;

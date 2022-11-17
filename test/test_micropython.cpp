@@ -90,8 +90,8 @@ void TestMicroPython::run(std::string script) {
 
 void TestMicroPython::main() {
 	nlr_buf_t nlr;
-	nlr.ret_val = NULL;
-	if (nlr_push(&nlr) == 0) {
+	nlr.ret_val = nullptr;
+	if (!nlr_push(&nlr)) {
 		mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, script_.c_str(), script_.length(), 0);
 		mp_parse_tree_t parse_tree = mp_parse(lex, MP_PARSE_FILE_INPUT);
 		mp_obj_t module_fun = mp_compile(&parse_tree, lex->source_name, false);
@@ -118,5 +118,5 @@ uuid::log::Level TestMicroPython::modulogging_effective_level() {
 }
 
 std::unique_ptr<aurcor::micropython::Print> TestMicroPython::modulogging_print(uuid::log::Level level) {
-	return std::make_unique<TestPrint>(level);
+	return std::make_unique<TestPrint>(print_instances_, level);
 }

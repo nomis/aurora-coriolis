@@ -24,10 +24,11 @@
 # include <cstring>
 
 extern "C" {
-	# include <py/runtime.h>
+	# include <py/nlr.h>
 	# include <py/obj.h>
 	# include <py/objstr.h>
 	# include <py/qstr.h>
+	# include <py/runtime.h>
 }
 
 # include <uuid/log.h>
@@ -138,6 +139,12 @@ mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
 	mp_arg_parse_all(0, nullptr, kwargs, MP_ARRAY_SIZE(allowed_args), allowed_args, parsed_args);
 
 	std::unique_ptr<Print> print = MicroPython::current().modulogging_print(level);
+	nlr_buf_t nlr;
+	nlr.ret_val = nullptr;
+	if (nlr_push(&nlr)) {
+		print.reset();
+		nlr_raise(nlr.ret_val);
+	}
 
 	if (n_args == 1) {
 		mp_obj_print_helper(print->context(), args[0], PRINT_STR);
@@ -181,6 +188,8 @@ mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
 
 		mp_obj_print_exception(print->context(), exc);
 	}
+
+	nlr_pop();
 
 	return MP_ROM_NONE;
 }

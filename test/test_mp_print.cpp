@@ -26,9 +26,11 @@ extern "C" {
 
 #include "aurcor/mp_print.h"
 
-TestPrint::TestPrint(uuid::log::Level level)
-		: level_(reinterpret_cast<const char *>(uuid::log::format_level_uppercase(level))) {
+TestPrint::TestPrint(size_t &refcount, uuid::log::Level level)
+		: refcount_(refcount),
+		level_(reinterpret_cast<const char *>(uuid::log::format_level_uppercase(level))) {
 	level_.append(":");
+	refcount_++;
 }
 
 void TestPrint::begin_line() {
@@ -46,4 +48,5 @@ void TestPrint::end_line() {
 TestPrint::~TestPrint() {
 	if (line_started())
 		end_line();
+	refcount_--;
 }
