@@ -245,8 +245,14 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		if (value < 0)
 			mp_raise_TypeError(MP_ERROR_TEXT("length must be positive"));
 
+		if ((size_t)value > MAX_ULENGTH)
+			mp_raise_msg(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting length value to bytes"));
+
 		in_bytes = std::min(in_bytes, (size_t)value * BYTES_PER_LED);
 	}
+
+	if (rotate_length < MIN_SLENGTH || rotate_length > MAX_SLENGTH)
+		mp_raise_msg(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting rotate value to bytes"));
 
 	if (byte_array) {
 		const uint8_t *input = reinterpret_cast<uint8_t *>(bufinfo.buf);
@@ -259,7 +265,7 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 			mp_raise_ValueError(MP_ERROR_TEXT("can't rotate by more than the length of byte array"));
 
 		if (buf_bytes % BYTES_PER_LED != 0)
-			mp_raise_ValueError(MP_ERROR_TEXT("byte array length must be a multiple of 3 bytes"));
+			mp_raise_TypeError(MP_ERROR_TEXT("byte array length must be a multiple of 3 bytes"));
 
 		if (reverse) {
 			if (rotate_bytes != 0) {
@@ -467,19 +473,28 @@ void PyModule::hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args, bool exp) 
 	if (!is_byte_array(bufinfo))
 		mp_raise_TypeError(MP_ERROR_TEXT("buffer must be a byte array"));
 
+	if (bufinfo.len % BYTES_PER_LED != 0)
+		mp_raise_TypeError(MP_ERROR_TEXT("byte array length must be a multiple of 3 bytes"));
+
 	if (!mp_obj_is_int(args[ARG_offset])) {
-			mp_raise_TypeError(MP_ERROR_TEXT("offset must be an int"));
+			mp_raise_TypeError(MP_ERROR_TEXT("buffer index must be an int"));
 	} else {
 		mp_int_t value = mp_obj_get_int(args[ARG_offset]);
 
-		offset = (size_t)value;
+		if (value < 0)
+			mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("buffer index must be positive"));
 
-		if (value < 0 || offset > bufinfo.len)
+		if ((size_t)value > MAX_ULENGTH)
+			mp_raise_msg(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting buffer index to bytes"));
+
+		offset = (size_t)value * BYTES_PER_LED;
+
+		if (offset > bufinfo.len)
+			mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("buffer index out of range"));
+
+		if (bufinfo.len - offset < BYTES_PER_LED)
 			mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("buffer index out of range"));
 	}
-
-	if (bufinfo.len - offset < BYTES_PER_LED)
-		mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("buffer index out of range"));
 
 	hsv_to_rgb(n_args - 2, &args[2], exp, *reinterpret_cast<std::array<uint8_t,3>*>(
 		&reinterpret_cast<uint8_t*>(bufinfo.buf)[offset]));

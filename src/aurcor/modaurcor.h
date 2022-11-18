@@ -95,6 +95,7 @@ MP_DECLARE_CONST_FUN_OBJ_0(aurcor_time_us_obj);
 
 # include <array>
 # include <memory>
+# include <limits>
 #endif
 
 namespace aurcor {
@@ -110,6 +111,11 @@ public:
 	static constexpr mp_int_t MAX_SATURATION = AURCOR_MAX_SATURATION;
 	static constexpr mp_int_t MAX_VALUE = AURCOR_MAX_VALUE;
 	static constexpr mp_int_t EXPANDED_HUE_RANGE = AURCOR_EXP_HUE_RANGE;
+	static constexpr ssize_t MIN_SLENGTH = (std::numeric_limits<ssize_t>::min() + (ssize_t)BYTES_PER_LED - 1) / (ssize_t)BYTES_PER_LED;
+	static constexpr ssize_t MAX_SLENGTH = std::numeric_limits<ssize_t>::max() / BYTES_PER_LED;
+	static constexpr size_t MAX_ULENGTH = std::numeric_limits<size_t>::max() / BYTES_PER_LED;
+	static_assert(-(MIN_SLENGTH * (ssize_t)BYTES_PER_LED) > 0, "Minimum signed length can't be converted to a positive value");
+	static_assert((MIN_SLENGTH * (ssize_t)BYTES_PER_LED) > std::numeric_limits<ssize_t>::min(), "Minimum signed length can't be converted to a positive value");
 
 	enum class OutputType {
 		RGB,
