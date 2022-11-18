@@ -122,6 +122,10 @@ ULOGGING_LEVELS_WITH_META
 	return ULOGGING_L_NOTSET;
 }
 
+/* https://gcc.gnu.org/bugzilla/show_bug.cgi?id=21161 */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclobbered"
+
 mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
 		size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
 	static constexpr size_t STACK_TUPLE_NUM = 8;
@@ -193,6 +197,8 @@ mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
 
 	return MP_ROM_NONE;
 }
+
+#pragma GCC diagnostic pop
 
 Level ULogging::enabled_level(mp_int_t py_level) {
 	auto &self = current();
