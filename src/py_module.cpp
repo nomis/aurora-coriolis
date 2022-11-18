@@ -251,7 +251,7 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 	if (byte_array) {
 		const uint8_t *input = reinterpret_cast<uint8_t *>(bufinfo.buf);
 		const size_t buf_bytes = bufinfo.len;
-		const size_t rotate_bytes = rotate_length > 0
+		const size_t rotate_bytes = rotate_length >= 0
 			? ((size_t)rotate_length * BYTES_PER_LED)
 			: (buf_bytes - (size_t)std::abs(rotate_length) * BYTES_PER_LED);
 
@@ -292,7 +292,7 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		}
 	} else if (rotate_length != 0 || reverse) {
 		const size_t values_length = mp_obj_get_int(mp_obj_len(values));
-		const size_t abs_rotate_length = rotate_length > 0
+		const size_t abs_rotate_length = rotate_length >= 0
 			? (size_t)rotate_length
 			: (values_length - (size_t)std::abs(rotate_length));
 		size_t in_length = std::min(in_bytes / BYTES_PER_LED, values_length);
