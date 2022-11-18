@@ -1,6 +1,7 @@
 .PHONY: all native coverage
+.NOTPARALLEL:
 
-all: native .WAIT coverage
+all: native coverage
 
 native:
 	mkdir -p ../.pio/build/native_test/
