@@ -258,7 +258,27 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		if (rotate_bytes > buf_bytes)
 			mp_raise_ValueError(MP_ERROR_TEXT("can't rotate by more than the length of byte array"));
 
-		if (!reverse) {
+		if (buf_bytes % BYTES_PER_LED != 0)
+			mp_raise_ValueError(MP_ERROR_TEXT("byte array length must be a multiple of 3 bytes"));
+
+		if (reverse) {
+			if (rotate_bytes != 0) {
+				size_t available_bytes = std::min(in_bytes, rotate_bytes);
+
+				in_bytes -= available_bytes;
+				for (size_t i = rotate_bytes; available_bytes > 0; i -= BYTES_PER_LED) {
+					std::memcpy(&buffer[out_bytes], &input[i - BYTES_PER_LED], BYTES_PER_LED);
+					out_bytes += BYTES_PER_LED;
+					available_bytes -= BYTES_PER_LED;
+				}
+			}
+
+			for (size_t i = buf_bytes; in_bytes > 0; i -= BYTES_PER_LED) {
+				std::memcpy(&buffer[out_bytes], &input[i - BYTES_PER_LED], BYTES_PER_LED);
+				out_bytes += BYTES_PER_LED;
+				in_bytes -= BYTES_PER_LED;
+			}
+		} else {
 			if (rotate_bytes != 0) {
 				size_t available_bytes = std::min(in_bytes, buf_bytes - rotate_bytes);
 
@@ -271,24 +291,6 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 				std::memcpy(&buffer[out_bytes], &input[0], in_bytes);
 				out_bytes += in_bytes;
 			}
-		} else {
-			if (rotate_bytes != 0) {
-				size_t available_bytes = std::min(in_bytes, rotate_bytes);
-
-				in_bytes -= available_bytes;
-				for (size_t i = rotate_bytes; available_bytes > 0; i -= BYTES_PER_LED) {
-					std::memcpy(&buffer[out_bytes], &input[i], BYTES_PER_LED);
-					out_bytes += BYTES_PER_LED;
-					available_bytes -= BYTES_PER_LED;
-				}
-			}
-
-			for (size_t i = buf_bytes; in_bytes > 0; i -= BYTES_PER_LED) {
-				std::memcpy(&buffer[out_bytes], &input[i], BYTES_PER_LED);
-				out_bytes += BYTES_PER_LED;
-				in_bytes -= BYTES_PER_LED;
-			}
-
 		}
 	} else if (rotate_length != 0 || reverse) {
 		const size_t values_length = mp_obj_get_int(mp_obj_len(values));
@@ -323,12 +325,12 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		} else {
 			size_t available_length = std::min(in_length, values_length - abs_rotate_length);
 
+			in_length -= available_length;
 			for (size_t i = abs_rotate_length; available_length > 0; i++) {
 				append_led(buffer, type, values_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL), out_bytes);
 				out_bytes += BYTES_PER_LED;
 				available_length--;
 			}
-			in_length -= available_length;
 
 			for (size_t i = 0; in_length > 0; i++) {
 				append_led(buffer, type, values_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL), out_bytes);

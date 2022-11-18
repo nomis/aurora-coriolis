@@ -23,52 +23,101 @@
 #include "test_led_bus.h"
 #include "test_micropython.h"
 
-void normal_rgb_0() {
+static void normal_rgb_0() {
 	std::array<uint8_t,5*3> expected{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
 import aurcor; aurcor.output_rgb(bytearray())
 )python")->outputs_[0].data(), expected.size());
 }
 
-void normal_rgb_1() {
+static void normal_rgb_1() {
 	std::array<uint8_t,5*3> expected{1,2,3,0,0,0,0,0,0,0,0,0,0,0,0};
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
 import aurcor; aurcor.output_rgb(bytearray(range(1, 1*3+1)))
 )python")->outputs_[0].data(), expected.size());
 }
 
-void normal_rgb_2() {
+static void normal_rgb_2() {
 	std::array<uint8_t,5*3> expected{1,2,3,4,5,6,0,0,0,0,0,0,0,0,0};
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
 import aurcor; aurcor.output_rgb(bytearray(range(1, 2*3+1)))
 )python")->outputs_[0].data(), expected.size());
 }
 
-void normal_rgb_3() {
+static void normal_rgb_3() {
 	std::array<uint8_t,5*3> expected{1,2,3,4,5,6,7,8,9,0,0,0,0,0,0};
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
 import aurcor; aurcor.output_rgb(bytearray(range(1, 3*3+1)))
 )python")->outputs_[0].data(), expected.size());
 }
 
-void normal_rgb_4() {
+static void normal_rgb_4() {
 	std::array<uint8_t,5*3> expected{1,2,3,4,5,6,7,8,9,10,11,12,0,0,0};
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
 import aurcor; aurcor.output_rgb(bytearray(range(1, 4*3+1)))
 )python")->outputs_[0].data(), expected.size());
 }
 
-void normal_rgb_5() {
+static void normal_rgb_5() {
 	std::array<uint8_t,5*3> expected{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
 import aurcor; aurcor.output_rgb(bytearray(range(1, 5*3+1)))
 )python")->outputs_[0].data(), expected.size());
 }
 
-void normal_rgb_6() {
+static void normal_rgb_6() {
 	std::array<uint8_t,5*3> expected{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
 import aurcor; aurcor.output_rgb(bytearray(range(1, 6*3+1)))
+)python")->outputs_[0].data(), expected.size());
+}
+
+static void reverse_rgb_0() {
+	std::array<uint8_t,5*3> expected{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
+import aurcor; aurcor.output_rgb(bytearray(), reverse=True)
+)python")->outputs_[0].data(), expected.size());
+}
+
+static void reverse_rgb_1() {
+	std::array<uint8_t,5*3> expected{1,2,3,0,0,0,0,0,0,0,0,0,0,0,0};
+	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
+import aurcor; aurcor.output_rgb(bytearray(range(1, 1*3+1)), reverse=True)
+)python")->outputs_[0].data(), expected.size());
+}
+
+static void reverse_rgb_2() {
+	std::array<uint8_t,5*3> expected{4,5,6,1,2,3,0,0,0,0,0,0,0,0,0};
+	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
+import aurcor; aurcor.output_rgb(bytearray(range(1, 2*3+1)), reverse=True)
+)python")->outputs_[0].data(), expected.size());
+}
+
+static void reverse_rgb_3() {
+	std::array<uint8_t,5*3> expected{7,8,9,4,5,6,1,2,3,0,0,0,0,0,0};
+	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
+import aurcor; aurcor.output_rgb(bytearray(range(1, 3*3+1)), reverse=True)
+)python")->outputs_[0].data(), expected.size());
+}
+
+static void reverse_rgb_4() {
+	std::array<uint8_t,5*3> expected{10,11,12,7,8,9,4,5,6,1,2,3,0,0,0};
+	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
+import aurcor; aurcor.output_rgb(bytearray(range(1, 4*3+1)), reverse=True)
+)python")->outputs_[0].data(), expected.size());
+}
+
+static void reverse_rgb_5() {
+	std::array<uint8_t,5*3> expected{13,14,15,10,11,12,7,8,9,4,5,6,1,2,3};
+	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
+import aurcor; aurcor.output_rgb(bytearray(range(1, 5*3+1)), reverse=True)
+)python")->outputs_[0].data(), expected.size());
+}
+
+static void reverse_rgb_6() {
+	std::array<uint8_t,5*3> expected{16,17,18,13,14,15,10,11,12,7,8,9,4,5,6};
+	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, R"python(
+import aurcor; aurcor.output_rgb(bytearray(range(1, 6*3+1)), reverse=True)
 )python")->outputs_[0].data(), expected.size());
 }
 
@@ -82,6 +131,14 @@ int testsuite_byte_array() {
 	RUN_TEST(normal_rgb_4);
 	RUN_TEST(normal_rgb_5);
 	RUN_TEST(normal_rgb_6);
+
+	RUN_TEST(reverse_rgb_0);
+	RUN_TEST(reverse_rgb_1);
+	RUN_TEST(reverse_rgb_2);
+	RUN_TEST(reverse_rgb_3);
+	RUN_TEST(reverse_rgb_4);
+	RUN_TEST(reverse_rgb_5);
+	RUN_TEST(reverse_rgb_6);
 
 	return UNITY_END();
 }
