@@ -36,6 +36,7 @@ extern "C" {
 #include <uuid/log.h>
 
 #include "aurcor/micropython.h"
+#include "test_led_bus.h"
 #include "test_mp_print.h"
 
 using aurcor::MicroPython;
@@ -48,6 +49,16 @@ void TestMicroPython::init() {
 	MicroPython::setup(1);
 }
 
+std::shared_ptr<TestByteBufferLEDBus> TestMicroPython::run_bus(size_t length,
+		size_t outputs, const std::string &script) {
+	auto bus = std::make_shared<TestByteBufferLEDBus>();
+	TestMicroPython mp{bus};
+	bus->length(5);
+	mp.run(script);
+	TEST_ASSERT_EQUAL_INT(outputs, bus->outputs_.size());
+	return bus;
+}
+
 void TestMicroPython::tearDown() {
 	fflush(stderr);
 	fprintf(stdout, "\n");
@@ -56,7 +67,7 @@ void TestMicroPython::tearDown() {
 }
 
 TestMicroPython::TestMicroPython(std::shared_ptr<aurcor::LEDBus> bus)
-		: MicroPython("test", bus) {
+		: MicroPython("test", bus), bus_(bus) {
 }
 
 void TestMicroPython::run(std::string script, bool safe) {

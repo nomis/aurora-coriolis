@@ -25,7 +25,7 @@
 #include "test_micropython.h"
 
 static void test_do_nothing() {
-	auto bus = std::make_shared<TestLEDBus>();
+	auto bus = std::make_shared<TestByteBufferLEDBus>();
 	TestMicroPython mp{bus};
 
 	mp.run("");
@@ -36,7 +36,7 @@ static void test_do_nothing() {
 }
 
 static void test_stdin() {
-	auto bus = std::make_shared<TestLEDBus>();
+	auto bus = std::make_shared<TestByteBufferLEDBus>();
 	TestMicroPython mp{bus};
 
 	mp.run(R"python(
@@ -53,7 +53,7 @@ input()
 }
 
 static void test_stdout() {
-	auto bus = std::make_shared<TestLEDBus>();
+	auto bus = std::make_shared<TestByteBufferLEDBus>();
 	TestMicroPython mp{bus};
 
 	mp.run(R"python(
@@ -68,7 +68,7 @@ print("Hello World!")
 }
 
 static void test_logging() {
-	auto bus = std::make_shared<TestLEDBus>();
+	auto bus = std::make_shared<TestByteBufferLEDBus>();
 	TestMicroPython mp{bus};
 
 	mp.run(R"python(
@@ -87,7 +87,7 @@ ulogging.error("World!")
 }
 
 static void test_logging_exception() {
-	auto bus = std::make_shared<TestLEDBus>();
+	auto bus = std::make_shared<TestByteBufferLEDBus>();
 	TestMicroPython mp{bus};
 
 	mp.run(R"python(
@@ -106,7 +106,7 @@ ulogging.info("Hello %s %s World!", 42)
 }
 
 static void test_uncaught_exception() {
-	auto bus = std::make_shared<TestLEDBus>();
+	auto bus = std::make_shared<TestByteBufferLEDBus>();
 	TestMicroPython mp{bus};
 
 	mp.run(R"python(

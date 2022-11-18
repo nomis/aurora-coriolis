@@ -83,14 +83,6 @@ private:
 	mutable LEDProfiles profiles_;
 };
 
-namespace ledbus {
-
-static inline void write(LEDBus &bus, const std::vector<uint8_t> data) {
-	bus.write(data.data(), data.size());
-}
-
-} // namespace ledbus
-
 class NullLEDBus: public LEDBus {
 public:
 	NullLEDBus(const char *name);

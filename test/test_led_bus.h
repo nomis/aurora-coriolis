@@ -22,13 +22,13 @@
 
 #include <vector>
 
-class TestLEDBus: public aurcor::LEDBus {
+class TestByteBufferLEDBus: public aurcor::ByteBufferLEDBus {
 public:
-	TestLEDBus();
-	virtual ~TestLEDBus() = default;
+	TestByteBufferLEDBus();
+	virtual ~TestByteBufferLEDBus() = default;
 
 	std::vector<std::vector<uint8_t>> outputs_;
 
 protected:
-	void start(const uint8_t *data, size_t size) override;
+	void transmit() override;
 };

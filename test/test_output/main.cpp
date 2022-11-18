@@ -16,19 +16,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "test_led_bus.h"
+#include <unity.h>
 
-#include <cstring>
-#include <vector>
+#include "test_micropython.h"
 
-#include "aurcor/led_bus.h"
-#include "aurcor/led_profiles.h"
-
-TestByteBufferLEDBus::TestByteBufferLEDBus() : aurcor::ByteBufferLEDBus("test") {
-	profile(LED_PROFILE_NORMAL).set(0, 255, 255, 255);
+void tearDown(void) {
+	TestMicroPython::tearDown();
 }
 
-void TestByteBufferLEDBus::transmit() {
-	outputs_.emplace_back(pos_, pos_ + bytes_);
-	finish();
+int main(int argc, char *argv[]) {
+	int ret = 0;
+
+	TestMicroPython::init();
+
+#define FUNC_DECLARE_EXEC(func) \
+	do { \
+		extern int func(); \
+		ret |= func(); \
+	} while(0)
+
+	FUNC_DECLARE_EXEC(testsuite_byte_array);
+
+	return ret;
 }

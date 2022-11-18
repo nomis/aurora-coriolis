@@ -25,9 +25,13 @@
 
 #include <uuid/log.h>
 
+class TestByteBufferLEDBus;
+
 class TestMicroPython: public aurcor::MicroPython {
 public:
 	static void init();
+	static std::shared_ptr<TestByteBufferLEDBus> run_bus(size_t length,
+		size_t outputs, const std::string &script);
 	static void tearDown();
 
 	TestMicroPython(std::shared_ptr<aurcor::LEDBus> bus);
@@ -50,6 +54,7 @@ protected:
 	std::unique_ptr<aurcor::micropython::Print> modulogging_print(uuid::log::Level level) override;
 
 private:
+	std::shared_ptr<aurcor::LEDBus> bus_;
 	std::string script_;
 	bool safe_{true};
 };
