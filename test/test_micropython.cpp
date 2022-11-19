@@ -53,10 +53,20 @@ std::shared_ptr<TestByteBufferLEDBus> TestMicroPython::run_bus(size_t length,
 		size_t outputs, const std::string &script) {
 	auto bus = std::make_shared<TestByteBufferLEDBus>();
 	TestMicroPython mp{bus};
-	bus->length(5);
+	bus->length(length);
 	mp.run(script);
 	TEST_ASSERT_EQUAL_INT(outputs, bus->outputs_.size());
 	return bus;
+}
+
+std::shared_ptr<TestMicroPython> TestMicroPython::run_script(
+		const std::string &script, size_t length, size_t outputs) {
+	auto bus = std::make_shared<TestByteBufferLEDBus>();
+	auto mp = std::make_shared<TestMicroPython>(bus);
+	bus->length(length);
+	mp->run(script);
+	TEST_ASSERT_EQUAL_INT(outputs, bus->outputs_.size());
+	return mp;
 }
 
 void TestMicroPython::tearDown() {

@@ -243,7 +243,7 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		mp_int_t value = mp_obj_get_int(parsed_args[ARG_length].u_obj);
 
 		if (value < 0)
-			mp_raise_TypeError(MP_ERROR_TEXT("length must be positive"));
+			mp_raise_ValueError(MP_ERROR_TEXT("length must be positive"));
 
 		if ((size_t)value > MAX_ULENGTH)
 			mp_raise_msg(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting length value to bytes"));
@@ -265,7 +265,7 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 			mp_raise_ValueError(MP_ERROR_TEXT("can't rotate by more than the length of byte array"));
 
 		if (buf_bytes % BYTES_PER_LED != 0)
-			mp_raise_TypeError(MP_ERROR_TEXT("byte array length must be a multiple of 3 bytes"));
+			mp_raise_ValueError(MP_ERROR_TEXT("byte array length must be a multiple of 3 bytes"));
 
 		if (reverse) {
 			if (rotate_bytes != 0) {
@@ -304,12 +304,9 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 			? (size_t)rotate_length
 			: (values_length - (size_t)std::abs(rotate_length));
 		size_t in_length = std::min(in_bytes / BYTES_PER_LED, values_length);
-		auto values_subscr = mp_obj_get_type(values)->subscr;
 
-		if (values_subscr == nullptr) {
-			mp_obj_subscr(values, 0, MP_OBJ_SENTINEL);
-			mp_raise_TypeError(MP_ERROR_TEXT("values must be subscriptable"));
-		}
+		if (abs_rotate_length > values_length)
+			mp_raise_ValueError(MP_ERROR_TEXT("can't rotate by more than the length of values"));
 
 		if (reverse) {
 			if (rotate_length != 0) {
@@ -317,14 +314,14 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 
 				in_length -= available_length;
 				for (size_t i = abs_rotate_length; available_length > 0; i--) {
-					append_led(buffer, type, values_subscr(values, MP_OBJ_NEW_SMALL_INT(i - 1), MP_OBJ_SENTINEL), out_bytes);
+					append_led(buffer, type, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i - 1), MP_OBJ_SENTINEL), out_bytes);
 					out_bytes += BYTES_PER_LED;
 					available_length--;
 				}
 			}
 
 			for (size_t i = values_length; in_length > 0; i--) {
-				append_led(buffer, type, values_subscr(values, MP_OBJ_NEW_SMALL_INT(i - 1), MP_OBJ_SENTINEL), out_bytes);
+				append_led(buffer, type, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i - 1), MP_OBJ_SENTINEL), out_bytes);
 				out_bytes += BYTES_PER_LED;
 				in_length--;
 			}
@@ -333,13 +330,13 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 
 			in_length -= available_length;
 			for (size_t i = abs_rotate_length; available_length > 0; i++) {
-				append_led(buffer, type, values_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL), out_bytes);
+				append_led(buffer, type, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL), out_bytes);
 				out_bytes += BYTES_PER_LED;
 				available_length--;
 			}
 
 			for (size_t i = 0; in_length > 0; i++) {
-				append_led(buffer, type, values_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL), out_bytes);
+				append_led(buffer, type, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL), out_bytes);
 				out_bytes += BYTES_PER_LED;
 				in_length--;
 			}

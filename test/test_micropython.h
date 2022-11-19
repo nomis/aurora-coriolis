@@ -32,6 +32,8 @@ public:
 	static void init();
 	static std::shared_ptr<TestByteBufferLEDBus> run_bus(size_t length,
 		size_t outputs, const std::string &script);
+	static std::shared_ptr<TestMicroPython> run_script(
+		const std::string &script, size_t length = 5, size_t outputs = 0);
 	static void tearDown();
 
 	TestMicroPython(std::shared_ptr<aurcor::LEDBus> bus);
