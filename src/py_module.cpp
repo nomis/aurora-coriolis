@@ -21,6 +21,7 @@
 #ifndef NO_QSTR
 # include <algorithm>
 # include <array>
+# include <cassert>
 # include <cmath>
 # include <cstring>
 
@@ -219,22 +220,12 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		return MP_ROM_NONE;
 	}
 
-	ssize_t rotate_length = parsed_args[ARG_rotate].u_int;
+	ssize_t signed_rotate_length = parsed_args[ARG_rotate].u_int;
 	auto values = parsed_args[ARG_values].u_obj;
 	uint8_t *buffer = led_buffer_->begin();
 	const size_t max_bytes = std::min(bus_->length() * BYTES_PER_LED, led_buffer_->size());
 	size_t in_bytes = max_bytes;
 	size_t out_bytes = 0;
-
-	mp_buffer_info_t bufinfo;
-	bool byte_array = mp_get_buffer(values, &bufinfo, MP_BUFFER_READ) && is_byte_array(bufinfo);
-
-	if (byte_array) {
-		in_bytes = std::min(in_bytes, bufinfo.len);
-
-		if (type != OutputType::RGB)
-			mp_raise_ValueError(MP_ERROR_TEXT("can only use byte array for RGB values"));
-	}
 
 	if (parsed_args[ARG_length].u_obj != MP_OBJ_NULL) {
 		if (!mp_obj_is_int(parsed_args[ARG_length].u_obj))
@@ -251,88 +242,88 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		in_bytes = std::min(in_bytes, (size_t)value * BYTES_PER_LED);
 	}
 
-	if (rotate_length < MIN_SLENGTH || rotate_length > MAX_SLENGTH)
+	if (signed_rotate_length < MIN_SLENGTH || signed_rotate_length > MAX_SLENGTH)
 		mp_raise_msg(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting rotate value to bytes"));
 
-	if (byte_array) {
-		const uint8_t *input = reinterpret_cast<uint8_t *>(bufinfo.buf);
-		const size_t buf_bytes = bufinfo.len;
-		const size_t rotate_bytes = rotate_length >= 0
-			? ((size_t)rotate_length * BYTES_PER_LED)
-			: (buf_bytes - (size_t)std::abs(rotate_length) * BYTES_PER_LED);
+	mp_buffer_info_t bufinfo;
+	bool byte_array = mp_get_buffer(values, &bufinfo, MP_BUFFER_READ) && is_byte_array(bufinfo);
 
-		if (rotate_bytes > buf_bytes)
-			mp_raise_ValueError(MP_ERROR_TEXT("can't rotate by more than the length of byte array"));
+	if (byte_array) {
+		const size_t buf_bytes = bufinfo.len;
+
+		if (type != OutputType::RGB)
+			mp_raise_ValueError(MP_ERROR_TEXT("can only use byte array for RGB values"));
 
 		if (buf_bytes % BYTES_PER_LED != 0)
 			mp_raise_ValueError(MP_ERROR_TEXT("byte array length must be a multiple of 3 bytes"));
 
-		if (reverse) {
-			if (rotate_bytes != 0) {
-				size_t available_bytes = std::min(in_bytes, rotate_bytes);
+		if ((size_t)std::abs(signed_rotate_length) * BYTES_PER_LED > buf_bytes)
+			mp_raise_ValueError(MP_ERROR_TEXT("can't rotate by more than the length of byte array"));
 
-				in_bytes -= available_bytes;
-				for (size_t i = rotate_bytes; available_bytes > 0; i -= BYTES_PER_LED) {
-					std::memcpy(&buffer[out_bytes], &input[i - BYTES_PER_LED], BYTES_PER_LED);
-					out_bytes += BYTES_PER_LED;
-					available_bytes -= BYTES_PER_LED;
-				}
+		in_bytes = std::min(in_bytes, bufinfo.len);
+
+		const uint8_t *input = reinterpret_cast<uint8_t *>(bufinfo.buf);
+		const size_t rotate_bytes = signed_rotate_length >= 0
+			? (signed_rotate_length * BYTES_PER_LED)
+			: (buf_bytes + signed_rotate_length * BYTES_PER_LED);
+		size_t available_rotate_bytes = std::min(in_bytes, buf_bytes - rotate_bytes);
+
+		if (reverse) {
+			in_bytes -= available_rotate_bytes;
+			for (size_t i = buf_bytes - rotate_bytes - BYTES_PER_LED; available_rotate_bytes > 0; i -= BYTES_PER_LED) {
+				std::memcpy(&buffer[out_bytes], &input[i], BYTES_PER_LED);
+				out_bytes += BYTES_PER_LED;
+				available_rotate_bytes -= BYTES_PER_LED;
 			}
 
-			for (size_t i = buf_bytes; in_bytes > 0; i -= BYTES_PER_LED) {
-				std::memcpy(&buffer[out_bytes], &input[i - BYTES_PER_LED], BYTES_PER_LED);
+			for (size_t i = buf_bytes - BYTES_PER_LED; in_bytes > 0; i -= BYTES_PER_LED) {
+				std::memcpy(&buffer[out_bytes], &input[i], BYTES_PER_LED);
 				out_bytes += BYTES_PER_LED;
 				in_bytes -= BYTES_PER_LED;
 			}
 		} else {
-			if (rotate_bytes != 0) {
-				size_t available_bytes = std::min(in_bytes, buf_bytes - rotate_bytes);
-
-				std::memcpy(&buffer[out_bytes], &input[rotate_bytes], available_bytes);
-				out_bytes += available_bytes;
-				in_bytes -= available_bytes;
+			if (available_rotate_bytes > 0) {
+				std::memcpy(&buffer[out_bytes], &input[rotate_bytes], available_rotate_bytes);
+				out_bytes += available_rotate_bytes;
+				in_bytes -= available_rotate_bytes;
 			}
 
 			if (in_bytes > 0) {
 				std::memcpy(&buffer[out_bytes], &input[0], in_bytes);
 				out_bytes += in_bytes;
+				in_bytes = 0;
 			}
 		}
-	} else if (rotate_length != 0 || reverse) {
+	} else if (signed_rotate_length != 0 || reverse) {
 		const size_t values_length = mp_obj_get_int(mp_obj_len(values));
-		const size_t abs_rotate_length = rotate_length >= 0
-			? (size_t)rotate_length
-			: (values_length - (size_t)std::abs(rotate_length));
-		size_t in_length = std::min(in_bytes / BYTES_PER_LED, values_length);
 
-		if (abs_rotate_length > values_length)
+		if ((size_t)std::abs(signed_rotate_length) > values_length)
 			mp_raise_ValueError(MP_ERROR_TEXT("can't rotate by more than the length of values"));
 
-		if (reverse) {
-			if (rotate_length != 0) {
-				size_t available_length = std::min(in_length, abs_rotate_length);
+		const size_t rotate_length = signed_rotate_length >= 0
+			? signed_rotate_length : (values_length + signed_rotate_length);
+		size_t in_length = std::min(in_bytes / BYTES_PER_LED, values_length);
+		size_t available_rotate_length = std::min(in_length, values_length - rotate_length);
 
-				in_length -= available_length;
-				for (size_t i = abs_rotate_length; available_length > 0; i--) {
-					append_led(buffer, type, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i - 1), MP_OBJ_SENTINEL), out_bytes);
-					out_bytes += BYTES_PER_LED;
-					available_length--;
-				}
+		if (reverse) {
+			in_length -= available_rotate_length;
+			for (size_t i = values_length - rotate_length - 1; available_rotate_length > 0; i--) {
+				append_led(buffer, type, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL), out_bytes);
+				out_bytes += BYTES_PER_LED;
+				available_rotate_length--;
 			}
 
-			for (size_t i = values_length; in_length > 0; i--) {
-				append_led(buffer, type, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i - 1), MP_OBJ_SENTINEL), out_bytes);
+			for (size_t i = values_length - 1; in_length > 0; i--) {
+				append_led(buffer, type, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL), out_bytes);
 				out_bytes += BYTES_PER_LED;
 				in_length--;
 			}
 		} else {
-			size_t available_length = std::min(in_length, values_length - abs_rotate_length);
-
-			in_length -= available_length;
-			for (size_t i = abs_rotate_length; available_length > 0; i++) {
+			in_length -= available_rotate_length;
+			for (size_t i = rotate_length; available_rotate_length > 0; i++) {
 				append_led(buffer, type, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL), out_bytes);
 				out_bytes += BYTES_PER_LED;
-				available_length--;
+				available_rotate_length--;
 			}
 
 			for (size_t i = 0; in_length > 0; i++) {

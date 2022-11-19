@@ -89,7 +89,7 @@ public:
 	virtual ~NullLEDBus() = default;
 
 protected:
-	void start(const uint8_t *data, size_t size) override;
+	void start(const uint8_t *data, size_t size) final override;
 };
 
 class ByteBufferLEDBus: public LEDBus {
@@ -98,7 +98,7 @@ public:
 	virtual ~ByteBufferLEDBus() = default;
 
 protected:
-	void start(const uint8_t *data, size_t size) override;
+	void start(const uint8_t *data, size_t size) final override;
 	virtual void transmit() = 0;
 
 	std::array<uint8_t,MAX_BYTES> buffer_{};
