@@ -1,0 +1,16 @@
+{
+	"C_Cpp.default.cppStandard": "c++17",
+	"C_Cpp.default.cStandard": "c11",
+	"C_Cpp.default.includePath": [
+		"${workspaceFolder}/.pio/**",
+		"${workspaceFolder}/include/**",
+		"${workspaceFolder}/lib/**",
+		"${workspaceFolder}/src/**",
+		"${workspaceFolder}/test/**"
+	],
+	"C_Cpp.default.defines": [
+		"ARDUINO",
+		"ENV_NATIVE",
+		"UNITY_INCLUDE_PRINT_FORMATTED"
+	]
+}
