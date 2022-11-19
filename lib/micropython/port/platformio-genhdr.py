@@ -18,7 +18,7 @@
 # PlatformIO usage:
 #
 # [env:...]
-# extra_scripts = pre:lib/micropython/port/platformio-gendhr.py
+# extra_scripts = pre:lib/micropython/port/platformio-genhdr.py
 
 import subprocess
 
