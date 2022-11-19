@@ -151,16 +151,19 @@ LEDProfile::Result LEDProfile::remove(const std::map<index_t,Ratio>::iterator &i
 	}
 }
 
-std::vector<int> LEDProfile::indexes() const {
-	std::vector<int> values{{0}};
+std::vector<unsigned int> LEDProfile::indexes() const {
+	std::vector<unsigned int> values;
 
-	for (auto &entry : ratios_)
+	for (auto &entry : ratios_) {
+		if (values.empty() && entry.first > 0)
+			values.push_back(0);
 		values.push_back(entry.first);
+	}
 
 	return values;
 }
 
-LEDProfile::Result LEDProfile::get(int index, uint8_t &r, uint8_t &g, uint8_t &b) const {
+LEDProfile::Result LEDProfile::get(unsigned int index, uint8_t &r, uint8_t &g, uint8_t &b) const {
 	if (!valid_index(index))
 		return Result::OUT_OF_RANGE;
 
@@ -174,7 +177,7 @@ LEDProfile::Result LEDProfile::get(int index, uint8_t &r, uint8_t &g, uint8_t &b
 	return Result::OK;
 }
 
-LEDProfile::Result LEDProfile::set(int index, int r, int g, int b) {
+LEDProfile::Result LEDProfile::set(unsigned int index, int r, int g, int b) {
 	if (!valid_index(index))
 		return Result::OUT_OF_RANGE;
 
@@ -185,7 +188,7 @@ LEDProfile::Result LEDProfile::set(int index, int r, int g, int b) {
 	return add(index, ratio);
 }
 
-LEDProfile::Result LEDProfile::adjust(int index, int r, int g, int b) {
+LEDProfile::Result LEDProfile::adjust(unsigned int index, int r, int g, int b) {
 	if (!valid_index(index))
 		return Result::OUT_OF_RANGE;
 
@@ -213,15 +216,15 @@ LEDProfile::Ratio LEDProfile::get(index_t index) const {
 	return ratio;
 }
 
-LEDProfile::Result LEDProfile::move(int src, int dst) {
+LEDProfile::Result LEDProfile::move(unsigned int src, unsigned int dst) {
 	return copy(src, dst, true);
 }
 
-LEDProfile::Result LEDProfile::copy(int src, int dst) {
+LEDProfile::Result LEDProfile::copy(unsigned int src, unsigned int dst) {
 	return copy(src, dst, false);
 }
 
-LEDProfile::Result LEDProfile::copy(int src, int dst, bool move) {
+LEDProfile::Result LEDProfile::copy(unsigned int src, unsigned int dst, bool move) {
 	if (!valid_index(src) || !valid_index(dst))
 		return Result::OUT_OF_RANGE;
 
@@ -243,7 +246,7 @@ LEDProfile::Result LEDProfile::copy(int src, int dst, bool move) {
 	return add((index_t)dst, dst_ratio);
 }
 
-LEDProfile::Result LEDProfile::remove(int index) {
+LEDProfile::Result LEDProfile::remove(unsigned int index) {
 	if (!valid_index(index))
 		return Result::OUT_OF_RANGE;
 
@@ -427,17 +430,17 @@ LEDProfile::Result inline LEDProfile::get_ratio_config_index(JsonArray &array,
 		return Result::PARSE_ERROR;
 	}
 
-	if (!it->is<int>()) {
+	if (!it->is<unsigned int>()) {
 		if (VERBOSE)
-			logger_.trace(F("Ratio config index is not an int"));
+			logger_.trace(F("Ratio config index is not an unsigned int"));
 		return Result::PARSE_ERROR;
 	}
 
-	int value = it->as<int>();
+	unsigned int value = it->as<unsigned int>();
 
 	if (!valid_index(value)) {
 		if (VERBOSE)
-			logger_.trace(F("Ratio config index %d is out of range"), value);
+			logger_.trace(F("Ratio config index %u is out of range"), value);
 		return Result::PARSE_ERROR;
 	}
 
@@ -530,8 +533,7 @@ LEDProfile::Result LEDProfile::save(const char *bus_name, const char *profile_na
 		return Result::IO_ERROR;
 	}
 
-	const char mode[2] = {'w', '\0'};
-	auto file = FS.open(filename.c_str(), mode);
+	auto file = FS.open(filename.c_str(), "w");
 	if (file) {
 		ArduinoJson::serializeJson(doc, file);
 

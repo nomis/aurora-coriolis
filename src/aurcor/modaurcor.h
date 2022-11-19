@@ -116,6 +116,7 @@ public:
 	static constexpr size_t MAX_ULENGTH = std::numeric_limits<size_t>::max() / BYTES_PER_LED;
 	static_assert(-(MIN_SLENGTH * (ssize_t)BYTES_PER_LED) > 0, "Minimum signed length can't be converted to a positive value");
 	static_assert((MIN_SLENGTH * (ssize_t)BYTES_PER_LED) > std::numeric_limits<ssize_t>::min(), "Minimum signed length can't be converted to a positive value");
+	static_assert(MAX_LEDS <= MAX_ULENGTH, "Too many LEDs");
 
 	enum class OutputType {
 		RGB,

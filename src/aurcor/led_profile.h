@@ -40,11 +40,13 @@ class LEDProfile {
 	friend LEDProfiles;
 public:
 	using index_t = uint16_t;
-	static_assert(std::numeric_limits<index_t>::max() + 1 >= MAX_LEDS,
+	static_assert(std::numeric_limits<index_t>::max() > MAX_LEDS,
 		"Index type is too small to cover all LEDs");
 
-	static constexpr int MIN_INDEX = std::numeric_limits<index_t>::min();
-	static constexpr int MAX_INDEX = std::numeric_limits<index_t>::max();
+	static_assert(std::numeric_limits<index_t>::min() == 0, "Index type must be unsigned");
+	static_assert(std::numeric_limits<index_t>::max() <= std::numeric_limits<unsigned int>::max(),
+		"Index type is too large to be stored in an unsigned int");
+	static constexpr unsigned int MAX_INDEX = std::numeric_limits<index_t>::max();
 
 	// These are in priority order to allow combining errors
 	enum Result : uint8_t {
@@ -62,13 +64,13 @@ public:
 	void print(uuid::console::Shell &shell, size_t limit = MAX_LEDS) const;
 	void transform(uint8_t *data, size_t size) const;
 
-	std::vector<int> indexes() const;
-	Result get(int index, uint8_t &r, uint8_t &g, uint8_t &b) const;
-	Result set(int index, int r, int g, int b);
-	Result adjust(int index, int r, int g, int b);
-	Result move(int src, int dst);
-	Result copy(int src, int dst);
-	Result remove(int index);
+	std::vector<unsigned int> indexes() const;
+	Result get(unsigned int index, uint8_t &r, uint8_t &g, uint8_t &b) const;
+	Result set(unsigned int index, int r, int g, int b);
+	Result adjust(unsigned int index, int r, int g, int b);
+	Result move(unsigned int src, unsigned int dst);
+	Result copy(unsigned int src, unsigned int dst);
+	Result remove(unsigned int index);
 	void clear();
 	bool compact(size_t limit = SIZE_MAX);
 
@@ -120,9 +122,8 @@ private:
 	 */
 	static constexpr Ratio DEFAULT_RATIO{8, 8, 8};
 
-	static bool valid_index(int index) {
-		return index >= MIN_INDEX
-			&& index <= MAX_INDEX
+	static bool valid_index(unsigned int index) {
+		return index <= MAX_INDEX
 			&& (index_t)index < MAX_LEDS;
 	}
 
@@ -140,7 +141,7 @@ private:
 	Result add_default();
 	Result remove(const std::map<index_t,Ratio>::iterator &it);
 	Ratio get(index_t index) const;
-	Result copy(int src, int dst, bool move);
+	Result copy(unsigned int src, unsigned int dst, bool move);
 
 	static std::string make_filename(const char *bus_name, const char *profile_name);
 
