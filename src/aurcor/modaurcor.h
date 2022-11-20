@@ -123,17 +123,6 @@ public:
 		EXP_HSV,
 	};
 
-	static inline bool is_byte_array(const mp_buffer_info_t &bufinfo) {
-		switch (bufinfo.typecode) {
-		case BYTEARRAY_TYPECODE:
-		case 'b':
-		case 'B':
-			return true;
-		}
-
-		return false;
-	}
-
 	static void hsv_to_rgb(mp_int_t hue, mp_int_t saturation, mp_int_t value, uint8_t rgb[3]);
 	static void exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation, mp_int_t value, uint8_t rgb[3]);
 

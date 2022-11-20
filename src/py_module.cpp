@@ -246,7 +246,47 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		mp_raise_msg(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting rotate value to bytes"));
 
 	mp_buffer_info_t bufinfo;
-	bool byte_array = mp_get_buffer(values, &bufinfo, MP_BUFFER_READ) && is_byte_array(bufinfo);
+	bool byte_array = false;
+
+	// Prevent use of unspecified array types so that they can be repurposed in the future
+	if (mp_get_buffer(values, &bufinfo, MP_BUFFER_READ)) {
+		switch (bufinfo.typecode) {
+		case BYTEARRAY_TYPECODE:
+		case 'b':
+		case 'B':
+			byte_array = true;
+			break;
+
+		// 0-65535 Hue
+		case 'h': // short
+        case 'H': // unsigned short
+		// 0.0 <= Hue < 1.0
+		case 'f': // float
+			if (type == OutputType::RGB)
+				mp_raise_ValueError(MP_ERROR_TEXT("unsupported array type for RGB values"));
+			break;
+
+		// 0x__RRGGBB
+		case 'i': // int
+		case 'I': // unsigned int
+			if (type != OutputType::RGB)
+				mp_raise_ValueError(MP_ERROR_TEXT("unsupported array type for HSV values"));
+			break;
+
+		case 'O': // object
+			break;
+
+		// case 'l': // long
+		// case 'L': // unsigned long
+		// case 'q': // long long
+		// case 'Q': // unsigned long long
+		// case 'd': // double
+		// case 'P': // pointer
+		default:
+			mp_raise_ValueError(MP_ERROR_TEXT("unsupported array type"));
+			break;
+		}
+	}
 
 	if (byte_array) {
 		const size_t buf_bytes = bufinfo.len;
@@ -507,8 +547,16 @@ void PyModule::hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args, bool exp) 
 
 	mp_get_buffer_raise(args[ARG_buffer], &bufinfo, MP_BUFFER_WRITE);
 
-	if (!is_byte_array(bufinfo))
+	switch (bufinfo.typecode) {
+	case BYTEARRAY_TYPECODE:
+	case 'b':
+	case 'B':
+		break;
+
+	default:
 		mp_raise_TypeError(MP_ERROR_TEXT("buffer must be a byte array"));
+		break;
+	}
 
 	if (bufinfo.len % BYTES_PER_LED != 0)
 		mp_raise_TypeError(MP_ERROR_TEXT("byte array length must be a multiple of 3 bytes"));
