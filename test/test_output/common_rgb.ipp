@@ -476,7 +476,7 @@ import aurcor; aurcor.output_rgb(fn(7), rotate=-7)
 static void reverse_rgb_0() {
 	std::array<uint8_t,5*3> expected{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.output_rgb(bytearray(), reverse=True)
+import aurcor; aurcor.output_rgb(fn(0), reverse=True)
 )python")->outputs_[0].data(), expected.size());
 }
 

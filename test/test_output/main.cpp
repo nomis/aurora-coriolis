@@ -46,6 +46,21 @@ int main(int argc, char *argv[]) {
 	FUNC_DECLARE_EXEC(testsuite_objarray_int_rgb);
 	FUNC_DECLARE_EXEC(testsuite_objarray_list_rgb);
 	FUNC_DECLARE_EXEC(testsuite_objarray_tuple_rgb);
+
+	FUNC_DECLARE_EXEC(testsuite_generator_tuple_hsv_float);
+	FUNC_DECLARE_EXEC(testsuite_generator_tuple_hsv_int);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_hsv_float);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_hsv_int);
+	FUNC_DECLARE_EXEC(testsuite_objarray_tuple_hsv_float);
+	FUNC_DECLARE_EXEC(testsuite_objarray_tuple_hsv_int);
+
+	FUNC_DECLARE_EXEC(testsuite_generator_tuple_exp_hsv_float);
+	FUNC_DECLARE_EXEC(testsuite_generator_tuple_exp_hsv_int);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_exp_hsv_float);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_exp_hsv_int);
+	FUNC_DECLARE_EXEC(testsuite_objarray_tuple_exp_hsv_float);
+	FUNC_DECLARE_EXEC(testsuite_objarray_tuple_exp_hsv_int);
+
 	FUNC_DECLARE_EXEC(testsuite_invalid);
 
 	return ret;

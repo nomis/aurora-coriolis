@@ -388,11 +388,11 @@ void PyModule::append_led(OutputType type, uint8_t *buffer, size_t offset, mp_ob
 			}
 
 		case OutputType::HSV:
-			hsv_to_rgb(hue_obj_to_int(item, false), MAX_SATURATION, MAX_VALUE, buffer);
+			hsv_to_rgb(hue_obj_to_int(item, false), MAX_SATURATION, MAX_VALUE, &buffer[offset]);
 			break;
 
 		case OutputType::EXP_HSV:
-			exp_hsv_to_rgb(hue_obj_to_int(item, true), MAX_SATURATION, MAX_VALUE, buffer);
+			exp_hsv_to_rgb(hue_obj_to_int(item, true), MAX_SATURATION, MAX_VALUE, &buffer[offset]);
 			break;
 		}
 	} else {
@@ -419,9 +419,9 @@ void PyModule::append_led(OutputType type, uint8_t *buffer, size_t offset, mp_ob
 			}
 
 			if (type == OutputType::HSV) {
-				hsv_to_rgb(hue_obj_to_int(hue_obj, false), saturation, value, buffer);
+				hsv_to_rgb(hue_obj_to_int(hue_obj, false), saturation, value, &buffer[offset]);
 			} else {
-				exp_hsv_to_rgb(hue_obj_to_int(hue_obj, true), saturation, value, buffer);
+				exp_hsv_to_rgb(hue_obj_to_int(hue_obj, true), saturation, value, &buffer[offset]);
 			}
 
 			break;
