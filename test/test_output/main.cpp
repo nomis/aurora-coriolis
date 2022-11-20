@@ -35,7 +35,17 @@ int main(int argc, char *argv[]) {
 		ret |= func(); \
 	} while(0)
 
-	FUNC_DECLARE_EXEC(testsuite_byte_array);
+	FUNC_DECLARE_EXEC(testsuite_bytearray_rgb);
+	FUNC_DECLARE_EXEC(testsuite_generator_int_rgb);
+	FUNC_DECLARE_EXEC(testsuite_generator_list_rgb);
+	FUNC_DECLARE_EXEC(testsuite_generator_tuple_rgb);
+	FUNC_DECLARE_EXEC(testsuite_intarray_rgb);
+	FUNC_DECLARE_EXEC(testsuite_list_int_rgb);
+	FUNC_DECLARE_EXEC(testsuite_list_list_rgb);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_rgb);
+	FUNC_DECLARE_EXEC(testsuite_objarray_int_rgb);
+	FUNC_DECLARE_EXEC(testsuite_objarray_list_rgb);
+	FUNC_DECLARE_EXEC(testsuite_objarray_tuple_rgb);
 	FUNC_DECLARE_EXEC(testsuite_invalid);
 
 	return ret;

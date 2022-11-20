@@ -55,6 +55,7 @@ std::shared_ptr<TestByteBufferLEDBus> TestMicroPython::run_bus(size_t length,
 	TestMicroPython mp{bus};
 	bus->length(length);
 	mp.run(script);
+	TEST_ASSERT_EQUAL_STRING("", mp.output_.c_str());
 	TEST_ASSERT_EQUAL_INT(outputs, bus->outputs_.size());
 	return bus;
 }

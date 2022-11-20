@@ -29,6 +29,7 @@ extern "C" {
 	# include <py/binary.h>
 	# include <py/runtime.h>
 	# include <py/obj.h>
+	# include <py/objtuple.h>
 	# include <py/qstr.h>
 	# include <py/smallint.h>
 }
@@ -84,19 +85,19 @@ mp_obj_t aurcor_rgb_to_exp_hsv_tuple(size_t n_args, const mp_obj_t *args) {
 }
 
 mp_obj_t aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
-	return PyModule::current().output_leds(PyModule::OutputType::RGB, n_args, args, kwargs);
+	return PyModule::current().output_leds(n_args, args, kwargs, PyModule::OutputType::RGB, false);
 }
 
 mp_obj_t aurcor_output_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
-	return PyModule::current().output_leds(PyModule::OutputType::HSV, n_args, args, kwargs);
+	return PyModule::current().output_leds(n_args, args, kwargs, PyModule::OutputType::HSV, false);
 }
 
 mp_obj_t aurcor_output_exp_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
-	return PyModule::current().output_leds(PyModule::OutputType::EXP_HSV, n_args, args, kwargs);
+	return PyModule::current().output_leds(n_args, args, kwargs, PyModule::OutputType::EXP_HSV, false);
 }
 
 mp_obj_t aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
-	return PyModule::current().output_leds(PyModule::OutputType::DEFAULTS, n_args, args, kwargs);
+	return PyModule::current().output_leds(n_args, args, kwargs, PyModule::OutputType::RGB, true);
 }
 
 } // extern "C"
@@ -113,7 +114,7 @@ inline PyModule& PyModule::current() {
 	return MicroPython::current().modaurcor_;
 }
 
-mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs, OutputType type, bool set_defaults) {
 	enum {
 		ARG_values,
 		ARG_length,
@@ -142,7 +143,6 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		// AFTER_DEFAULTS
 		{MP_QSTR_rotate,      MP_ARG_KW_ONLY | MP_ARG_INT,    {u_int: 0}},
 	};
-	const bool set_defaults = type == OutputType::DEFAULTS;
 	const size_t n_allowed_args = MP_ARRAY_SIZE(allowed_args)
 		- (set_defaults ? (N_BEFORE_DEFAULTS + N_AFTER_DEFAULTS) : 0);
 	const size_t off_allowed_args = set_defaults ? N_BEFORE_DEFAULTS : 0;
@@ -212,7 +212,7 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		reverse = mp_obj_is_true(parsed_args[ARG_reverse].u_obj);
 	}
 
-	if (type == OutputType::DEFAULTS) {
+	if (set_defaults) {
 		profile_ = profile;
 		wait_us_ = wait_us;
 		repeat_ = repeat;
@@ -308,26 +308,26 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 		if (reverse) {
 			in_length -= available_rotate_length;
 			for (size_t i = values_length - rotate_length - 1; available_rotate_length > 0; i--) {
-				append_led(buffer, type, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL), out_bytes);
+				append_led(type, buffer, out_bytes, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL));
 				out_bytes += BYTES_PER_LED;
 				available_rotate_length--;
 			}
 
 			for (size_t i = values_length - 1; in_length > 0; i--) {
-				append_led(buffer, type, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL), out_bytes);
+				append_led(type, buffer, out_bytes, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL));
 				out_bytes += BYTES_PER_LED;
 				in_length--;
 			}
 		} else {
 			in_length -= available_rotate_length;
 			for (size_t i = rotate_length; available_rotate_length > 0; i++) {
-				append_led(buffer, type, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL), out_bytes);
+				append_led(type, buffer, out_bytes, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL));
 				out_bytes += BYTES_PER_LED;
 				available_rotate_length--;
 			}
 
 			for (size_t i = 0; in_length > 0; i++) {
-				append_led(buffer, type, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL), out_bytes);
+				append_led(type, buffer, out_bytes, mp_obj_subscr(values, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL));
 				out_bytes += BYTES_PER_LED;
 				in_length--;
 			}
@@ -343,7 +343,7 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 			if (item == MP_OBJ_STOP_ITERATION)
 				break;
 
-			append_led(buffer, type, item, out_bytes);
+			append_led(type, buffer, out_bytes, item);
 			out_bytes += BYTES_PER_LED;
 			in_length--;
 		}
@@ -373,12 +373,63 @@ mp_obj_t PyModule::output_leds(OutputType type, size_t n_args, const mp_obj_t *a
 	return MP_ROM_NONE;
 }
 
-void PyModule::append_led(uint8_t *buffer, OutputType type, mp_obj_t item, size_t offset) {
-	// TODO parse item
+void PyModule::append_led(OutputType type, uint8_t *buffer, size_t offset, mp_obj_t item) {
+	if (mp_obj_is_int(item) || mp_obj_is_float(item)) {
+		switch (type) {
+		case OutputType::RGB: {
+				mp_int_t value = mp_obj_get_int(item); /* RGB doesn't support float */
+
+				offset += 2;
+				for (size_t i = 0; i < 3; i++) {
+					buffer[offset--] = value;
+					value >>= 8;
+				}
+				break;
+			}
+
+		case OutputType::HSV:
+			hsv_to_rgb(hue_obj_to_int(item, false), MAX_SATURATION, MAX_VALUE, buffer);
+			break;
+
+		case OutputType::EXP_HSV:
+			exp_hsv_to_rgb(hue_obj_to_int(item, true), MAX_SATURATION, MAX_VALUE, buffer);
+			break;
+		}
+	} else {
+		switch (type) {
+		case OutputType::RGB:
+			for (size_t i = 0; i < 3; i++)
+				buffer[offset++] = int_to_u8(mp_obj_get_int(mp_obj_subscr(item, MP_OBJ_NEW_SMALL_INT(i), MP_OBJ_SENTINEL)));
+			break;
+
+		case OutputType::HSV:
+		case OutputType::EXP_HSV:
+			mp_int_t len = int_constrain(mp_obj_get_int(mp_obj_len(item)), 3);
+			mp_obj_t hue_obj = mp_obj_subscr(item, MP_OBJ_NEW_SMALL_INT(0), MP_OBJ_SENTINEL);
+			mp_int_t saturation = MAX_SATURATION;
+			mp_int_t value = MAX_VALUE;
+
+			switch (len) {
+			case 3:
+				saturation = saturation_obj_to_int(mp_obj_subscr(item, MP_OBJ_NEW_SMALL_INT(1), MP_OBJ_SENTINEL));
+				[[fallthrough]];
+			case 2:
+				value = value_obj_to_int(mp_obj_subscr(item, MP_OBJ_NEW_SMALL_INT(len - 1), MP_OBJ_SENTINEL));
+				break;
+			}
+
+			if (type == OutputType::HSV) {
+				hsv_to_rgb(hue_obj_to_int(hue_obj, false), saturation, value, buffer);
+			} else {
+				exp_hsv_to_rgb(hue_obj_to_int(hue_obj, true), saturation, value, buffer);
+			}
+
+			break;
+		}
+	}
 }
 
-void PyModule::hsv_to_rgb(mp_int_t hue, mp_int_t saturation, mp_int_t value,
-		std::array<uint8_t,3> &rgb) {
+void PyModule::hsv_to_rgb(mp_int_t hue, mp_int_t saturation, mp_int_t value, uint8_t rgb[3]) {
 	if (HSV_TO_RGB_USE_FLOAT) {
 		mp_float_t hi;
 		mp_float_t hf = std::modf(hue / (mp_float_t)(HUE_RANGE / 6), &hi);
@@ -416,8 +467,7 @@ void PyModule::hsv_to_rgb(mp_int_t hue, mp_int_t saturation, mp_int_t value,
 	}
 }
 
-inline void PyModule::exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation,
-		mp_int_t value, std::array<uint8_t,3> &rgb) {
+inline void PyModule::exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation, mp_int_t value, uint8_t rgb[3]) {
 	mp_int_t hue;
 
 	if (expanded_hue < EXPANDED_HUE_LEFT_RANGE) {
@@ -429,25 +479,24 @@ inline void PyModule::exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation,
 	hsv_to_rgb(hue, saturation, value, rgb);
 }
 
-void PyModule::hsv_to_rgb(size_t n_args, const mp_obj_t *args, bool exp,
-		std::array<uint8_t,3> &rgb) {
-	mp_int_t hue = mp_obj_get_int(args[0]);
+void PyModule::hsv_to_rgb(size_t n_args, const mp_obj_t *args, bool exp, uint8_t rgb[3]) {
+	mp_int_t hue = hue_obj_to_int(args[0], exp);
 	mp_int_t saturation = MAX_SATURATION;
 	mp_int_t value = MAX_VALUE;
 
 	switch (n_args) {
 	case 3:
-		saturation = int_constrain(mp_obj_get_int(args[1]), MAX_SATURATION);
+		saturation = saturation_obj_to_int(args[1]);
 		[[fallthrough]];
 	case 2:
-		value = int_constrain(mp_obj_get_int(args[n_args - 1]), MAX_VALUE);
+		value = value_obj_to_int(args[n_args - 1]);
 		break;
 	}
 
 	if (exp) {
-		PyModule::exp_hsv_to_rgb(hue % EXPANDED_HUE_RANGE, saturation, value, rgb);
+		exp_hsv_to_rgb(hue, saturation, value, rgb);
 	} else {
-		PyModule::hsv_to_rgb(hue % HUE_RANGE, saturation, value, rgb);
+		hsv_to_rgb(hue, saturation, value, rgb);
 	}
 }
 
@@ -484,14 +533,13 @@ void PyModule::hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args, bool exp) 
 			mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("buffer index out of range"));
 	}
 
-	hsv_to_rgb(n_args - 2, &args[2], exp, *reinterpret_cast<std::array<uint8_t,3>*>(
-		&reinterpret_cast<uint8_t*>(bufinfo.buf)[offset]));
+	hsv_to_rgb(n_args - 2, &args[2], exp, &reinterpret_cast<uint8_t*>(bufinfo.buf)[offset]);
 }
 
 mp_obj_t PyModule::hsv_to_rgb_int(size_t n_args, const mp_obj_t *args, bool exp) {
 	std::array<uint8_t,3> rgb_bytes;
 
-	hsv_to_rgb(n_args, args, exp, rgb_bytes);
+	hsv_to_rgb(n_args, args, exp, rgb_bytes.data());
 
 	static_assert(MP_SMALL_INT_FITS(0xFFFFFF), "small int overflow");
 	return MP_OBJ_NEW_SMALL_INT((rgb_bytes[0] << 16) | (rgb_bytes[1] << 8) | rgb_bytes[2]);
@@ -501,7 +549,7 @@ mp_obj_t PyModule::hsv_to_rgb_tuple(size_t n_args, const mp_obj_t *args, bool ex
 	std::array<uint8_t,3> rgb_bytes;
 	mp_obj_tuple_t *tuple = reinterpret_cast<mp_obj_tuple_t *>(mp_obj_new_tuple(rgb_bytes.size(), nullptr));
 
-	hsv_to_rgb(n_args, args, exp, rgb_bytes);
+	hsv_to_rgb(n_args, args, exp, rgb_bytes.data());
 
 	for (size_t i = 0; i < rgb_bytes.size(); i++)
 		tuple->items[i] = MP_OBJ_NEW_SMALL_INT(rgb_bytes[i]);
@@ -509,7 +557,7 @@ mp_obj_t PyModule::hsv_to_rgb_tuple(size_t n_args, const mp_obj_t *args, bool ex
 	return tuple;
 }
 
-void PyModule::rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3> &hsv) {
+void PyModule::rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b, mp_int_t hsv[3]) {
 	enum { HSV_hue, HSV_saturation, HSV_value };
 	uint8_t max = r;
 
@@ -569,7 +617,7 @@ void PyModule::rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3
 	}
 }
 
-inline void PyModule::rgb_to_exp_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3> &hsv) {
+inline void PyModule::rgb_to_exp_hsv(uint8_t r, uint8_t g, uint8_t b, mp_int_t hsv[3]) {
 	rgb_to_hsv(r, g, b, hsv);
 
 	if (hsv[0] < EXPANDED_HUE_SIZE) {
@@ -598,15 +646,48 @@ mp_obj_t PyModule::rgb_to_hsv_tuple(size_t n_args, const mp_obj_t *args, bool ex
 	}
 
 	if (exp) {
-		PyModule::rgb_to_exp_hsv(r, g, b, hsv);
+		PyModule::rgb_to_exp_hsv(r, g, b, hsv.data());
 	} else {
-		PyModule::rgb_to_hsv(r, g, b, hsv);
+		PyModule::rgb_to_hsv(r, g, b, hsv.data());
 	}
 
 	for (size_t i = 0; i < hsv.size(); i++)
 		tuple->items[i] = MP_OBJ_NEW_SMALL_INT(hsv[i]);
 
 	return tuple;
+}
+
+mp_int_t PyModule::hue_obj_to_int(mp_obj_t hue, bool exp) {
+	if (mp_obj_is_int(hue)) {
+		return mp_obj_get_int(hue) % (exp ? EXPANDED_HUE_RANGE : HUE_RANGE);
+	} else if (mp_obj_is_float(hue)) {
+		mp_float_t hi;
+		mp_float_t hf = std::modf(mp_obj_get_float(hue), &hi);
+
+		return std::lround(hf * (exp ? EXPANDED_HUE_RANGE : HUE_RANGE));
+	} else {
+		mp_raise_TypeError(MP_ERROR_TEXT("hue must be an int or float"));
+	}
+}
+
+mp_int_t PyModule::saturation_obj_to_int(mp_obj_t saturation) {
+	if (mp_obj_is_int(saturation)) {
+		return mp_obj_get_int(saturation);
+	} else if (mp_obj_is_float(saturation)) {
+		return int_constrain(std::lround(mp_obj_get_float(saturation) * MAX_SATURATION), MAX_SATURATION);
+	} else {
+		mp_raise_TypeError(MP_ERROR_TEXT("saturation must be an int or float"));
+	}
+}
+
+mp_int_t PyModule::value_obj_to_int(mp_obj_t value) {
+	if (mp_obj_is_int(value)) {
+		return mp_obj_get_int(value);
+	} else if (mp_obj_is_float(value)) {
+		return int_constrain(std::lround(mp_obj_get_float(value) * MAX_VALUE), MAX_VALUE);
+	} else {
+		mp_raise_TypeError(MP_ERROR_TEXT("value must be an int or float"));
+	}
 }
 
 } // namespace micropython

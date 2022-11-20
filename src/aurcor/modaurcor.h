@@ -93,7 +93,6 @@ MP_DECLARE_CONST_FUN_OBJ_0(aurcor_time_us_obj);
 # include "led_bus.h"
 # include "led_profiles.h"
 
-# include <array>
 # include <memory>
 # include <limits>
 #endif
@@ -122,7 +121,6 @@ public:
 		RGB,
 		HSV,
 		EXP_HSV,
-		DEFAULTS,
 	};
 
 	static inline bool is_byte_array(const mp_buffer_info_t &bufinfo) {
@@ -136,22 +134,22 @@ public:
 		return false;
 	}
 
-	static void hsv_to_rgb(mp_int_t hue, mp_int_t saturation, mp_int_t value, std::array<uint8_t,3> &rgb);
-	static void exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation, mp_int_t value, std::array<uint8_t,3> &rgb);
+	static void hsv_to_rgb(mp_int_t hue, mp_int_t saturation, mp_int_t value, uint8_t rgb[3]);
+	static void exp_hsv_to_rgb(mp_int_t expanded_hue, mp_int_t saturation, mp_int_t value, uint8_t rgb[3]);
 
-	static void hsv_to_rgb(size_t n_args, const mp_obj_t *args, bool exp, std::array<uint8_t,3> &rgb);
+	static void hsv_to_rgb(size_t n_args, const mp_obj_t *args, bool exp, uint8_t rgb[3]);
 	static void hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args, bool exp);
 	static mp_obj_t hsv_to_rgb_int(size_t n_args, const mp_obj_t *args, bool exp);
 	static mp_obj_t hsv_to_rgb_tuple(size_t n_args, const mp_obj_t *args, bool exp);
 
-	static void rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3> &hsv);
-	static void rgb_to_exp_hsv(uint8_t r, uint8_t g, uint8_t b, std::array<mp_int_t,3> &hsv);
+	static void rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b, mp_int_t hsv[3]);
+	static void rgb_to_exp_hsv(uint8_t r, uint8_t g, uint8_t b, mp_int_t hsv[3]);
 
 	static mp_obj_t rgb_to_hsv_tuple(size_t n_args, const mp_obj_t *args, bool exp);
 
 	PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus);
 
-	mp_obj_t output_leds(OutputType type, size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	mp_obj_t output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs, OutputType type, bool set_defaults);
 
 private:
 	static constexpr size_t TIMING_DELAY_US = 10;
@@ -180,7 +178,10 @@ private:
 	friend mp_obj_t ::aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	static PyModule& current();
 
-	static void append_led(uint8_t *buffer, OutputType type, mp_obj_t item, size_t offset);
+	static void append_led(OutputType type, uint8_t *buffer, size_t offset, mp_obj_t item);
+	static mp_int_t hue_obj_to_int(mp_obj_t hue, bool exp);
+	static mp_int_t saturation_obj_to_int(mp_obj_t saturation);
+	static mp_int_t value_obj_to_int(mp_obj_t value);
 
 	MemoryBlock *led_buffer_;
 	std::shared_ptr<LEDBus> bus_;

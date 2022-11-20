@@ -3,14 +3,17 @@
 	"C_Cpp.default.cStandard": "c11",
 	"C_Cpp.default.includePath": [
 		"${workspaceFolder}/.pio/**",
-		"${workspaceFolder}/include/**",
-		"${workspaceFolder}/lib/**",
-		"${workspaceFolder}/src/**",
-		"${workspaceFolder}/test/**"
+		"${workspaceFolder}/include",
+		"${workspaceFolder}/lib/micropython/port/build/genhdr",
+		"${workspaceFolder}/lib/micropython/src",
+		"${workspaceFolder}/src",
+		"${workspaceFolder}/src/app/native",
+		"${workspaceFolder}/test"
 	],
 	"C_Cpp.default.defines": [
 		"ARDUINO",
-		"ENV_NATIVE",
+		/* "ENV_NATIVE", */
 		"UNITY_INCLUDE_PRINT_FORMATTED"
-	]
+	],
+	"C_Cpp.default.mergeConfigurations": true
 }
