@@ -46,7 +46,12 @@ int main(int argc, char *argv[]) {
 	FUNC_DECLARE_EXEC(testsuite_objarray_int_rgb);
 	FUNC_DECLARE_EXEC(testsuite_objarray_list_rgb);
 	FUNC_DECLARE_EXEC(testsuite_objarray_tuple_rgb);
+	FUNC_DECLARE_EXEC(testsuite_tuple_int_rgb);
+	FUNC_DECLARE_EXEC(testsuite_tuple_list_rgb);
+	FUNC_DECLARE_EXEC(testsuite_tuple_tuple_rgb);
 
+	FUNC_DECLARE_EXEC(testsuite_generator_list_hsv_float);
+	FUNC_DECLARE_EXEC(testsuite_generator_list_hsv_int);
 	FUNC_DECLARE_EXEC(testsuite_generator_tuple_hsv_float);
 	FUNC_DECLARE_EXEC(testsuite_generator_tuple_hsv_int);
 	FUNC_DECLARE_EXEC(testsuite_list_tuple_hsv_float);
@@ -55,13 +60,45 @@ int main(int argc, char *argv[]) {
 	FUNC_DECLARE_EXEC(testsuite_list_tuple_hsv_int);
 	FUNC_DECLARE_EXEC(testsuite_objarray_tuple_hsv_float);
 	FUNC_DECLARE_EXEC(testsuite_objarray_tuple_hsv_int);
+	FUNC_DECLARE_EXEC(testsuite_tuple_tuple_hsv_float);
+	FUNC_DECLARE_EXEC(testsuite_tuple_tuple_hsv_int);
 
+	FUNC_DECLARE_EXEC(testsuite_generator_list_exp_hsv_float);
+	FUNC_DECLARE_EXEC(testsuite_generator_list_exp_hsv_int);
 	FUNC_DECLARE_EXEC(testsuite_generator_tuple_exp_hsv_float);
 	FUNC_DECLARE_EXEC(testsuite_generator_tuple_exp_hsv_int);
 	FUNC_DECLARE_EXEC(testsuite_list_tuple_exp_hsv_float);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_exp_hsv_float_neg1);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_exp_hsv_float_pos1);
 	FUNC_DECLARE_EXEC(testsuite_list_tuple_exp_hsv_int);
 	FUNC_DECLARE_EXEC(testsuite_objarray_tuple_exp_hsv_float);
 	FUNC_DECLARE_EXEC(testsuite_objarray_tuple_exp_hsv_int);
+	FUNC_DECLARE_EXEC(testsuite_tuple_tuple_exp_hsv_float);
+	FUNC_DECLARE_EXEC(testsuite_tuple_tuple_exp_hsv_int);
+
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_hv_float);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_hv_float_neg1);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_hv_float_pos1);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_hv_int);
+
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_exp_hv_float);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_exp_hv_float_neg1);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_exp_hv_float_pos1);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_exp_hv_int);
+
+	FUNC_DECLARE_EXEC(testsuite_floatarray_h);
+	FUNC_DECLARE_EXEC(testsuite_list_float_h);
+	FUNC_DECLARE_EXEC(testsuite_list_float_h_neg1);
+	FUNC_DECLARE_EXEC(testsuite_list_float_h_pos1);
+	FUNC_DECLARE_EXEC(testsuite_list_int_h);
+	FUNC_DECLARE_EXEC(testsuite_shortarray_h);
+
+	FUNC_DECLARE_EXEC(testsuite_floatarray_exp_h);
+	FUNC_DECLARE_EXEC(testsuite_list_float_exp_h);
+	FUNC_DECLARE_EXEC(testsuite_list_float_exp_h_neg1);
+	FUNC_DECLARE_EXEC(testsuite_list_float_exp_h_pos1);
+	FUNC_DECLARE_EXEC(testsuite_list_int_exp_h);
+	FUNC_DECLARE_EXEC(testsuite_shortarray_exp_h);
 
 	FUNC_DECLARE_EXEC(testsuite_invalid);
 

@@ -259,7 +259,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 
 		// 0-65535 Hue
 		case 'h': // short
-        case 'H': // unsigned short
+		case 'H': // unsigned short
 		// 0.0 <= Hue < 1.0
 		case 'f': // float
 			if (type == OutputType::RGB)

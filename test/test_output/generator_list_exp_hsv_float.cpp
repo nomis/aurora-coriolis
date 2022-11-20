@@ -26,11 +26,13 @@
 
 static std::string fn = R"python(
 def fn(n):
-	return list([(aurcor.HUE_RANGE // 8 * x / aurcor.HUE_RANGE,
-		aurcor.MAX_SATURATION * (20 - x) // 20 / aurcor.MAX_SATURATION,
-		aurcor.MAX_VALUE * (10 - x) // 10 / aurcor.MAX_VALUE) for x in range(1, 8)])[0:n]
+	for x in range(1, n + 1):
+		yield [aurcor.EXP_HUE_RANGE // 8 * x / aurcor.EXP_HUE_RANGE,
+			aurcor.MAX_SATURATION * (20 - x) // 20 / aurcor.MAX_SATURATION,
+			aurcor.MAX_VALUE * (10 - x) // 10 / aurcor.MAX_VALUE]
 )python";
 
-#define COMMON_HSV_NAME testsuite_list_tuple_hsv_float
+#define COMMON_EXP_HSV_NAME testsuite_generator_list_exp_hsv_float
+#define COMMON_EXP_HSV_GENERATOR
 
-#include "common_hsv.ipp"
+#include "common_exp_hsv.ipp"

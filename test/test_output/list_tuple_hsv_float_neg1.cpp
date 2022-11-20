@@ -29,8 +29,8 @@
 static std::string fn = R"python(
 def fn(n):
 	return list([(aurcor.HUE_RANGE // 8 * x / aurcor.HUE_RANGE - 1.0,
-        aurcor.MAX_SATURATION * (20 - x) // 20 / aurcor.MAX_SATURATION,
-        aurcor.MAX_VALUE * (10 - x) // 10 / aurcor.MAX_VALUE) for x in range(1, 8)])[0:n]
+		aurcor.MAX_SATURATION * (20 - x) // 20 / aurcor.MAX_SATURATION,
+		aurcor.MAX_VALUE * (10 - x) // 10 / aurcor.MAX_VALUE) for x in range(1, 8)])[0:n]
 )python";
 
 #define COMMON_HSV_NAME testsuite_list_tuple_hsv_float_neg1

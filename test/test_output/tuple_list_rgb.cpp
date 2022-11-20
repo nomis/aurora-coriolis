@@ -26,11 +26,9 @@
 
 static std::string fn = R"python(
 def fn(n):
-	return list([(aurcor.HUE_RANGE // 8 * x / aurcor.HUE_RANGE,
-		aurcor.MAX_SATURATION * (20 - x) // 20 / aurcor.MAX_SATURATION,
-		aurcor.MAX_VALUE * (10 - x) // 10 / aurcor.MAX_VALUE) for x in range(1, 8)])[0:n]
+	return tuple([[x, x + 1, x + 2] for x in range(1, n*3+1, 3)])
 )python";
 
-#define COMMON_HSV_NAME testsuite_list_tuple_hsv_float
+#define COMMON_RGB_NAME testsuite_tuple_list_rgb
 
-#include "common_hsv.ipp"
+#include "common_rgb.ipp"
