@@ -705,12 +705,19 @@ mp_obj_t PyModule::rgb_to_hsv_tuple(size_t n_args, const mp_obj_t *args, bool ex
 	return tuple;
 }
 
-mp_int_t PyModule::hue_obj_to_int(mp_obj_t hue, bool exp) {
+inline mp_int_t PyModule::hue_obj_to_int(mp_obj_t hue, bool exp) {
 	if (mp_obj_is_int(hue)) {
 		return mp_obj_get_int(hue) % (exp ? EXPANDED_HUE_RANGE : HUE_RANGE);
 	} else if (mp_obj_is_float(hue)) {
-		mp_float_t hi;
-		mp_float_t hf = std::modf(mp_obj_get_float(hue), &hi);
+		mp_float_t h = mp_obj_get_float(hue);
+
+		if (!std::isfinite(h))
+			mp_raise_TypeError(MP_ERROR_TEXT("hue float must be finite"));
+
+		mp_float_t hf = std::modf(h, &h);
+
+		if (std::signbit(hf))
+			hf = std::modf(hf + (mp_float_t)1.0, &h);
 
 		return std::lround(hf * (exp ? EXPANDED_HUE_RANGE : HUE_RANGE));
 	} else {
@@ -718,21 +725,31 @@ mp_int_t PyModule::hue_obj_to_int(mp_obj_t hue, bool exp) {
 	}
 }
 
-mp_int_t PyModule::saturation_obj_to_int(mp_obj_t saturation) {
+inline mp_int_t PyModule::saturation_obj_to_int(mp_obj_t saturation) {
 	if (mp_obj_is_int(saturation)) {
 		return mp_obj_get_int(saturation);
 	} else if (mp_obj_is_float(saturation)) {
-		return int_constrain(std::lround(mp_obj_get_float(saturation) * MAX_SATURATION), MAX_SATURATION);
+		mp_float_t s = mp_obj_get_float(saturation);
+
+		if (!std::isfinite(s))
+			mp_raise_TypeError(MP_ERROR_TEXT("saturation float must be finite"));
+
+		return int_constrain(std::lround(s * MAX_SATURATION), MAX_SATURATION);
 	} else {
 		mp_raise_TypeError(MP_ERROR_TEXT("saturation must be an int or float"));
 	}
 }
 
-mp_int_t PyModule::value_obj_to_int(mp_obj_t value) {
+inline mp_int_t PyModule::value_obj_to_int(mp_obj_t value) {
 	if (mp_obj_is_int(value)) {
 		return mp_obj_get_int(value);
 	} else if (mp_obj_is_float(value)) {
-		return int_constrain(std::lround(mp_obj_get_float(value) * MAX_VALUE), MAX_VALUE);
+		mp_float_t v = mp_obj_get_float(value);
+
+		if (!std::isfinite(v))
+			mp_raise_TypeError(MP_ERROR_TEXT("value float must be finite"));
+
+		return int_constrain(std::lround(v * MAX_VALUE), MAX_VALUE);
 	} else {
 		mp_raise_TypeError(MP_ERROR_TEXT("value must be an int or float"));
 	}

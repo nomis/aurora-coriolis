@@ -50,6 +50,8 @@ int main(int argc, char *argv[]) {
 	FUNC_DECLARE_EXEC(testsuite_generator_tuple_hsv_float);
 	FUNC_DECLARE_EXEC(testsuite_generator_tuple_hsv_int);
 	FUNC_DECLARE_EXEC(testsuite_list_tuple_hsv_float);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_hsv_float_neg1);
+	FUNC_DECLARE_EXEC(testsuite_list_tuple_hsv_float_pos1);
 	FUNC_DECLARE_EXEC(testsuite_list_tuple_hsv_int);
 	FUNC_DECLARE_EXEC(testsuite_objarray_tuple_hsv_float);
 	FUNC_DECLARE_EXEC(testsuite_objarray_tuple_hsv_int);
