@@ -106,6 +106,14 @@ MicroPython::MicroPython(const std::string &name,
 	}
 }
 
+MicroPython::~MicroPython() {
+	if (running_) {
+		logger_.err(F("[%s] Still running in destructor"), name_.c_str());
+
+		while (!stop()) {}
+	}
+}
+
 bool MicroPython::start() {
 	if (started_ || !memory_blocks_available())
 		return false;
@@ -216,6 +224,9 @@ void MicroPython::state_copy() {
 	exec_system_exit_ = &pyexec_system_exit;
 }
 
+void MicroPython::main() {
+}
+
 void MicroPython::state_reset() {
 #if MICROPY_INSTANCE_PER_THREAD
 	state_ctx_ = nullptr;
@@ -283,7 +294,7 @@ void MicroPython::log_exception(mp_obj_t exc, uuid::log::Level level) {
 	{
 		std::vector<char> prefix(1 + name_.size() + 3 + 1);
 
-		::snprintf_P(prefix.data(), prefix.size(), PSTR("[%s] E"), name_.c_str());
+		::snprintf(prefix.data(), prefix.size(), "[%s] E", name_.c_str());
 
 		LogPrint print{logger_, level, prefix.data()};
 
@@ -303,6 +314,18 @@ void MicroPython::log_exception(mp_obj_t exc, uuid::log::Level level) {
 
 	if (nlr.ret_val)
 		nlr_raise(nlr.ret_val);
+}
+
+uuid::log::Level MicroPython::modulogging_effective_level() {
+	return logger_.effective_level();
+}
+
+std::unique_ptr<micropython::Print> MicroPython::modulogging_print(uuid::log::Level level) {
+	std::vector<char> prefix(1 + name_.size() + 3 + 1);
+
+	::snprintf(prefix.data(), prefix.size(), "[%s] L", name_.c_str());
+
+	return std::make_unique<LogPrint>(logger_, level, prefix.data());
 }
 
 MicroPython::AccessState::AccessState(MicroPython &mp)
@@ -534,7 +557,11 @@ extern "C" int mp_hal_stdin_rx_chr(void) {
 }
 
 int aurcor::MicroPython::mp_hal_stdin_rx_chr(void) {
-	mp_raise_OSError(MP_ENODEV);
+	if (running_) {
+		mp_raise_OSError(MP_ENODEV);
+	} else {
+		abort();
+	}
 }
 
 int aurcor::MicroPythonShell::mp_hal_stdin_rx_chr(void) {
@@ -566,6 +593,11 @@ done:
 
 extern "C" void mp_hal_stdout_tx_strn(const char *str, size_t len) {
 	MicroPython::current().mp_hal_stdout_tx_strn(reinterpret_cast<const uint8_t *>(str), len);
+}
+
+void aurcor::MicroPython::mp_hal_stdout_tx_strn(const uint8_t *str, size_t len) {
+	logger_.err(F("[%s] Write to stdout with no implementation"), name_.c_str());
+	abort();
 }
 
 void aurcor::MicroPythonShell::mp_hal_stdout_tx_strn(const uint8_t *str, size_t len) {

@@ -68,7 +68,7 @@ public:
 
 	static void setup(size_t pool_count);
 
-	virtual ~MicroPython() = default;
+	virtual ~MicroPython();
 
 protected:
 	class AccessState {
@@ -91,7 +91,7 @@ protected:
 	MicroPython(const std::string &name, std::shared_ptr<LEDBus> bus);
 
 	bool start();
-	virtual void main() = 0;
+	virtual void main();
 	virtual void shutdown();
 	bool stop();
 
@@ -102,16 +102,16 @@ protected:
 	virtual void state_reset();
 
 	void force_exit();
-	void abort();
+	void abort() __attribute__((noreturn));
 
 	friend int ::mp_hal_stdin_rx_chr(void);
 	virtual int mp_hal_stdin_rx_chr(void);
 
 	friend void ::mp_hal_stdout_tx_strn(const char *str, size_t len);
-	virtual void mp_hal_stdout_tx_strn(const uint8_t *str, size_t len) = 0;
+	virtual void mp_hal_stdout_tx_strn(const uint8_t *str, size_t len);
 
-	virtual uuid::log::Level modulogging_effective_level() = 0;
-	virtual std::unique_ptr<aurcor::micropython::Print> modulogging_print(uuid::log::Level level) = 0;
+	virtual uuid::log::Level modulogging_effective_level();
+	virtual std::unique_ptr<aurcor::micropython::Print> modulogging_print(uuid::log::Level level);
 
 	const std::string name_;
 
