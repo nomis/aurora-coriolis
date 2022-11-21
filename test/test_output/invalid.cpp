@@ -514,6 +514,188 @@ import aurcor; aurcor.output_rgb(Test(), rotate=-1)
 )python")->output_.c_str());
 }
 
+static void byte_array_for_hsv() {
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: can only use byte array for RGB values\r\n",
+		TestMicroPython::run_script(R"python(
+import aurcor; aurcor.output_hsv(bytearray(3))
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: can only use byte array for RGB values\r\n",
+		TestMicroPython::run_script(R"python(
+import aurcor; aurcor.output_exp_hsv(bytearray(3))
+)python")->output_.c_str());
+}
+
+static void short_array_for_rgb() {
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: unsupported array type for RGB values\r\n",
+		TestMicroPython::run_script(R"python(
+import array, aurcor; aurcor.output_rgb(array.array('h', [1, 2, 3]))
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: unsupported array type for RGB values\r\n",
+		TestMicroPython::run_script(R"python(
+import array, aurcor; aurcor.output_rgb(array.array('H', [1, 2, 3]))
+)python")->output_.c_str());
+}
+
+static void float_array_for_rgb() {
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: unsupported array type for RGB values\r\n",
+		TestMicroPython::run_script(R"python(
+import array, aurcor; aurcor.output_rgb(array.array('f', [1.0, 2.0, 3.0]))
+)python")->output_.c_str());
+}
+
+static void int_array_for_hsv() {
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: unsupported array type for HSV values\r\n",
+		TestMicroPython::run_script(R"python(
+import array, aurcor; aurcor.output_hsv(array.array('i', [1, 2, 3]))
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: unsupported array type for HSV values\r\n",
+		TestMicroPython::run_script(R"python(
+import array, aurcor; aurcor.output_hsv(array.array('I', [1, 2, 3]))
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: unsupported array type for HSV values\r\n",
+		TestMicroPython::run_script(R"python(
+import array, aurcor; aurcor.output_exp_hsv(array.array('i', [1, 2, 3]))
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: unsupported array type for HSV values\r\n",
+		TestMicroPython::run_script(R"python(
+import array, aurcor; aurcor.output_exp_hsv(array.array('I', [1, 2, 3]))
+)python")->output_.c_str());
+}
+
+static void long_array() {
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: unsupported array type\r\n",
+		TestMicroPython::run_script(R"python(
+import array, aurcor; aurcor.output_rgb(array.array('l', [1, 2, 3]))
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: unsupported array type\r\n",
+		TestMicroPython::run_script(R"python(
+import array, aurcor; aurcor.output_rgb(array.array('L', [1, 2, 3]))
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: unsupported array type\r\n",
+		TestMicroPython::run_script(R"python(
+import array, aurcor; aurcor.output_hsv(array.array('l', [1, 2, 3]))
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: unsupported array type\r\n",
+		TestMicroPython::run_script(R"python(
+import array, aurcor; aurcor.output_hsv(array.array('L', [1, 2, 3]))
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: unsupported array type\r\n",
+		TestMicroPython::run_script(R"python(
+import array, aurcor; aurcor.output_exp_hsv(array.array('l', [1, 2, 3]))
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: unsupported array type\r\n",
+		TestMicroPython::run_script(R"python(
+import array, aurcor; aurcor.output_exp_hsv(array.array('L', [1, 2, 3]))
+)python")->output_.c_str());
+}
+
+static void bools() {
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: 'bool' object isn't subscriptable\r\n",
+		TestMicroPython::run_script(R"python(
+import aurcor; aurcor.output_rgb([True, False, True])
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: object of type 'bool' has no len()\r\n",
+		TestMicroPython::run_script(R"python(
+import aurcor; aurcor.output_hsv([True, False, True])
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: object of type 'bool' has no len()\r\n",
+		TestMicroPython::run_script(R"python(
+import aurcor; aurcor.output_exp_hsv([True, False, True])
+)python")->output_.c_str());
+}
+
+static void strings() {
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: can't convert str to int\r\n",
+		TestMicroPython::run_script(R"python(
+import aurcor; aurcor.output_rgb(["a", "b", "c"])
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: hue must be an int or float\r\n",
+		TestMicroPython::run_script(R"python(
+import aurcor; aurcor.output_hsv(["a", "b", "c"])
+)python")->output_.c_str());
+
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"TypeError: hue must be an int or float\r\n",
+		TestMicroPython::run_script(R"python(
+import aurcor; aurcor.output_exp_hsv(["a", "b", "c"])
+)python")->output_.c_str());
+}
+
 static void reverse_with_unsupported_objects() {
 	TEST_ASSERT_EQUAL_STRING(
 		"Traceback (most recent call last):\r\n"
@@ -572,6 +754,13 @@ void testsuite_invalid() {
 	RUN_TEST(rotate_above_length);
 
 	RUN_TEST(byte_array_multiple_of_3);
+	RUN_TEST(byte_array_for_hsv);
+	RUN_TEST(short_array_for_rgb);
+	RUN_TEST(float_array_for_rgb);
+	RUN_TEST(int_array_for_hsv);
+	RUN_TEST(long_array);
+	RUN_TEST(bools);
+	RUN_TEST(strings);
 	RUN_TEST(rotate_with_unsupported_objects);
 	RUN_TEST(reverse_with_unsupported_objects);
 }

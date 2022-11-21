@@ -263,14 +263,14 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		// 0.0 <= Hue < 1.0
 		case 'f': // float
 			if (type == OutputType::RGB)
-				mp_raise_ValueError(MP_ERROR_TEXT("unsupported array type for RGB values"));
+				mp_raise_TypeError(MP_ERROR_TEXT("unsupported array type for RGB values"));
 			break;
 
 		// 0x__RRGGBB
 		case 'i': // int
 		case 'I': // unsigned int
 			if (type != OutputType::RGB)
-				mp_raise_ValueError(MP_ERROR_TEXT("unsupported array type for HSV values"));
+				mp_raise_TypeError(MP_ERROR_TEXT("unsupported array type for HSV values"));
 			break;
 
 		case 'O': // object
@@ -283,7 +283,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		case 'd': // double
 		case 'P': // pointer
 		default:
-			mp_raise_ValueError(MP_ERROR_TEXT("unsupported array type"));
+			mp_raise_TypeError(MP_ERROR_TEXT("unsupported array type"));
 			break;
 		}
 	}
@@ -292,7 +292,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		const size_t buf_bytes = bufinfo.len;
 
 		if (type != OutputType::RGB)
-			mp_raise_ValueError(MP_ERROR_TEXT("can only use byte array for RGB values"));
+			mp_raise_TypeError(MP_ERROR_TEXT("can only use byte array for RGB values"));
 
 		if (buf_bytes % BYTES_PER_LED != 0)
 			mp_raise_ValueError(MP_ERROR_TEXT("byte array length must be a multiple of 3 bytes"));
