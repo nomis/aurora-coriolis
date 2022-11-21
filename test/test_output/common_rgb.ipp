@@ -922,9 +922,7 @@ import aurcor; aurcor.output_rgb(fn(7), reverse=True, rotate=-7)
 }
 #endif
 
-int COMMON_RGB_NAME () {
-	UNITY_BEGIN();
-
+void COMMON_RGB_NAME () {
 	RUN_TEST(normal_rgb_0);
 	RUN_TEST(normal_rgb_1);
 	RUN_TEST(normal_rgb_2);
@@ -1058,6 +1056,4 @@ int COMMON_RGB_NAME () {
 	RUN_TEST(reverse_rotate_rgb_7_backward_6);
 	RUN_TEST(reverse_rotate_rgb_7_backward_7);
 #endif
-
-	return UNITY_END();
 }

@@ -548,9 +548,7 @@ import aurcor; aurcor.output_rgb(Test(), reverse=True)
 )python")->output_.c_str());
 }
 
-int testsuite_invalid() {
-	UNITY_BEGIN();
-
+void testsuite_invalid() {
 	RUN_TEST(length_not_int);
 	RUN_TEST(length_below_min);
 	RUN_TEST(length_above_max);
@@ -576,6 +574,4 @@ int testsuite_invalid() {
 	RUN_TEST(byte_array_multiple_of_3);
 	RUN_TEST(rotate_with_unsupported_objects);
 	RUN_TEST(reverse_with_unsupported_objects);
-
-	return UNITY_END();
 }

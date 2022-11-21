@@ -276,12 +276,12 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		case 'O': // object
 			break;
 
-		// case 'l': // long
-		// case 'L': // unsigned long
-		// case 'q': // long long
-		// case 'Q': // unsigned long long
-		// case 'd': // double
-		// case 'P': // pointer
+		case 'l': // long
+		case 'L': // unsigned long
+		case 'q': // long long
+		case 'Q': // unsigned long long
+		case 'd': // double
+		case 'P': // pointer
 		default:
 			mp_raise_ValueError(MP_ERROR_TEXT("unsupported array type"));
 			break;

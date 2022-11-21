@@ -596,7 +596,7 @@ extern "C" void mp_hal_stdout_tx_strn(const char *str, size_t len) {
 }
 
 void aurcor::MicroPython::mp_hal_stdout_tx_strn(const uint8_t *str, size_t len) {
-	logger_.err(F("[%s] Write to stdout with no implementation"), name_.c_str());
+	logger_.crit(F("[%s] Write to stdout with no implementation"), name_.c_str());
 	abort();
 }
 

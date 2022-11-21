@@ -9,7 +9,6 @@ native:
 	platformio test -d .. -e native_test
 
 coverage:
-	rm -f ../.pio/coverage.info
-	lcov -d ../.pio/build/native_test/ -c -o ../.pio/coverage.info
+	lcov -d ../.pio/build/native_test/ -c -o ../.pio/build/native_test/coverage.info
 	rm -rf ../coverage
-	genhtml -o ../coverage/ --demangle-cpp --ignore-errors source ../.pio/coverage.info
+	genhtml -o ../coverage/ --demangle-cpp --ignore-errors source ../.pio/build/native_test/coverage.info

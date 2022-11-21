@@ -25,14 +25,14 @@ void tearDown(void) {
 }
 
 int main(int argc, char *argv[]) {
-	int ret = 0;
+	UNITY_BEGIN();
 
 	TestMicroPython::init();
 
 #define FUNC_DECLARE_EXEC(func) \
 	do { \
-		extern int func(); \
-		ret |= func(); \
+		extern void func(); \
+		func(); \
 	} while(0)
 
 	FUNC_DECLARE_EXEC(testsuite_bytearray_rgb);
@@ -102,5 +102,5 @@ int main(int argc, char *argv[]) {
 
 	FUNC_DECLARE_EXEC(testsuite_invalid);
 
-	return ret;
+	return UNITY_END();
 }

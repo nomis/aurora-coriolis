@@ -15,5 +15,7 @@
 		/* "ENV_NATIVE", */
 		"UNITY_INCLUDE_PRINT_FORMATTED"
 	],
-	"C_Cpp.default.mergeConfigurations": true
+	"C_Cpp.default.mergeConfigurations": true,
+	"editor.detectIndentation": false,
+	"editor.insertSpaces": false
 }

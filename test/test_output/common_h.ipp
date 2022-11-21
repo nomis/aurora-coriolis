@@ -924,9 +924,7 @@ import aurcor; aurcor.output_hsv(fn(7), reverse=True, rotate=-7)
 }
 #endif
 
-int COMMON_H_NAME () {
-	UNITY_BEGIN();
-
+void COMMON_H_NAME () {
 	RUN_TEST(normal_h_0);
 	RUN_TEST(normal_h_1);
 	RUN_TEST(normal_h_2);
@@ -1060,6 +1058,4 @@ int COMMON_H_NAME () {
 	RUN_TEST(reverse_rotate_h_7_backward_6);
 	RUN_TEST(reverse_rotate_h_7_backward_7);
 #endif
-
-	return UNITY_END();
 }
