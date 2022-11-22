@@ -30,6 +30,6 @@ def fn(n):
 		yield ((x * 3 + 1) << 16) | ((x * 3 + 2) << 8) | (x * 3 + 3)
 )python";
 
-#define COMMON_RGB_GENERATOR
+#define COMMON_GENERATOR
 
 #include "../common_rgb.ipp"

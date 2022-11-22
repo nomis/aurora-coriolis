@@ -32,6 +32,6 @@ def fn(n):
 			aurcor.MAX_VALUE * (10 - x) // 10 / aurcor.MAX_VALUE]
 )python";
 
-#define COMMON_EXP_HSV_GENERATOR
+#define COMMON_GENERATOR
 
 #include "../common_exp_hsv.ipp"
