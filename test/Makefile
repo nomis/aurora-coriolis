@@ -1,6 +1,7 @@
-.PHONY: all native coverage
+.PHONY: all ci native coverage
 .NOTPARALLEL:
 
+ci: native
 all: native coverage
 
 native:
