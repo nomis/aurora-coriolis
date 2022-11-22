@@ -93,7 +93,7 @@ void TestMicroPython::run(std::string script, bool safe) {
 			force_exit_ = true;
 			force_exit();
 		} else {
-			delay(1);
+			yield();
 		}
 	}
 
@@ -103,7 +103,7 @@ void TestMicroPython::run(std::string script, bool safe) {
 			stop_failed_ = true;
 			break;
 		} else {
-			delay(1);
+			yield();
 		}
 	}
 
