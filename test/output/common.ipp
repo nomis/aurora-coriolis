@@ -66,104 +66,6 @@ import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5))
 )python")->outputs_[0].data(), expected.size());
 }
 
-static void normal_5_length_0() {
-	std::array<uint8_t,5*3> expected{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=0)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void normal_5_length_1() {
-	std::array<uint8_t,5*3> expected{EXPECT_A,0,0,0,0,0,0,0,0,0,0,0,0};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=1)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void normal_5_length_2() {
-	std::array<uint8_t,5*3> expected{EXPECT_A,EXPECT_B,0,0,0,0,0,0,0,0,0};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=2)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void normal_5_length_3() {
-	std::array<uint8_t,5*3> expected{EXPECT_A,EXPECT_B,EXPECT_C,0,0,0,0,0,0};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=3)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void normal_5_length_4() {
-	std::array<uint8_t,5*3> expected{EXPECT_A,EXPECT_B,EXPECT_C,EXPECT_D,0,0,0};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=4)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void normal_5_length_5() {
-	std::array<uint8_t,5*3> expected{EXPECT_A,EXPECT_B,EXPECT_C,EXPECT_D,EXPECT_E};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=5)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void normal_5_length_6() {
-	std::array<uint8_t,5*3> expected{EXPECT_A,EXPECT_B,EXPECT_C,EXPECT_D,EXPECT_E};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=6)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void normal_5_length_0_repeat() {
-	std::array<uint8_t,5*3> expected{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=0, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void normal_5_length_1_repeat() {
-	std::array<uint8_t,5*3> expected{EXPECT_A,EXPECT_A,EXPECT_A,EXPECT_A,EXPECT_A};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=1, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void normal_5_length_2_repeat() {
-	std::array<uint8_t,5*3> expected{EXPECT_A,EXPECT_B,EXPECT_A,EXPECT_B,EXPECT_A};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=2, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void normal_5_length_3_repeat() {
-	std::array<uint8_t,5*3> expected{EXPECT_A,EXPECT_B,EXPECT_C,EXPECT_A,EXPECT_B};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=3, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void normal_5_length_4_repeat() {
-	std::array<uint8_t,5*3> expected{EXPECT_A,EXPECT_B,EXPECT_C,EXPECT_D,EXPECT_A};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=4, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void normal_5_length_5_repeat() {
-	std::array<uint8_t,5*3> expected{EXPECT_A,EXPECT_B,EXPECT_C,EXPECT_D,EXPECT_E};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=5, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void normal_5_length_6_repeat() {
-	std::array<uint8_t,5*3> expected{EXPECT_A,EXPECT_B,EXPECT_C,EXPECT_D,EXPECT_E};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), length=6, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
 static void normal_6() {
 	std::array<uint8_t,5*3> expected{EXPECT_A,EXPECT_B,EXPECT_C,EXPECT_D,EXPECT_E};
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
@@ -1061,104 +963,6 @@ import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True)
 )python")->outputs_[0].data(), expected.size());
 }
 
-static void reverse_5_length_0() {
-	std::array<uint8_t,5*3> expected{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=0)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void reverse_5_length_1() {
-	std::array<uint8_t,5*3> expected{EXPECT_E,0,0,0,0,0,0,0,0,0,0,0,0};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=1)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void reverse_5_length_2() {
-	std::array<uint8_t,5*3> expected{EXPECT_E,EXPECT_D,0,0,0,0,0,0,0,0,0};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=2)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void reverse_5_length_3() {
-	std::array<uint8_t,5*3> expected{EXPECT_E,EXPECT_D,EXPECT_C,0,0,0,0,0,0};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=3)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void reverse_5_length_4() {
-	std::array<uint8_t,5*3> expected{EXPECT_E,EXPECT_D,EXPECT_C,EXPECT_B,0,0,0};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=4)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void reverse_5_length_5() {
-	std::array<uint8_t,5*3> expected{EXPECT_E,EXPECT_D,EXPECT_C,EXPECT_B,EXPECT_A};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=5)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void reverse_5_length_6() {
-	std::array<uint8_t,5*3> expected{EXPECT_E,EXPECT_D,EXPECT_C,EXPECT_B,EXPECT_A};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=6)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void reverse_5_length_0_repeat() {
-	std::array<uint8_t,5*3> expected{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=0, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void reverse_5_length_1_repeat() {
-	std::array<uint8_t,5*3> expected{EXPECT_E,EXPECT_E,EXPECT_E,EXPECT_E,EXPECT_E};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=1, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void reverse_5_length_2_repeat() {
-	std::array<uint8_t,5*3> expected{EXPECT_E,EXPECT_D,EXPECT_E,EXPECT_D,EXPECT_E};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=2, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void reverse_5_length_3_repeat() {
-	std::array<uint8_t,5*3> expected{EXPECT_E,EXPECT_D,EXPECT_C,EXPECT_E,EXPECT_D};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=3, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void reverse_5_length_4_repeat() {
-	std::array<uint8_t,5*3> expected{EXPECT_E,EXPECT_D,EXPECT_C,EXPECT_B,EXPECT_E};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=4, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void reverse_5_length_5_repeat() {
-	std::array<uint8_t,5*3> expected{EXPECT_E,EXPECT_D,EXPECT_C,EXPECT_B,EXPECT_A};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=5, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
-static void reverse_5_length_6_repeat() {
-	std::array<uint8_t,5*3> expected{EXPECT_E,EXPECT_D,EXPECT_C,EXPECT_B,EXPECT_A};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
-import aurcor; aurcor.)python" + output_fn_name + R"python((fn(5), reverse=True, length=6, repeat=True)
-)python")->outputs_[0].data(), expected.size());
-}
-
 static void reverse_6() {
 	std::array<uint8_t,5*3> expected{EXPECT_F,EXPECT_E,EXPECT_D,EXPECT_C,EXPECT_B};
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(expected.data(), TestMicroPython::run_bus(expected.size(), 1, fn + R"python(
@@ -2029,20 +1833,6 @@ int main(int argc, char *argv[]) {
 	RUN_TEST(normal_3);
 	RUN_TEST(normal_4);
 	RUN_TEST(normal_5);
-	RUN_TEST(normal_5_length_0);
-	RUN_TEST(normal_5_length_1);
-	RUN_TEST(normal_5_length_2);
-	RUN_TEST(normal_5_length_3);
-	RUN_TEST(normal_5_length_4);
-	RUN_TEST(normal_5_length_5);
-	RUN_TEST(normal_5_length_6);
-	RUN_TEST(normal_5_length_0_repeat);
-	RUN_TEST(normal_5_length_1_repeat);
-	RUN_TEST(normal_5_length_2_repeat);
-	RUN_TEST(normal_5_length_3_repeat);
-	RUN_TEST(normal_5_length_4_repeat);
-	RUN_TEST(normal_5_length_5_repeat);
-	RUN_TEST(normal_5_length_6_repeat);
 	RUN_TEST(normal_6);
 	RUN_TEST(normal_7);
 
@@ -2175,21 +1965,6 @@ int main(int argc, char *argv[]) {
 	RUN_TEST(reverse_2);
 	RUN_TEST(reverse_3);
 	RUN_TEST(reverse_4);
-	RUN_TEST(reverse_5);
-	RUN_TEST(reverse_5_length_0);
-	RUN_TEST(reverse_5_length_1);
-	RUN_TEST(reverse_5_length_2);
-	RUN_TEST(reverse_5_length_3);
-	RUN_TEST(reverse_5_length_4);
-	RUN_TEST(reverse_5_length_5);
-	RUN_TEST(reverse_5_length_6);
-	RUN_TEST(reverse_5_length_0_repeat);
-	RUN_TEST(reverse_5_length_1_repeat);
-	RUN_TEST(reverse_5_length_2_repeat);
-	RUN_TEST(reverse_5_length_3_repeat);
-	RUN_TEST(reverse_5_length_4_repeat);
-	RUN_TEST(reverse_5_length_5_repeat);
-	RUN_TEST(reverse_5_length_6_repeat);
 	RUN_TEST(reverse_5);
 	RUN_TEST(reverse_6);
 	RUN_TEST(reverse_7);

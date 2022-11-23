@@ -22,44 +22,6 @@
 
 #include "test_micropython.h"
 
-static void length_not_int() {
-	TEST_ASSERT_EQUAL_STRING(
-		"Traceback (most recent call last):\r\n"
-		"  File \"<stdin>\", line 2, in <module>\r\n"
-		"TypeError: length must be an int\r\n",
-		TestMicroPython::run_script(R"python(
-import aurcor; aurcor.output_rgb([], "1")
-)python")->output_.c_str());
-
-	TEST_ASSERT_EQUAL_STRING(
-		"Traceback (most recent call last):\r\n"
-		"  File \"<stdin>\", line 2, in <module>\r\n"
-		"TypeError: length must be an int\r\n",
-		TestMicroPython::run_script(R"python(
-import aurcor; aurcor.output_rgb([], 1.0)
-)python")->output_.c_str());
-}
-
-static void length_below_min() {
-	TEST_ASSERT_EQUAL_STRING(
-		"Traceback (most recent call last):\r\n"
-		"  File \"<stdin>\", line 2, in <module>\r\n"
-		"ValueError: length must be positive\r\n",
-		TestMicroPython::run_script(R"python(
-import aurcor; aurcor.output_rgb([], -1)
-)python")->output_.c_str());
-}
-
-static void length_above_max() {
-	TEST_ASSERT_EQUAL_STRING(
-		"Traceback (most recent call last):\r\n"
-		"  File \"<stdin>\", line 2, in <module>\r\n"
-		"OverflowError: overflow converting length value to bytes\r\n",
-		TestMicroPython::run_script(R"python(
-import aurcor; aurcor.output_rgb([], 2**64//3 + 1)
-)python")->output_.c_str());
-}
-
 static void profile_not_int() {
 	TEST_ASSERT_EQUAL_STRING(
 		"Traceback (most recent call last):\r\n"
@@ -739,9 +701,6 @@ int main(int argc, char *argv[]) {
 
 	TestMicroPython::init();
 
-	RUN_TEST(length_not_int);
-	RUN_TEST(length_below_min);
-	RUN_TEST(length_above_max);
 	RUN_TEST(profile_not_int);
 	RUN_TEST(profile_below_min);
 	RUN_TEST(profile_above_max);

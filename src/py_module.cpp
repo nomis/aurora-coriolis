@@ -117,7 +117,6 @@ inline PyModule& PyModule::current() {
 mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs, OutputType type, bool set_defaults) {
 	enum {
 		ARG_values,
-		ARG_length,
 
 		ARG_profile,
 		ARG_fps,
@@ -132,7 +131,6 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 	static const mp_arg_t allowed_args[] = {
 		// BEFORE_DEFAULTS
 		{MP_QSTR_values,      MP_ARG_REQUIRED | MP_ARG_OBJ,   {u_obj: MP_OBJ_NULL}},
-		{MP_QSTR_length,      MP_ARG_OBJ,                     {u_obj: MP_OBJ_NULL}},
 
 		{MP_QSTR_profile,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 		{MP_QSTR_fps,         MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
@@ -226,21 +224,6 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 	const size_t max_bytes = std::min(bus_->length() * BYTES_PER_LED, led_buffer_->size());
 	size_t in_bytes = max_bytes;
 	size_t out_bytes = 0;
-
-	if (parsed_args[ARG_length].u_obj != MP_OBJ_NULL) {
-		if (!mp_obj_is_int(parsed_args[ARG_length].u_obj))
-			mp_raise_TypeError(MP_ERROR_TEXT("length must be an int"));
-
-		mp_int_t value = mp_obj_get_int(parsed_args[ARG_length].u_obj);
-
-		if (value < 0)
-			mp_raise_ValueError(MP_ERROR_TEXT("length must be positive"));
-
-		if ((size_t)value > MAX_ULENGTH)
-			mp_raise_msg(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting length value to bytes"));
-
-		in_bytes = std::min(in_bytes, (size_t)value * BYTES_PER_LED);
-	}
 
 	if (signed_rotate_length < MIN_SLENGTH || signed_rotate_length > MAX_SLENGTH)
 		mp_raise_msg(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting rotate value to bytes"));
