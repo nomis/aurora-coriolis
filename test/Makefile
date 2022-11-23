@@ -1,8 +1,12 @@
-.PHONY: all ci native native_coverage coverage
+.PHONY: all native native_coverage coverage
 .NOTPARALLEL:
 
-ci: native
-all: native_coverage coverage
+DEFAULT_TARGETS:=native_coverage coverage
+ifeq ($(CI),true)
+DEFAULT_TARGETS:=native
+endif
+
+all: $(DEFAULT_TARGETS)
 
 native:
 	platformio test -d .. -e native_test
