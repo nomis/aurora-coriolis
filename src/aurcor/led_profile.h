@@ -18,18 +18,18 @@
 
 #pragma once
 
-#include <Arduino.h>
-#include <ArduinoJson.h>
-
 #include <limits>
 #include <map>
 #include <mutex>
 #include <shared_mutex>
 
+#include <CBOR.h>
+#include <CBOR_parsing.h>
+#include <CBOR_streams.h>
+
 #include <uuid/console.h>
 #include <uuid/log.h>
 
-#include "app/json.h"
 #include "constants.h"
 
 namespace aurcor {
@@ -87,8 +87,6 @@ protected:
 private:
 	static constexpr size_t MAX_RATIOS = (MAX_LEDS + MIN_RATIO_LEDS - 1) / MIN_RATIO_LEDS;
 	static_assert(MAX_RATIOS > 0, "Must allow at least one ratio configuration entry");
-	static constexpr size_t BUFFER_SIZE = JSON_ARRAY_SIZE(MAX_RATIOS)
-		+ MAX_RATIOS * (JSON_ARRAY_SIZE(2) + JSON_ARRAY_SIZE(3));
 #ifdef ENV_NATIVE
 	static constexpr bool VERBOSE = true;
 #else
@@ -127,7 +125,18 @@ private:
 			&& (index_t)index < MAX_LEDS;
 	}
 
-	static bool valid_value(int value) {
+	static bool valid_index(int64_t index) {
+		return index >= 0
+			&& (uint64_t)index <= MAX_INDEX
+			&& (index_t)index < MAX_LEDS;
+	}
+
+	static bool valid_value(int32_t value) {
+		return value >= 0
+			&& value <= UINT8_MAX;
+	}
+
+	static bool valid_value(int64_t value) {
 		return value >= 0
 			&& value <= UINT8_MAX;
 	}
@@ -145,17 +154,14 @@ private:
 
 	static std::string make_filename(const char *bus_name, const char *profile_name);
 
-	Result load(app::JsonDocument &doc);
-	Result load_ratio_configs(ArduinoJson::JsonArray &array);
-	Result load_ratio_config(ArduinoJson::JsonArray &array);
-	static Result get_ratio_config_index(ArduinoJson::JsonArray &array,
-		ArduinoJson::JsonArray::iterator &it, index_t &index);
-	static Result get_ratio_config_ratio(ArduinoJson::JsonArray &array,
-		ArduinoJson::JsonArray::iterator &it, Ratio &ratio);
-	static Result get_ratio_config_ratio_value(
-		ArduinoJson::JsonVariant &element, uint8_t &ratio_value);
+	Result load(qindesign::cbor::Reader &reader);
+	Result load_ratio_configs(qindesign::cbor::Reader &reader, uint64_t entries);
+	Result load_ratio_config(qindesign::cbor::Reader &reader);
+	static Result get_ratio_config_index(qindesign::cbor::Reader &reader, index_t &index);
+	static Result get_ratio_config_ratio(qindesign::cbor::Reader &reader, Ratio &ratio);
+	static Result get_ratio_config_ratio_value(qindesign::cbor::Reader &reader, uint8_t &ratio_value);
 
-	void save(app::JsonDocument &doc, index_t index, const Ratio &ratio);
+	void save(qindesign::cbor::Writer &writer, index_t index, const Ratio &ratio);
 
 	static uuid::log::Logger logger_;
 

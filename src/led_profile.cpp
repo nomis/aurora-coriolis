@@ -18,24 +18,25 @@
 
 #include "aurcor/led_profile.h"
 
-#include <Arduino.h>
-#include <ArduinoJson.hpp>
-
 #include <mutex>
 #include <shared_mutex>
 #include <utility>
+
+#include <CBOR.h>
+#include <CBOR_parsing.h>
+#include <CBOR_streams.h>
 
 #include <uuid/console.h>
 #include <uuid/log.h>
 
 #include "app/fs.h"
-#include "app/json.h"
 #include "aurcor/util.h"
 
 #ifndef PSTR_ALIGN
 # define PSTR_ALIGN 4
 #endif
 
+namespace cbor = qindesign::cbor;
 using app::FS;
 using uuid::log::Level;
 
@@ -154,9 +155,10 @@ LEDProfile::Result LEDProfile::remove(const std::map<index_t,Ratio>::iterator &i
 std::vector<unsigned int> LEDProfile::indexes() const {
 	std::vector<unsigned int> values;
 
+	if (values.empty() || ratios_.begin()->first > 0)
+		values.push_back(0);
+
 	for (auto &entry : ratios_) {
-		if (values.empty() && entry.first > 0)
-			values.push_back(0);
 		values.push_back(entry.first);
 	}
 
@@ -206,7 +208,7 @@ LEDProfile::Ratio LEDProfile::get(index_t index) const {
 	Ratio ratio{DEFAULT_RATIO};
 
 	for (auto &entry : ratios_) {
-		if (entry.first < index) {
+		if (entry.first <= index) {
 			ratio = entry.second;
 		} else {
 			break;
@@ -303,11 +305,11 @@ std::string LEDProfile::make_filename(const char *bus_name, const char *profile_
 	std::string filename;
 
 	filename.append(directory_name);
-	filename.append(" ");
+	filename.append("/");
 	filename.append(bus_name);
-	filename.append(" ");
+	filename.append(".");
 	filename.append(profile_name);
-	filename.append(".json");
+	filename.append(".cbor");
 
 	return filename;
 }
@@ -322,30 +324,27 @@ LEDProfile::Result LEDProfile::load(const char *bus_name, const char *profile_na
 
 	auto file = FS.open(filename.c_str(), "r");
 	if (file) {
-		app::JsonDocument doc{BUFFER_SIZE};
+		cbor::Reader reader{file};
 
-		auto error = ArduinoJson::deserializeJson(doc, file);
-		if (error) {
-			logger_.err(F("Failed to read profile file %s: %s"), filename.c_str(), error.c_str());
-			return Result::PARSE_ERROR;
-		} else {
-			auto result = load(doc);
+		if (!cbor::expectValue(reader, cbor::DataType::kTag, cbor::kSelfDescribeTag))
+			file.seek(0);
 
-			switch (result) {
-			case Result::FULL:
-				logger_.err(F("Profile file %s contains too many entries (truncated)"), filename.c_str());
-				break;
+		auto result = load(reader);
 
-			case Result::PARSE_ERROR:
-				logger_.err(F("Profile file %s contains invalid data that has been ignored"), filename.c_str());
-				break;
+		switch (result) {
+		case Result::FULL:
+			logger_.err(F("Profile file %s contains too many entries (truncated)"), filename.c_str());
+			break;
 
-			default:
-				break;
-			}
+		case Result::PARSE_ERROR:
+			logger_.err(F("Profile file %s contains invalid data that has been ignored"), filename.c_str());
+			break;
 
-			return result;
+		default:
+			break;
 		}
+
+		return result;
 	} else {
 		logger_.log(automatic ? Level::DEBUG : Level::ERR,
 			F("Unable to open profile file %s for reading"), filename.c_str());
@@ -353,94 +352,83 @@ LEDProfile::Result LEDProfile::load(const char *bus_name, const char *profile_na
 	}
 }
 
-LEDProfile::Result inline LEDProfile::load(app::JsonDocument &doc) {
+LEDProfile::Result inline LEDProfile::load(cbor::Reader &reader) {
 	Result result = Result::PARSE_ERROR;
-	auto root = doc.as<JsonArray>();
+	uint64_t entries;
+	bool indefinite;
 
-	if (root) {
-		ratios_.clear();
-		result = load_ratio_configs(root);
-		modified_ = result != Result::OK;
-	} else {
+	if (!cbor::expectArray(reader, &entries, &indefinite)) {
 		if (VERBOSE)
-			logger_.trace(F("Document root is not an array"));
+			logger_.trace(F("File does not contain an array"));
+		return Result::PARSE_ERROR;
 	}
+
+	if (indefinite) {
+		if (VERBOSE)
+			logger_.trace(F("File does not contain a definite length array"));
+		return Result::PARSE_ERROR;
+	}
+
+	ratios_.clear();
+	result = load_ratio_configs(reader, entries);
+	modified_ = result != Result::OK;
 
 	return result;
 }
 
-LEDProfile::Result inline LEDProfile::load_ratio_configs(JsonArray &array) {
+LEDProfile::Result inline LEDProfile::load_ratio_configs(cbor::Reader &reader, uint64_t entries) {
 	Result result = OK;
 
-	for (JsonVariant element : array) {
-		auto entry = element.as<JsonArray>();
-
-		if (!entry) {
-			if (VERBOSE)
-				logger_.trace(F("Ratio config entry is not an array"));
-
-			add_default();
-			downgrade_result(result, Result::PARSE_ERROR);
-			continue;
-		}
-
-		downgrade_result(result, load_ratio_config(entry));
+	while (entries-- > 0) {
+		if (downgrade_result(result, load_ratio_config(reader)))
+			return result;
 	}
 
 	return result;
 }
 
-LEDProfile::Result inline LEDProfile::load_ratio_config(JsonArray &array) {
+LEDProfile::Result inline LEDProfile::load_ratio_config(cbor::Reader &reader) {
 	Result result = OK;
 	index_t index;
 	Ratio ratio;
 
-	auto it = array.begin();
+	if (!cbor::expectValue(reader, cbor::DataType::kArray, 2)) {
+		if (VERBOSE)
+			logger_.trace(F("Ratio config entry is not an array of 2 elements"));
 
-	if (downgrade_result(result,
-			get_ratio_config_index(array, it, index)) != Result::OK) {
+		add_default();
+		downgrade_result(result, Result::PARSE_ERROR);
+		return result;
+	}
+
+	if (downgrade_result(result, get_ratio_config_index(reader, index)) != Result::OK) {
 		add_default();
 		return result;
 	}
 
-	++it;
-	if (downgrade_result(result,
-			get_ratio_config_ratio(array, it, ratio)) != Result::OK) {
+	if (downgrade_result(result, get_ratio_config_ratio(reader, ratio)) != Result::OK) {
 		add(index, DEFAULT_RATIO);
 		return result;
 	}
 
 	downgrade_result(result, add(index, ratio));
 
-	++it;
-	if (it != array.end()) {
-		if (VERBOSE)
-			logger_.trace(F("Ratio config entry has additional data"));
-		downgrade_result(result, Result::PARSE_ERROR);
-	}
-
 	return result;
 }
 
-LEDProfile::Result inline LEDProfile::get_ratio_config_index(JsonArray &array,
-		JsonArray::iterator &it, index_t &index) {
-	if (it == array.end()) {
+LEDProfile::Result inline LEDProfile::get_ratio_config_index(cbor::Reader &reader, index_t &index) {
+	int64_t value;
+
+	if (!cbor::expectInt(reader, &value)) {
 		if (VERBOSE)
-			logger_.trace(F("Ratio config entry is missing the index"));
+			logger_.trace(F("Ratio config index is not an int"));
+
 		return Result::PARSE_ERROR;
 	}
-
-	if (!it->is<unsigned int>()) {
-		if (VERBOSE)
-			logger_.trace(F("Ratio config index is not an unsigned int"));
-		return Result::PARSE_ERROR;
-	}
-
-	unsigned int value = it->as<unsigned int>();
 
 	if (!valid_index(value)) {
 		if (VERBOSE)
-			logger_.trace(F("Ratio config index %u is out of range"), value);
+			logger_.trace(F("Ratio config index %" PRIu64 " is out of range"), value);
 		return Result::PARSE_ERROR;
 	}
 
@@ -448,60 +436,39 @@ LEDProfile::Result inline LEDProfile::get_ratio_config_index(JsonArray &array,
 	return Result::OK;
 }
 
-LEDProfile::Result inline LEDProfile::get_ratio_config_ratio(JsonArray &array,
-		JsonArray::iterator &it, Ratio &ratio) {
+LEDProfile::Result inline LEDProfile::get_ratio_config_ratio(cbor::Reader &reader, Ratio &ratio) {
 	Result result = OK;
-	uint8_t i = 0;
 
-	if (it == array.end()) {
+	if (!cbor::expectValue(reader, cbor::DataType::kArray, 3)) {
 		if (VERBOSE)
-			logger_.trace(F("Ratio config entry is missing the ratio"));
+			logger_.trace(F("Ratio config ratio is not an array of 3 elements"));
+
 		return Result::PARSE_ERROR;
 	}
 
-	if (!it->is<JsonArray>()) {
-		if (VERBOSE)
-			logger_.trace(F("Ratio config ratio is not an array"));
-		return Result::PARSE_ERROR;
-	}
-
-	for (JsonVariant element : it->as<JsonArray>()) {
-		if (i >= sizeof(ratio.v)) {
-			if (VERBOSE)
-				logger_.trace(F("Ratio config ratio has too many values"));
-			return Result::PARSE_ERROR;
-		}
-
+	for (uint_fast8_t i = 0; i < 3; i++) {
 		if (downgrade_result(result,
-				get_ratio_config_ratio_value(element, ratio.v[i])) != Result::OK)
+				get_ratio_config_ratio_value(reader, ratio.v[i])) != Result::OK)
 			return result;
-
-		i++;
 	}
 
-	if (i == (uint8_t)sizeof(ratio.v)) {
-		return Result::OK;
-	} else {
-		if (VERBOSE)
-			logger_.trace(F("Ratio config ratio has too few values (%u < %u)"),
-				i, (uint8_t)sizeof(ratio.v));
-		return Result::PARSE_ERROR;
-	}
+	return Result::OK;
 }
 
 LEDProfile::Result inline LEDProfile::get_ratio_config_ratio_value(
-		JsonVariant &element, uint8_t &ratio_value) {
-	if (!element.is<int>()) {
+		cbor::Reader &reader, uint8_t &ratio_value) {
+	int64_t value;
+
+	if (!cbor::expectInt(reader, &value)) {
 		if (VERBOSE)
 			logger_.trace(F("Ratio config ratio value is not an int"));
+
 		return Result::PARSE_ERROR;
 	}
 
-	int value = element.as<int>();
-
 	if (!valid_value(value)) {
 		if (VERBOSE)
-			logger_.trace(F("Ratio config ratio value %d is out of range"), value);
+			logger_.trace(F("Ratio config ratio value %" PRId64 " is out of range"), value);
 		return Result::PARSE_ERROR;
 	}
 
@@ -520,46 +487,42 @@ LEDProfile::Result LEDProfile::save(const char *bus_name, const char *profile_na
 		return Result::IO_ERROR;
 	}
 
-	app::JsonDocument doc{BUFFER_SIZE};
-
-	if (!ratios_.empty() && ratios_.begin()->first != 0)
-		save(doc, 0, DEFAULT_RATIO);
-
-	for (auto &entry : ratios_)
-		save(doc, entry.first, entry.second);
-
-	if (doc.overflowed()) {
-		logger_.err(F("Out of memory saving profile"));
-		return Result::IO_ERROR;
-	}
-
 	auto file = FS.open(filename.c_str(), "w");
-	if (file) {
-		ArduinoJson::serializeJson(doc, file);
-
-		if (file.getWriteError()) {
-			logger_.err(F("Failed to write profile file %s: %u"), filename.c_str(), file.getWriteError());
-			return Result::IO_ERROR;
-		} else {
-			modified_ = false;
-			return Result::OK;
-		}
-	} else {
+	if (!file) {
 		logger_.err(F("Unable to open profile file %s for writing"), filename.c_str());
 		return Result::IO_ERROR;
 	}
+
+	cbor::Writer writer{file};
+	bool save_default = !ratios_.empty() && ratios_.begin()->first != 0;
+
+	writer.writeTag(cbor::kSelfDescribeTag);
+	writer.beginArray(ratios_.size() + (save_default ? 1 : 0));
+
+	if (save_default)
+		save(writer, 0, DEFAULT_RATIO);
+
+	for (auto &entry : ratios_)
+		save(writer, entry.first, entry.second);
+
+	if (file.getWriteError()) {
+		logger_.err(F("Failed to write profile file %s: %u"), filename.c_str(), file.getWriteError());
+		file.close();
+		FS.remove(filename.c_str());
+		return Result::IO_ERROR;
+	} else {
+		modified_ = false;
+		return Result::OK;
+	}
 }
 
-void LEDProfile::save(app::JsonDocument &doc, index_t index, const Ratio &ratio) {
-	auto array = doc.createNestedArray();
-
-	array.add(index);
-
-	array = array.createNestedArray();
-
-	array.add(ratio.r);
-	array.add(ratio.g);
-	array.add(ratio.b);
+void LEDProfile::save(cbor::Writer &writer, index_t index, const Ratio &ratio) {
+	writer.beginArray(2);
+	writer.writeUnsignedInt(index);
+	writer.beginArray(3);
+	writer.writeUnsignedInt(ratio.r);
+	writer.writeUnsignedInt(ratio.g);
+	writer.writeUnsignedInt(ratio.b);
 }
 
 } // namespace aurcor

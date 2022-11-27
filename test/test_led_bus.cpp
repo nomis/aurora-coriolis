@@ -25,7 +25,9 @@
 #include "aurcor/led_profiles.h"
 
 TestByteBufferLEDBus::TestByteBufferLEDBus() : aurcor::ByteBufferLEDBus("test") {
-	profile(LED_PROFILE_NORMAL).set(0, 255, 255, 255);
+	auto &p = profile(LED_PROFILE_NORMAL);
+	p.clear();
+	p.set(0, 255, 255, 255);
 }
 
 void TestByteBufferLEDBus::transmit() {
