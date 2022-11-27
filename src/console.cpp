@@ -82,7 +82,8 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 			shell.printfln(F("Bus \"%s\" not found"), arguments[0].c_str());
 		}
 	},
-	[] (Shell &shell, const std::vector<std::string> &arguments __attribute__((unused))) -> std::vector<std::string> {
+	[] (Shell &shell, const std::vector<std::string> &current_arguments __attribute__((unused)),
+			const std::string &next_argument) -> std::vector<std::string> {
 		return to_app(shell).bus_names();
 	});
 }
