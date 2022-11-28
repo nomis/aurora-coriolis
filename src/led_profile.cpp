@@ -357,13 +357,7 @@ LEDProfile::Result inline LEDProfile::load(cbor::Reader &reader) {
 	uint64_t entries;
 	bool indefinite;
 
-	if (!cbor::expectArray(reader, &entries, &indefinite)) {
-		if (VERBOSE)
-			logger_.trace(F("File does not contain an array"));
-		return Result::PARSE_ERROR;
-	}
-
-	if (indefinite) {
+	if (!cbor::expectArray(reader, &entries, &indefinite) || indefinite) {
 		if (VERBOSE)
 			logger_.trace(F("File does not contain a definite length array"));
 		return Result::PARSE_ERROR;
