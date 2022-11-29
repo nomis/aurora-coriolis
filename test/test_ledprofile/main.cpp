@@ -111,29 +111,58 @@ static void test_save() {
 }
 
 static void test_load() {
+	app::FS.mkdir("/profiles");
+	auto file = app::FS.open("/profiles/test_load.normal.cbor", "w");
+	TEST_ASSERT_TRUE(file);
+	if (file) {
+		std::vector<uint8_t> data{
+			0xd9, 0xd9, 0xf7, /* CBOR */
+				0x85, /* Array of 5 elements */
+					0x82, /* Array of 2 elements */
+						0x00, /* Int: 0 */
+						0x83, /* Array of 3 elements */
+							0x08, /* Int: 8 */
+							0x08, /* Int: 8 */
+							0x08, /* Int: 8 */
+					0x82, /* Array of 2 elements */
+						0x18, 0x32, /* Int: 50 */
+						0x83, /* Array of 3 elements */
+							0x18, 0x65, /* Int: 101 */
+							0x18, 0x66, /* Int: 102 */
+							0x18, 0x67, /* Int: 103 */
+					0x82, /* Array of 2 elements */
+						0x18, 0x64, /* Int: 100 */
+						0x83, /* Array of 3 elements */
+							0x18, 0x97, /* Int: 151 */
+							0x18, 0x98, /* Int: 152 */
+							0x18, 0x99, /* Int: 153 */
+					0x82, /* Array of 2 elements */
+						0x18, 0x96, /* Int: 150 */
+						0x83, /* Array of 3 elements */
+							0x18, 0xc9, /* Int: 201 */
+							0x18, 0xca, /* Int: 202 */
+							0x18, 0xcb, /* Int: 203 */
+					0x82, /* Array of 2 elements */
+						0x18, 0xc8, /* Int: 200 */
+						0x83, /* Array of 3 elements */
+							0x18, 0xfb, /* Int: 251 */
+							0x18, 0xfc, /* Int: 252 */
+							0x18, 0xfd, /* Int: 253 */
+		};
+		TEST_ASSERT_EQUAL_INT(data.size(), file.write(data.data(), data.size()));
+	}
+	file.close();
+
 	LEDProfiles profiles{"test_load"};
 	auto &profile = profiles.get(LED_PROFILE_NORMAL);
 
-	profile.clear();
-	TEST_ASSERT_EQUAL_INT(1, profile.indexes().size());
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.set(50, 101, 102, 103));
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.set(100, 151, 152, 153));
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.set(150, 201, 202, 203));
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.set(200, 251, 252, 253));
 	TEST_ASSERT_EQUAL_INT(5, profile.indexes().size());
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profiles.save(LED_PROFILE_NORMAL));
-
-	profile.clear();
-	TEST_ASSERT_EQUAL_INT(1, profile.indexes().size());
 
 	uint8_t r, g, b;
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.get(50, r, g, b));
+	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.get(0, r, g, b));
 	TEST_ASSERT_EQUAL_INT(8, r);
 	TEST_ASSERT_EQUAL_INT(8, g);
 	TEST_ASSERT_EQUAL_INT(8, b);
-
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profiles.load(LED_PROFILE_NORMAL));
-	TEST_ASSERT_EQUAL_INT(5, profile.indexes().size());
 
 	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.get(50, r, g, b));
 	TEST_ASSERT_EQUAL_INT(101, r);
