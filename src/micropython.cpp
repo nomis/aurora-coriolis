@@ -107,15 +107,21 @@ MicroPython::MicroPython(const std::string &name,
 }
 
 MicroPython::~MicroPython() {
-	if (running_) {
-		logger_.err(F("[%s] Still running in destructor"), name_.c_str());
+	// This is highly unlikely to happen
+	if (started_ && !stopped_) {
+		logger_.emerg(F("[%s] Still running in destructor"), name_.c_str());
 
-		while (!stop()) {}
+		// This is likely to block forever if it's waiting for stdin/stdout
+		// but the alternative is to crash
+		while (!stop()) {
+			Serial.printf("MicroPython %s still running in destructor\r\n", name_.c_str());
+			delay(1);
+		}
 	}
 }
 
 bool MicroPython::start() {
-	if (started_ || !memory_blocks_available())
+	if (started_ || !memory_blocks_available() || stopped_)
 		return false;
 
 	logger_.trace(F("[%s] Starting thread"), name_.c_str());
@@ -261,8 +267,10 @@ void MicroPython::shutdown() {
 }
 
 bool MicroPython::stop() {
-	if (!started_)
+	if (!started_) {
+		stopped_ = true;
 		return true;
+	}
 
 	if (running_) {
 		logger_.trace(F("[%s] Stopping thread"), name_.c_str());
@@ -273,6 +281,7 @@ bool MicroPython::stop() {
 		std::unique_lock lock{active_, std::try_to_lock};
 
 		if (lock.owns_lock()) {
+			lock.unlock();
 			thread_.join();
 			heap_.reset();
 			pystack_.reset();
@@ -367,22 +376,26 @@ MicroPythonShell::MicroPythonShell(const std::string &name,
 		std::shared_ptr<LEDBus> bus) : MicroPython(name, bus) {
 }
 
-void MicroPythonShell::start(Shell &shell) {
-	auto self = shared_from_this();
+MicroPythonShell::~MicroPythonShell() {
+	if (running() || !stop()) {
+		logger_.err(F("[%s] Still running in destructor"), name_.c_str());
 
+		while (!stop()) {}
+	}
+}
+
+bool MicroPythonShell::start(Shell &shell) {
 	if (!memory_blocks_available()) {
 		shell.printfln(F("Out of memory"));
-		return;
+		return false;
 	}
 
 	if (!MicroPython::start()) {
 		shell.printfln(F("Failed to start"));
-		return;
+		return false;
 	}
 
-	shell.block_with([self] (Shell &shell, bool stop) -> bool {
-		return self->shell_foreground(shell, stop);
-	});
+	return true;
 }
 
 void MicroPythonShell::main() {

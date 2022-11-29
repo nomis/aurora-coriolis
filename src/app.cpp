@@ -53,15 +53,15 @@ void App::init() {
 	 * Usable: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 16 17 21 33 34 35 36 37 38 39 40
 	 * Null: 18 41 42 43 44
 	 */
-	buses_.push_back(std::make_shared<UARTLEDBus>(0, "led0", 41, 39));
-	buses_.push_back(std::make_shared<UARTLEDBus>(1, "led1", 42, 40));
-	buses_.push_back(std::make_shared<NullLEDBus>("null0"));
-	buses_.push_back(std::make_shared<NullLEDBus>("null1"));
+	add(std::make_shared<UARTLEDBus>(0, "led0", 41, 39));
+	add(std::make_shared<UARTLEDBus>(1, "led1", 42, 40));
+	add(std::make_shared<NullLEDBus>("null0"));
+	add(std::make_shared<NullLEDBus>("null1"));
 #else
-	buses_.push_back(std::make_shared<NullLEDBus>("null0"));
-	buses_.push_back(std::make_shared<NullLEDBus>("null1"));
-	buses_.push_back(std::make_shared<NullLEDBus>("null2"));
-	buses_.push_back(std::make_shared<NullLEDBus>("null3"));
+	add(std::make_shared<NullLEDBus>("null0"));
+	add(std::make_shared<NullLEDBus>("null1"));
+	add(std::make_shared<NullLEDBus>("null2"));
+	add(std::make_shared<NullLEDBus>("null3"));
 #endif
 
 	MicroPython::setup(buses_.size());
@@ -80,11 +80,15 @@ void App::start() {
 
 	// TODO make this configurable
 	for (auto &bus : buses_)
-		bus->length(MAX_LEDS);
+		bus.second->length(MAX_LEDS);
 }
 
 void App::loop() {
 	app::App::loop();
+}
+
+void App::add(const std::shared_ptr<LEDBus> &&bus) {
+	buses_.emplace(bus->name(), bus);
 }
 
 std::vector<std::string> App::bus_names() const {
@@ -93,17 +97,42 @@ std::vector<std::string> App::bus_names() const {
 	names.reserve(buses_.size());
 
 	for (auto &bus : buses_)
-		names.emplace_back(bus->name());
+		names.emplace_back(bus.first);
 
 	return names;
 }
 
 std::shared_ptr<LEDBus> App::bus(const std::string &name) {
-	for (auto &bus : buses_)
-		if (bus->name() == name)
-			return bus;
+	auto it = buses_.find(name);
+
+	if (it != buses_.end())
+		return it->second;
 
 	return {};
+}
+
+void App::attach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp) {
+	logger_.trace(F("Attach MicroPython[%s] to LEDBus[%s]"), mp->name().c_str(), bus->name());
+	mps_.emplace(bus, mp);
+}
+
+bool App::detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp) {
+	auto it = mps_.find(bus);
+
+	if (it != mps_.end()) {
+		auto other_mp = it->second;
+
+		if (mp && other_mp != mp)
+			return false;
+
+		if (!other_mp->stop())
+			return false;
+
+		logger_.trace(F("Detach MicroPython[%s] from LEDBus[%s]"), other_mp->name().c_str(), bus->name());
+		mps_.erase(it);
+	}
+
+	return true;
 }
 
 } // namespace aurcor

@@ -67,6 +67,8 @@ public:
 	static_assert(TASK_STACK_LIMIT < TASK_EXC_STACK_LIMIT, "Task stack limit must be lower than task exception stack limit");
 
 	static void setup(size_t pool_count);
+	const std::string& name() const { return name_; }
+	bool stop();
 
 	virtual ~MicroPython();
 
@@ -93,7 +95,6 @@ protected:
 	bool start();
 	virtual void main();
 	virtual void shutdown();
-	bool stop();
 
 	inline bool memory_blocks_available() const { return heap_ && pystack_ && ledbufs_; }
 	inline bool running() const { return running_; }
@@ -174,8 +175,10 @@ public:
 	static constexpr size_t STDOUT_LEN = 128;
 
 	MicroPythonShell(const std::string &name, std::shared_ptr<LEDBus> bus);
+	~MicroPythonShell() override;
 
-	void start(uuid::console::Shell &shell);
+	bool start(uuid::console::Shell &shell);
+	bool shell_foreground(uuid::console::Shell &shell, bool stop);
 
 protected:
 	void main() override;
@@ -191,7 +194,6 @@ protected:
 	std::unique_ptr<aurcor::micropython::Print> modulogging_print(uuid::log::Level level) override;
 
 private:
-	bool shell_foreground(uuid::console::Shell &shell, bool stop);
 	bool interrupt_char(int c);
 
 	IOBuffer stdin_{STDIN_LEN};

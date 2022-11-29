@@ -74,12 +74,37 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(ShellContext::MAIN, CommandFlags::USER,
 		flash_string_vector{F_(mpy)}, flash_string_vector{F_(bus_mandatory)},
 			[=] (Shell &shell, const std::vector<std::string> &arguments) {
-		auto bus = to_app(shell).bus(arguments[0]);
+		auto &bus_name = arguments[0];
+		auto bus = to_app(shell).bus(bus_name);
+		std::shared_ptr<MicroPythonShell> mp;
 
 		if (bus) {
-			std::make_shared<MicroPythonShell>(to_app_shell(shell).console_name(), bus)->start(shell);
+			shell.block_with([bus, mp] (Shell &shell, bool stop) mutable -> bool {
+				if (mp) {
+					if (mp->shell_foreground(shell, stop)) {
+						to_app(shell).detach(bus, mp);
+						return true;
+					}
+				} else if (stop) {
+					return true;
+				} else {
+					auto &app = to_app(shell);
+
+					if (app.detach(bus)) {
+						mp = std::make_shared<MicroPythonShell>(to_app_shell(shell).console_name(), bus);
+
+						app.attach(bus, mp);
+						if (!mp->start(shell)) {
+							app.detach(bus, mp);
+							return true;
+						}
+					}
+				}
+
+				return false;
+			});
 		} else {
-			shell.printfln(F("Bus \"%s\" not found"), arguments[0].c_str());
+			shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
 		}
 	},
 	[] (Shell &shell, const std::vector<std::string> &current_arguments __attribute__((unused)),

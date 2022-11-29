@@ -23,14 +23,15 @@
 #include <initializer_list>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "../app/app.h"
-#include "../app/console.h"
-#include "../app/network.h"
-#include "led_bus.h"
 
 namespace aurcor {
+
+class LEDBus;
+class MicroPython;
 
 class App: public app::App {
 private:
@@ -50,9 +51,14 @@ public:
 
 	std::vector<std::string> bus_names() const;
 	std::shared_ptr<LEDBus> bus(const std::string &name);
+	void attach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp);
+	bool detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp = nullptr);
 
 private:
-	std::vector<std::shared_ptr<LEDBus>> buses_;
+	void add(const std::shared_ptr<LEDBus> &&bus);
+
+	std::unordered_map<std::string,std::shared_ptr<LEDBus>> buses_;
+	std::unordered_map<std::shared_ptr<LEDBus>,std::shared_ptr<MicroPython>> mps_;
 };
 
 } // namespace aurcor
