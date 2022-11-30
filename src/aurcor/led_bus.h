@@ -30,6 +30,7 @@
 #include <uuid/log.h>
 
 #include "constants.h"
+#include "led_bus_config.h"
 #include "led_profile.h"
 #include "led_profiles.h"
 
@@ -43,14 +44,14 @@ public:
 	static constexpr size_t RESET_TIME_US = 280;
 	static constexpr TickType_t SEMAPHORE_TIMEOUT_TICKS = 30 * 1000 * portTICK_PERIOD_MS;
 
-	LEDBus(const char *name);
+	LEDBus(const char *name, size_t default_length = 1);
 	virtual ~LEDBus();
 
 	const char *name() const { return name_; }
-	inline size_t length() const { return length_; }
-	inline void length(size_t length) { length_ = std::max(MIN_LEDS, std::min(MAX_LEDS, length)); }
-	inline bool reverse() const { return reverse_; }
-	inline void reverse(bool reverse) { reverse_ = reverse; }
+	inline size_t length() const { return config_.length(); }
+	inline void length(size_t value) { config_.length(value); }
+	inline bool reverse() const { return config_.reverse(); }
+	inline void reverse(bool value) { config_.reverse(value); }
 
 	inline LEDProfile& profile(enum led_profile_id id) { return profiles_.get(id); }
 	inline const LEDProfile& profile(enum led_profile_id id) const { return profiles_.get(id); }
@@ -76,10 +77,9 @@ private:
 
 	const char *name_;
 	SemaphoreHandle_t semaphore_{nullptr};
-	std::atomic<size_t> length_{1};
-	std::atomic<bool> reverse_{false};
 	std::atomic<bool> busy_{false};
 	uint64_t last_update_us_{0};
+	mutable LEDBusConfig config_;
 	mutable LEDProfiles profiles_;
 };
 
