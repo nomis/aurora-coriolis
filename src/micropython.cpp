@@ -291,32 +291,28 @@ void MicroPython::cleanup() {
 }
 
 void MicroPython::log_exception(mp_obj_t exc, uuid::log::Level level) {
-	nlr_buf_t nlr;
-	nlr.ret_val = nullptr;
+	micropython_nlr_begin();
 
-	{
-		std::vector<char> prefix(1 + name_.size() + 3 + 1);
+	std::vector<char> prefix(1 + name_.size() + 3 + 1);
 
-		::snprintf(prefix.data(), prefix.size(), "[%s] E", name_.c_str());
+	::snprintf(prefix.data(), prefix.size(), "[%s] E", name_.c_str());
 
-		LogPrint print{logger_, level, prefix.data()};
+	LogPrint print{logger_, level, prefix.data()};
 
-		prefix.resize(0);
-		prefix.shrink_to_fit();
+	prefix.resize(0);
+	prefix.shrink_to_fit();
 
-		mp_stack_set_limit(TASK_EXC_STACK_LIMIT);
+	mp_stack_set_limit(TASK_EXC_STACK_LIMIT);
 
-		if (!nlr_push(&nlr)) {
-			mp_obj_print_exception(print.context(), exc);
-			nlr_pop();
-			nlr.ret_val = nullptr;
-		}
-	}
+	micropython_nlr_try();
+
+	mp_obj_print_exception(print.context(), exc);
+
+	micropython_nlr_finally();
 
 	mp_stack_set_limit(TASK_STACK_LIMIT);
 
-	if (nlr.ret_val)
-		nlr_raise(nlr.ret_val);
+	micropython_nlr_end();
 }
 
 uuid::log::Level MicroPython::modulogging_effective_level() {

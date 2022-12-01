@@ -142,13 +142,11 @@ mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
 	mp_arg_val_t parsed_args[MP_ARRAY_SIZE(allowed_args)];
 	mp_arg_parse_all(0, nullptr, kwargs, MP_ARRAY_SIZE(allowed_args), allowed_args, parsed_args);
 
+	micropython_nlr_begin();
+
 	std::unique_ptr<Print> print = MicroPython::current().modulogging_print(level);
-	nlr_buf_t nlr;
-	nlr.ret_val = nullptr;
-	if (nlr_push(&nlr)) {
-		print.reset();
-		nlr_raise(nlr.ret_val);
-	}
+
+	micropython_nlr_try();
 
 	if (n_args == 1) {
 		mp_obj_print_helper(print->context(), args[0], PRINT_STR);
@@ -193,7 +191,8 @@ mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
 		mp_obj_print_exception(print->context(), exc);
 	}
 
-	nlr_pop();
+	micropython_nlr_finally();
+	micropython_nlr_end();
 
 	return MP_ROM_NONE;
 }

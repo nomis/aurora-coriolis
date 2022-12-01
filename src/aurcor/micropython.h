@@ -47,6 +47,38 @@ extern "C" {
 #include "modulogging.h"
 #include "mp_print.h"
 
+#define micropython_nlr_begin() \
+	do { \
+		nlr_buf_t nlr; \
+		nlr.ret_val = nullptr; \
+		\
+		do { \
+			do {} while (0)
+			/* Objects constructed on the stack go here */
+
+#define micropython_nlr_try() \
+			if (!nlr_push(&nlr)) { \
+				do { \
+					do {} while (0)
+					/* MicroPython functions that may throw an exception go here */
+
+#define micropython_nlr_finally() \
+				} while (0); \
+				\
+				nlr_pop(); \
+				nlr.ret_val = nullptr; \
+			} \
+			do {} while (0)
+			/* Code to always be executed goes here (must not throw exceptions) */
+
+#define micropython_nlr_end() \
+			/* Objects on the stack go out of scope here */ \
+		} while (0); \
+		\
+		if (nlr.ret_val) \
+			nlr_raise(nlr.ret_val); \
+	} while (0)
+
 namespace aurcor {
 
 class LEDBus;
