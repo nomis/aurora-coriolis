@@ -27,6 +27,8 @@ public:
 	TestByteBufferLEDBus();
 	virtual ~TestByteBufferLEDBus() = default;
 
+	const char *type() const override { return "TestByteBufferLEDBus"; }
+
 	std::vector<std::vector<uint8_t>> outputs_;
 
 protected:

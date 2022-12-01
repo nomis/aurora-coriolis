@@ -39,6 +39,8 @@ public:
 	TestMicroPython(std::shared_ptr<aurcor::LEDBus> bus);
 	virtual ~TestMicroPython() = default;
 
+	const char *type() const override { return "TestMicroPython"; }
+
 	void run(std::string script, bool safe = true);
 
 	std::string output_;

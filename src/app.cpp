@@ -112,7 +112,8 @@ std::shared_ptr<LEDBus> App::bus(const std::string &name) {
 }
 
 void App::attach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp) {
-	logger_.trace(F("Attach MicroPython[%s] to LEDBus[%s]"), mp->name().c_str(), bus->name());
+	logger_.trace(F("Attach %s[%s] to %s[%s]"),
+		mp->type(), mp->name().c_str(), bus->type(), bus->name());
 	mps_.emplace(bus, mp);
 }
 
@@ -128,7 +129,8 @@ bool App::detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Micro
 		if (!other_mp->stop())
 			return false;
 
-		logger_.trace(F("Detach MicroPython[%s] from LEDBus[%s]"), other_mp->name().c_str(), bus->name());
+		logger_.trace(F("Detach %s[%s] from %s[%s]"),
+			other_mp->type(), other_mp->name().c_str(), bus->type(), bus->name());
 		mps_.erase(it);
 	}
 

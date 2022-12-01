@@ -68,6 +68,8 @@ public:
 	UARTLEDBus(unsigned int uart_num, const char *name, uint8_t rx_pin, uint8_t tx_pin);
 	~UARTLEDBus() override;
 
+	const char *type() const override { return "UARTLEDBus"; }
+
 protected:
 	void transmit() override;
 

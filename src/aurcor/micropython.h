@@ -100,6 +100,7 @@ public:
 	static_assert(TASK_STACK_LIMIT < TASK_EXC_STACK_LIMIT, "Task stack limit must be lower than task exception stack limit");
 
 	static void setup(size_t pool_count);
+	virtual const char *type() const = 0;
 	const std::string& name() const { return name_; }
 	bool stop();
 
@@ -210,6 +211,8 @@ public:
 
 	MicroPythonShell(const std::string &name, std::shared_ptr<LEDBus> bus);
 	~MicroPythonShell() override;
+
+	const char *type() const override { return "MicroPythonShell"; }
 
 	bool start(uuid::console::Shell &shell);
 	bool shell_foreground(uuid::console::Shell &shell, bool stop);

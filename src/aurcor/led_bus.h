@@ -47,6 +47,7 @@ public:
 	LEDBus(const char *name, size_t default_length = 1);
 	virtual ~LEDBus();
 
+	virtual const char *type() const = 0;
 	const char *name() const { return name_; }
 	inline size_t length() const { return config_.length(); }
 	inline void length(size_t value) { config_.length(value); }
@@ -87,6 +88,8 @@ class NullLEDBus: public LEDBus {
 public:
 	NullLEDBus(const char *name);
 	virtual ~NullLEDBus() = default;
+
+	const char *type() const override { return "NullLEDBus"; }
 
 protected:
 	void start(const uint8_t *data, size_t size) final override;
