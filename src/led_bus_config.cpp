@@ -62,9 +62,11 @@ size_t LEDBusConfig::length() const {
 
 void LEDBusConfig::length(size_t value) {
 	std::unique_lock data_lock{data_mutex_};
-	length_constrained(value);
-	data_lock.unlock();
-	save();
+	if (length_ != value) {
+		length_constrained(value);
+		data_lock.unlock();
+		save();
+	}
 }
 
 void LEDBusConfig::length_constrained(size_t value) {
@@ -78,9 +80,11 @@ bool LEDBusConfig::reverse() const {
 
 void LEDBusConfig::reverse(bool value) {
 	std::unique_lock data_lock{data_mutex_};
-	reverse_ = value;
-	data_lock.unlock();
-	save();
+	if (reverse_ != value) {
+		reverse_ = value;
+		data_lock.unlock();
+		save();
+	}
 }
 
 void LEDBusConfig::reset() {
