@@ -46,7 +46,6 @@ void TestPrint::end_line() {
 }
 
 TestPrint::~TestPrint() {
-	if (line_started())
-		end_line();
+	cleanup();
 	refcount_--;
 }

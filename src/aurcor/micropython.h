@@ -51,6 +51,7 @@ namespace aurcor {
 
 class LEDBus;
 
+/* Final derived classes need to call cleanup() in destructor */
 class MicroPython {
 	friend aurcor::micropython::PyModule;
 	friend aurcor::micropython::ULogging;
@@ -70,7 +71,7 @@ public:
 	const std::string& name() const { return name_; }
 	bool stop();
 
-	virtual ~MicroPython();
+	virtual ~MicroPython() = default;
 
 protected:
 	class AccessState {
@@ -95,6 +96,7 @@ protected:
 	bool start();
 	virtual void main();
 	virtual void shutdown();
+	virtual void cleanup();
 
 	inline bool memory_blocks_available() const { return heap_ && pystack_ && ledbufs_; }
 	inline bool running() const { return running_; }
@@ -167,7 +169,7 @@ private:
 	micropython::ULogging modulogging_;
 };
 
-class MicroPythonShell: public MicroPython,
+class MicroPythonShell final: public MicroPython,
 		public std::enable_shared_from_this<MicroPythonShell> {
 
 public:

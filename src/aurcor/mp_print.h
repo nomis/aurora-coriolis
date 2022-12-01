@@ -40,6 +40,9 @@ public:
 	inline const mp_print_t *context() { return &context_; }
 	virtual void print(const char *str, size_t len) = 0;
 
+protected:
+	virtual void cleanup();
+
 private:
 	Print(Print&&) = delete;
 	Print(const Print&) = delete;
@@ -52,7 +55,7 @@ private:
 	std::vector<char> text_;
 };
 
-/* Final derived classes need to call end_line() in destructor */
+/* Final derived classes need to call cleanup() in destructor */
 class LinePrint: public Print {
 public:
 	LinePrint() = default;
@@ -63,13 +66,14 @@ protected:
 	virtual void begin_line();
 	virtual void print_part_line(const char *str, size_t len) = 0;
 	virtual void end_line() = 0;
+	void cleanup() override;
 
 	bool line_started() const { return line_; }
 
 	bool line_{false};
 };
 
-/* Final derived classes need to call end_line() in destructor */
+/* Final derived classes need to call cleanup() in destructor */
 class LineWrapPrint: public LinePrint {
 public:
 	LineWrapPrint(size_t line_length);

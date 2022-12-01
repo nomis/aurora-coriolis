@@ -106,20 +106,6 @@ MicroPython::MicroPython(const std::string &name,
 	}
 }
 
-MicroPython::~MicroPython() {
-	// This is highly unlikely to happen
-	if (started_ && !stopped_) {
-		logger_.emerg(F("[%s] Still running in destructor"), name_.c_str());
-
-		// This is likely to block forever if it's waiting for stdin/stdout
-		// but the alternative is to crash
-		while (!stop()) {
-			Serial.printf("MicroPython %s still running in destructor\r\n", name_.c_str());
-			delay(1);
-		}
-	}
-}
-
 bool MicroPython::start() {
 	if (started_ || !memory_blocks_available() || stopped_)
 		return false;
@@ -296,6 +282,14 @@ bool MicroPython::stop() {
 	return !thread_.joinable();
 }
 
+void MicroPython::cleanup() {
+	if (started_ && !stopped_) {
+		logger_.emerg(F("[%s] Still running in destructor"), name_.c_str());
+
+		while (!stop()) {}
+	}
+}
+
 void MicroPython::log_exception(mp_obj_t exc, uuid::log::Level level) {
 	nlr_buf_t nlr;
 	nlr.ret_val = nullptr;
@@ -377,11 +371,7 @@ MicroPythonShell::MicroPythonShell(const std::string &name,
 }
 
 MicroPythonShell::~MicroPythonShell() {
-	if (running() || !stop()) {
-		logger_.err(F("[%s] Still running in destructor"), name_.c_str());
-
-		while (!stop()) {}
-	}
+	cleanup();
 }
 
 bool MicroPythonShell::start(Shell &shell) {

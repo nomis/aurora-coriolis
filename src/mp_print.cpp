@@ -39,6 +39,9 @@ void Print::print_strn(void *env, const char *str, size_t len) {
 	reinterpret_cast<Print*>(env)->print(str, len);
 }
 
+void Print::cleanup() {
+}
+
 void LinePrint::begin_line() {
 }
 
@@ -72,6 +75,13 @@ void LinePrint::print(const char *str, size_t len) {
 
 	if (pos - str > 0)
 		print_part_line(str, pos - str);
+}
+
+void LinePrint::cleanup() {
+	if (line_) {
+		end_line();
+		line_ = false;
+	}
 }
 
 LineWrapPrint::LineWrapPrint(size_t line_length) {
@@ -120,8 +130,7 @@ void LogPrint::print_wrapped_line(const char *text, bool continuation) {
 }
 
 LogPrint::~LogPrint() {
-	if (line_started())
-		end_line();
+	cleanup();
 }
 
 PlatformPrint::PlatformPrint(uuid::log::Level level)
@@ -129,8 +138,7 @@ PlatformPrint::PlatformPrint(uuid::log::Level level)
 }
 
 PlatformPrint::~PlatformPrint() {
-	if (line_started())
-		end_line();
+	cleanup();
 }
 
 void PlatformPrint::begin_line() {
@@ -144,9 +152,7 @@ void PlatformPrint::print_part_line(const char *str, size_t len) {
 }
 
 void PlatformPrint::end_line() {
-	const std::array<char, 2> crlf{'\r', '\n'};
-
-	::mp_hal_stdout_tx_strn(crlf.data(), crlf.size());
+	::mp_hal_stdout_tx_strn("\r\n", 2);
 }
 
 } // namespace micropython
