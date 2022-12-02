@@ -47,6 +47,11 @@ extern "C" {
 #include "modulogging.h"
 #include "mp_print.h"
 
+/*
+ * The "do { ... } while (0)" blocks ensure a stray "break" or "continue" will
+ * only exit the current block. There's nothing to stop "retrun" from breaking
+ * everything.
+ */
 #define micropython_nlr_begin() \
 	do { \
 		nlr_buf_t nlr; \
