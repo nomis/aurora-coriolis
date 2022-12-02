@@ -18,6 +18,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <limits>
 #include <memory>
 #include <string>
@@ -28,6 +29,7 @@
 #include <uuid/log.h>
 
 #include "aurcor/app.h"
+#include "aurcor/console.h"
 #include "aurcor/micropython.h"
 #include "app/config.h"
 #include "app/console.h"
@@ -42,6 +44,7 @@ using ::uuid::console::Shell;
 using LogLevel = ::uuid::log::Level;
 using LogFacility = ::uuid::log::Facility;
 
+using ::app::AppShell;
 using ::app::CommandFlags;
 using ::app::Config;
 using ::app::ShellContext;
@@ -55,21 +58,104 @@ namespace aurcor {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic error "-Wunused-const-variable"
+MAKE_PSTR_WORD(bus)
+MAKE_PSTR_WORD(exit)
+MAKE_PSTR_WORD(help)
+MAKE_PSTR_WORD(length)
+MAKE_PSTR_WORD(logout)
 MAKE_PSTR_WORD(mpy)
+MAKE_PSTR_WORD(normal)
+MAKE_PSTR_WORD(reverse)
+MAKE_PSTR_WORD(show)
 MAKE_PSTR(bus_mandatory, "<bus>")
+MAKE_PSTR(length_optional, "[length]")
 //MAKE_PSTR(xxx, "[xxx]")
 #pragma GCC diagnostic pop
 
-static inline app::AppShell &to_app_shell(Shell &shell) {
-	return dynamic_cast<app::AppShell&>(shell);
+static inline AppShell &to_app_shell(Shell &shell) {
+	return dynamic_cast<AppShell&>(shell);
 }
 
 static inline App &to_app(Shell &shell) {
 	return static_cast<App&>(to_app_shell(shell).app_);
 }
 
+static inline AurcorShell &to_shell(Shell &shell) {
+	return dynamic_cast<AurcorShell&>(shell);
+}
+
 static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	#define NO_ARGUMENTS std::vector<std::string>{}
+
+	auto bus_names_autocomplete = [] (Shell &shell,
+			const std::vector<std::string> &current_arguments,
+			const std::string &next_argument) -> std::vector<std::string> {
+		return to_app(shell).bus_names();
+	};
+
+	commands->add_command(ShellContext::MAIN, CommandFlags::USER,
+		flash_string_vector{F_(bus)}, flash_string_vector{F_(bus_mandatory)},
+			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+		auto &bus_name = arguments[0];
+		auto bus = to_app(shell).bus(bus_name);
+
+		if (bus) {
+			to_shell(shell).enter_bus_context(bus);
+		} else {
+			shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
+		}
+	}, bus_names_autocomplete);
+
+	auto bus_exit_function = [] (Shell &shell, const std::vector<std::string> &arguments) {
+		shell.exit_context();
+	};
+
+	commands->add_command(ShellContext::BUS, CommandFlags::USER, flash_string_vector{F_(exit)}, bus_exit_function);
+
+	commands->add_command(ShellContext::BUS, CommandFlags::USER, flash_string_vector{F_(help)},
+			[] (Shell &shell, const std::vector<std::string> &arguments) {
+		shell.print_all_available_commands();
+	});
+
+	auto show_length = [] (Shell &shell, const std::vector<std::string> &arguments) {
+		shell.printfln(F("Length: %zu"), to_shell(shell).bus()->length());
+	};
+
+	auto show_direction = [] (Shell &shell, const std::vector<std::string> &arguments) {
+		shell.printfln(F("Direction: %s"), to_shell(shell).bus()->reverse() ? "reverse" : "normal");
+	};
+
+	commands->add_command(ShellContext::BUS, CommandFlags::USER, flash_string_vector{F_(length)}, flash_string_vector{F_(length_optional)},
+			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+		if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
+			to_shell(shell).bus()->length(std::atol(arguments[0].c_str()));
+		}
+		show_length(shell, NO_ARGUMENTS);
+	});
+
+	commands->add_command(ShellContext::BUS, CommandFlags::USER, flash_string_vector{F_(logout)},
+			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+		bus_exit_function(shell, NO_ARGUMENTS);
+		AppShell::main_logout_function(shell, NO_ARGUMENTS);
+	});
+
+	commands->add_command(ShellContext::BUS, CommandFlags::ADMIN, flash_string_vector{F_(normal)},
+			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+		to_shell(shell).bus()->reverse(false);
+		show_direction(shell, NO_ARGUMENTS);
+	});
+
+	commands->add_command(ShellContext::BUS, CommandFlags::ADMIN, flash_string_vector{F_(reverse)},
+			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+		to_shell(shell).bus()->reverse(true);
+		show_direction(shell, NO_ARGUMENTS);
+	});
+
+	commands->add_command(ShellContext::BUS, CommandFlags::ADMIN, flash_string_vector{F_(show)},
+			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+		show_length(shell, NO_ARGUMENTS);
+		show_direction(shell, NO_ARGUMENTS);
+	});
 
 	commands->add_command(ShellContext::MAIN, CommandFlags::USER,
 		flash_string_vector{F_(mpy)}, flash_string_vector{F_(bus_mandatory)},
@@ -106,11 +192,49 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 		} else {
 			shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
 		}
-	},
-	[] (Shell &shell, const std::vector<std::string> &current_arguments __attribute__((unused)),
-			const std::string &next_argument) -> std::vector<std::string> {
-		return to_app(shell).bus_names();
-	});
+	}, bus_names_autocomplete);
+}
+
+AurcorShell::AurcorShell(app::App &app) : Shell(), AppShell(app) {
+
+}
+
+void AurcorShell::enter_bus_context(std::shared_ptr<LEDBus> bus) {
+	if (context() == ShellContext::MAIN) {
+		enter_context(ShellContext::BUS);
+		bus_ = bus;
+	}
+}
+
+bool AurcorShell::exit_context() {
+	if (context() == ShellContext::BUS) {
+		bus_.reset();
+	}
+	return AppShell::exit_context();
+}
+
+void AurcorShell::display_banner() {
+	AppShell::display_banner();
+	println(F("┌─────────────────────────────────────────────────────────────────┐"));
+	println(F("│Curtains of octarine glow danced slowly and majestically over the│"));
+	println(F("│Disc as the fire of the  Aurora Coriolis,  the vast discharge of │"));
+	println(F("│magic from the Disc’s standing field, earthed itself in the green│"));
+	println(F("│ice mountains of the Hub. The central spire of Cori Celesti, home│"));
+	println(F("│of the gods, was a ten mile high column of cold coruscating fire.│"));
+	println(F("└─────────────────────────────────────────────────────────────────┘"));
+	println();
+}
+
+std::string AurcorShell::context_text() {
+	switch (static_cast<ShellContext>(context())) {
+	case ShellContext::BUS:
+		return std::string{"/bus/"} + bus_->name();
+
+	default:
+		break;
+	}
+
+	return AppShell::context_text();
 }
 
 } // namespace aurcor

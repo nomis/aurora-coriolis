@@ -22,6 +22,7 @@
 # include <esp_pthread.h>
 #endif
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -99,6 +100,7 @@ std::vector<std::string> App::bus_names() const {
 	for (auto &bus : buses_)
 		names.emplace_back(bus.first);
 
+	std::sort(names.begin(), names.end());
 	return names;
 }
 
