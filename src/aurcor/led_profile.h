@@ -151,6 +151,7 @@ private:
 	Result remove(const std::map<index_t,Ratio>::iterator &it);
 	Ratio get(index_t index) const;
 	Result copy(unsigned int src, unsigned int dst, bool move);
+	bool compact_locked(size_t limit);
 
 	static std::string make_filename(const char *bus_name, const char *profile_name);
 

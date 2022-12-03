@@ -107,7 +107,7 @@ LEDProfile::Result LEDProfile::add(index_t index, const Ratio &ratio) {
 		size_t size = ratios_.size();
 
 		if (size > MAX_RATIOS
-				|| (size == MAX_RATIOS && !compact(1))) {
+				|| (size == MAX_RATIOS && !compact_locked(1))) {
 			return Result::FULL;
 		}
 
@@ -268,6 +268,11 @@ void LEDProfile::clear() {
 
 bool LEDProfile::compact(size_t limit) {
 	std::unique_lock data_lock{data_mutex_};
+
+	return compact_locked(limit);
+}
+
+bool LEDProfile::compact_locked(size_t limit) {
 	size_t removed = 0;
 
 	if (!ratios_.empty() && removed < limit) {
