@@ -111,7 +111,7 @@ LEDProfile::Result LEDProfile::add(index_t index, const Ratio &ratio) {
 			return Result::FULL;
 		}
 
-		ratios_.insert(std::pair{index, ratio});
+		ratios_.emplace(index, ratio);
 		modified_ = true;
 	}
 
@@ -201,6 +201,7 @@ LEDProfile::Result LEDProfile::adjust(unsigned int index, int r, int g, int b) {
 	ratio.g = std::min(std::max(0, (int)ratio.g + g), UINT8_MAX);
 	ratio.b = std::min(std::max(0, (int)ratio.b + b), UINT8_MAX);
 
+	remove(ratios_.find(index));
 	return add((index_t)index, ratio);
 }
 
