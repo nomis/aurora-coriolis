@@ -78,9 +78,11 @@ void LEDProfile::print(uuid::console::Shell &shell, size_t limit) const {
 		} else {
 			shell.printfln(print_row, begin, index + limit,
 				ratio.r, ratio.g, ratio.b);
-			break;
+			return;
 		}
 	}
+
+	shell.printfln(print_row, begin, index - 1, ratio.r, ratio.g, ratio.b);
 }
 
 void LEDProfile::transform(uint8_t *data, size_t size) const {
