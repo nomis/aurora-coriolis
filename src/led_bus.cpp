@@ -91,7 +91,7 @@ IRAM_ATTR void LEDBus::finish_isr() {
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-NullLEDBus::NullLEDBus(const char *name) : LEDBus(name, MAX_LEDS) {
+NullLEDBus::NullLEDBus(const char *name) : LEDBus(name, MAX_LEDS / 10) {
 }
 
 void NullLEDBus::start(const uint8_t *data, size_t length) {
