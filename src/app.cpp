@@ -78,10 +78,6 @@ void App::start() {
 	cfg.inherit_cfg = true;
 	esp_pthread_set_cfg(&cfg);
 #endif
-
-	// TODO make this configurable
-	for (auto &bus : buses_)
-		bus.second->length(MAX_LEDS);
 }
 
 void App::loop() {
