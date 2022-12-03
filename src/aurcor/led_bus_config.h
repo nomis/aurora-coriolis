@@ -69,7 +69,8 @@ private:
 
 	const char *bus_name_;
 	mutable std::shared_mutex data_mutex_;
-	size_t length_{1};
+	size_t length_;
+	bool length_set_{false};
 	bool reverse_{false};
 };
 

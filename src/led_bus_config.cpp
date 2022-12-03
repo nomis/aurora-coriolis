@@ -62,8 +62,9 @@ size_t LEDBusConfig::length() const {
 
 void LEDBusConfig::length(size_t value) {
 	std::unique_lock data_lock{data_mutex_};
-	if (length_ != value) {
+	if (length_ != value || !length_set_) {
 		length_constrained(value);
+		length_set_ = true;
 		data_lock.unlock();
 		save();
 	}
@@ -158,6 +159,7 @@ bool inline LEDBusConfig::load(cbor::Reader &reader) {
 				return false;
 
 			length_constrained(value);
+			length_set_ = true;
 		} else if (key == "reverse") {
 			if (!cbor::expectBoolean(reader, &reverse_))
 				return false;
