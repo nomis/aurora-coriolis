@@ -476,12 +476,7 @@ LEDProfile::Result LEDProfile::save(const char *bus_name, const char *profile_na
 
 	logger_.notice(F("Writing profile to file %s"), filename.c_str());
 
-	if (!FS.mkdir(directory_name)) {
-		logger_.err(F("Unable to create directory %s"), directory_name);
-		return Result::IO_ERROR;
-	}
-
-	auto file = FS.open(filename.c_str(), "w");
+	auto file = FS.open(filename.c_str(), "w", true);
 	if (!file) {
 		logger_.err(F("Unable to open profile file %s for writing"), filename.c_str());
 		return Result::IO_ERROR;

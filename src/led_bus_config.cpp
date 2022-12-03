@@ -177,12 +177,7 @@ bool LEDBusConfig::save() {
 
 	logger_.notice(F("Writing config to file %s"), filename.c_str());
 
-	if (!FS.mkdir(directory_name)) {
-		logger_.err(F("Unable to create directory %s"), directory_name);
-		return false;
-	}
-
-	auto file = FS.open(filename.c_str(), "w");
+	auto file = FS.open(filename.c_str(), "w", true);
 	if (!file) {
 		logger_.err(F("Unable to open config file %s for writing"), filename.c_str());
 		return false;

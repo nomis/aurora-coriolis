@@ -111,8 +111,7 @@ static void test_save() {
 }
 
 static void test_load() {
-	app::FS.mkdir("/profiles");
-	auto file = app::FS.open("/profiles/test_load.normal.cbor", "w");
+	auto file = app::FS.open("/profiles/test_load.normal.cbor", "w", true);
 	TEST_ASSERT_TRUE(file);
 	if (file) {
 		std::vector<uint8_t> data{
