@@ -255,7 +255,12 @@ LEDProfile::Result LEDProfile::remove(unsigned int index) {
 
 	std::unique_lock data_lock{data_mutex_};
 
-	return remove(ratios_.find((index_t)index));
+	auto result = remove(ratios_.find((index_t)index));
+	if (index == 0) {
+		return Result::OK;
+	} else {
+		return result;
+	}
 }
 
 void LEDProfile::clear() {
