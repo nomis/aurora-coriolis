@@ -17,3 +17,4 @@
  */
 
 	BUS,
+	BUS_PROFILE,

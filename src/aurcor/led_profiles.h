@@ -44,6 +44,7 @@ LED_PROFILES
 # include <array>
 # include <bitset>
 # include <mutex>
+# include <vector>
 
 # include "led_profile.h"
 #endif
@@ -58,12 +59,16 @@ public:
 	LEDProfiles(const char *bus_name_);
 	~LEDProfiles() = default;
 
+	static std::vector<std::string> lc_names();
+	static const char* lc_name(enum led_profile_id id);
+	static bool lc_id(const std::string &name, enum led_profile_id &id);
+
 	LEDProfile& get(enum led_profile_id id);
 	LEDProfile::Result load(enum led_profile_id id);
 	LEDProfile::Result save(enum led_profile_id id);
 
 private:
-	static const std::array<const char *,NUM_LED_PROFILES> names_;
+	static const std::array<const char *,NUM_LED_PROFILES> lc_names_;
 
 	LEDProfile::Result auto_load(enum led_profile_id id, bool reload);
 

@@ -24,18 +24,25 @@
 #include <string>
 #include <vector>
 
+#include "aurcor/led_bus.h"
+#include "aurcor/led_profiles.h"
+
 namespace aurcor {
 
-class LEDBus;
+class LEDProfile;
 
 class AurcorShell: public app::AppShell {
 public:
 	~AurcorShell() override = default;
 
 	void enter_bus_context(std::shared_ptr<LEDBus> bus);
+	void enter_bus_profile_context(enum led_profile_id profile);
+	void enter_bus_profile_context(std::shared_ptr<LEDBus> bus, enum led_profile_id profile);
 	bool exit_context() override;
 
-	std::shared_ptr<LEDBus> bus() { return bus_; }
+	inline std::shared_ptr<LEDBus> bus() { return bus_; }
+	inline LEDProfile& profile() { return bus_->profile(profile_); }
+	inline enum led_profile_id profile_id() { return profile_; }
 
 protected:
 	AurcorShell(app::App &app);
@@ -45,6 +52,7 @@ protected:
 
 private:
 	std::shared_ptr<LEDBus> bus_;
+	enum led_profile_id profile_{LED_PROFILE_NORMAL};
 };
 
 } // namespace aurcor

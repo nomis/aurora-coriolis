@@ -22,6 +22,7 @@
 
 #include <array>
 #include <mutex>
+#include <vector>
 
 #include "aurcor/led_bus.h"
 #include "aurcor/led_profile.h"
@@ -32,20 +33,42 @@ namespace ledprofiles {
 
 #define LED_PROFILE(_lc_name, _uc_name) \
 	static const char *lc_name_ ## _lc_name = #_lc_name;
+
 LED_PROFILES
 #undef LED_PROFILE
 
 } // namespace ledprofiles
 
-const std::array<const char *,NUM_LED_PROFILES> LEDProfiles::names_ = {
+const std::array<const char *,NUM_LED_PROFILES> LEDProfiles::lc_names_ = {
 #define LED_PROFILE(_lc_name, _uc_name) \
 	ledprofiles::lc_name_ ## _lc_name,
+
 LED_PROFILES
 #undef LED_PROFILE
 };
 
 LEDProfiles::LEDProfiles(const char *bus_name) : bus_name_(bus_name) {
 
+}
+
+std::vector<std::string> LEDProfiles::lc_names() {
+	return {lc_names_.begin(), lc_names_.end()};
+}
+
+const char* LEDProfiles::lc_name(enum led_profile_id id) {
+	size_t profile = (size_t)id;
+	return lc_names_[profile];
+}
+
+bool LEDProfiles::lc_id(const std::string &name, enum led_profile_id &id) {
+	for (size_t profile = MIN_ID; profile <= MAX_ID; profile++) {
+		if (lc_names_[profile] == name) {
+			id = static_cast<enum led_profile_id>(profile);
+			return true;
+		}
+	}
+
+	return false;
 }
 
 LEDProfile& LEDProfiles::get(enum led_profile_id id) {
@@ -63,7 +86,7 @@ LEDProfile::Result LEDProfiles::save(enum led_profile_id id) {
 	size_t profile = (size_t)id;
 
 	auto_load(id, false);
-	return profiles_[profile].save(bus_name_, names_[profile]);
+	return profiles_[profile].save(bus_name_, lc_names_[profile]);
 }
 
 LEDProfile::Result LEDProfiles::auto_load(enum led_profile_id id, bool reload) {
@@ -78,7 +101,7 @@ LEDProfile::Result LEDProfiles::auto_load(enum led_profile_id id, bool reload) {
 		lock.unlock();
 	}
 
-	return profiles_[profile].load(bus_name_, names_[profile], !reload);
+	return profiles_[profile].load(bus_name_, lc_names_[profile], !reload);
 }
 
 } // namespace aurcor
