@@ -45,19 +45,19 @@ using uuid::log::Logger;
 extern "C" {
 
 mp_obj_t ulogging_log(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
-	return ULogging::do_log(MP_QSTR_log, ULogging::level_from_obj(args[0]), false, n_args - 1, &args[1], kwargs);
+	return ULogging::do_log(ULogging::level_from_obj(args[0]), false, n_args - 1, &args[1], kwargs);
 }
 
 #define ULOGGING_LEVEL(_level, _py_lc_name, _py_uc_name, _py_level) \
 	mp_obj_t ulogging_ ## _py_lc_name (size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) { \
-		return ULogging::do_log(MP_QSTR_ ## _py_lc_name, ULOGGING_L_ ## _py_uc_name, false, n_args, args, kwargs); \
+		return ULogging::do_log(ULOGGING_L_ ## _py_uc_name, false, n_args, args, kwargs); \
 	}
 
 ULOGGING_LEVELS
 #undef ULOGGING_LEVEL
 
 mp_obj_t ulogging_exception(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
-	return ULogging::do_log(MP_QSTR_exception, ULOGGING_L_ERROR, true, n_args, args, kwargs);
+	return ULogging::do_log(ULOGGING_L_ERROR, true, n_args, args, kwargs);
 }
 
 mp_obj_t ulogging_disable(size_t n_args, const mp_obj_t *args) {
@@ -126,7 +126,7 @@ ULOGGING_LEVELS_WITH_META
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wclobbered"
 
-mp_obj_t ULogging::do_log(qstr fn, mp_int_t py_level, bool exc_info,
+mp_obj_t ULogging::do_log(mp_int_t py_level, bool exc_info,
 		size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
 	static constexpr size_t STACK_TUPLE_NUM = 8;
 	auto &self = current();

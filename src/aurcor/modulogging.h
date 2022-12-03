@@ -95,8 +95,8 @@ public:
 	static uuid::log::Level find_level(mp_int_t py_level);
 	static mp_int_t to_py_level(uuid::log::Level level);
 
-	static mp_obj_t do_log(qstr fn, mp_int_t py_level, bool exc_info,
-		size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	static mp_obj_t do_log(mp_int_t py_level, bool exc_info, size_t n_args,
+		const mp_obj_t *args, mp_map_t *kwargs);
 	static uuid::log::Level enabled_level(mp_int_t py_level);
 
 	static mp_int_t effective_level();
