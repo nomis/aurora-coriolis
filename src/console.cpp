@@ -54,7 +54,7 @@ using ::aurcor::MicroPythonShell;
 namespace aurcor {
 
 static inline AppShell &to_app_shell(Shell &shell) {
-	return dynamic_cast<AppShell&>(shell);
+	return static_cast<AppShell&>(shell);
 }
 
 static inline App &to_app(Shell &shell) {
@@ -62,7 +62,7 @@ static inline App &to_app(Shell &shell) {
 }
 
 static inline AurcorShell &to_shell(Shell &shell) {
-	return dynamic_cast<AurcorShell&>(shell);
+	return static_cast<AurcorShell&>(shell);
 }
 
 static void led_profile_result(AurcorShell &shell, LEDProfile::Result result = LEDProfile::Result::OK, const __FlashStringHelper *message = nullptr) {
@@ -395,7 +395,8 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	});
 }
 
-AurcorShell::AurcorShell(app::App &app) : Shell(), AppShell(app) {
+AurcorShell::AurcorShell(app::App &app, Stream &stream, unsigned int context, unsigned int flags)
+	: AppShell(app, stream, context, flags) {
 
 }
 

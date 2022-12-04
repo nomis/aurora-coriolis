@@ -45,7 +45,7 @@ public:
 	inline enum led_profile_id profile_id() { return profile_; }
 
 protected:
-	AurcorShell(app::App &app);
+	AurcorShell(app::App &app, Stream &stream, unsigned int context, unsigned int flags);
 
 	void display_banner() override;
 	std::string context_text() override;
