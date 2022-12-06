@@ -49,13 +49,16 @@ extern "C" {
 #include <uuid/console.h>
 #include <uuid/log.h>
 
+#include "app/fs.h"
 #include "app/gcc.h"
+#include "app/util.h"
 #include "aurcor/io_buffer.h"
 #include "aurcor/led_bus.h"
 #include "aurcor/modaurcor.h"
 #include "aurcor/modulogging.h"
 #include "aurcor/memory_pool.h"
 #include "aurcor/mp_print.h"
+#include "aurcor/mp_reader.h"
 
 #ifndef PSTR_ALIGN
 # define PSTR_ALIGN 4
@@ -288,6 +291,14 @@ void MicroPython::cleanup() {
 
 		while (!stop()) {}
 	}
+}
+
+std::string MicroPython::script_filename(const char *path) {
+	std::string filename{"/scripts/"};
+
+	filename.append(app::normalise_filename(path));
+
+	return filename;
 }
 
 void MicroPython::log_exception(mp_obj_t exc, uuid::log::Level level) {
@@ -534,20 +545,21 @@ void aurcor::MicroPython::mp_hal_end_atomic_section() {
 	atomic_section_mutex_.unlock();
 }
 
-extern "C" mp_lexer_t *mp_lexer_new_from_file(const char *filename) {
-	return MicroPython::current().mp_lexer_new_from_file(filename);
-}
-
-::mp_lexer_t *aurcor::MicroPython::mp_lexer_new_from_file(const char *filename) {
-	mp_raise_OSError(MP_ENOENT);
+extern "C" ::mp_lexer_t *mp_lexer_new_from_file(const char *filename) {
+    return mp_lexer_new(qstr_from_str(filename),
+		aurcor::micropython::Reader::from_file(
+			aurcor::MicroPython::script_filename(filename).c_str()));
 }
 
 extern "C" ::mp_import_stat_t mp_import_stat(const char *path) {
-	return MicroPython::current().mp_import_stat(path);
+	auto file = app::FS.open(aurcor::MicroPython::script_filename(path).c_str());
+	return !file ? MP_IMPORT_STAT_NO_EXIST
+		: (file.isDirectory() ? MP_IMPORT_STAT_DIR : MP_IMPORT_STAT_FILE);
 }
 
-::mp_import_stat_t aurcor::MicroPython::mp_import_stat(const char *path) {
-	return MP_IMPORT_STAT_NO_EXIST;
+extern "C" void mp_reader_new_file(::mp_reader_t *reader, const char *filename) {
+    *reader = aurcor::micropython::Reader::from_file(
+		aurcor::MicroPython::script_filename(filename).c_str());
 }
 
 extern "C" int mp_hal_stdin_rx_chr(void) {

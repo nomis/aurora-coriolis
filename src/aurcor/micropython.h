@@ -105,6 +105,8 @@ public:
 	static_assert(TASK_STACK_LIMIT < TASK_EXC_STACK_LIMIT, "Task stack limit must be lower than task exception stack limit");
 
 	static void setup(size_t pool_count);
+	static std::string script_filename(const char *path);
+
 	virtual const char *type() const = 0;
 	const std::string& name() const { return name_; }
 	bool stop();
@@ -175,12 +177,6 @@ private:
 
 	friend void ::mp_hal_end_atomic_section(void);
 	void mp_hal_end_atomic_section();
-
-	friend ::mp_lexer_t *::mp_lexer_new_from_file(const char *filename);
-	::mp_lexer_t *mp_lexer_new_from_file(const char *filename);
-
-	friend typeof(::mp_import_stat_t) ::mp_import_stat(const char *path);
-	::mp_import_stat_t mp_import_stat(const char *path);
 
 	std::unique_ptr<MemoryBlock> heap_;
 	std::unique_ptr<MemoryBlock> pystack_;
