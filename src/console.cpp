@@ -262,6 +262,61 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 		}
 	}, bus_names_autocomplete);
 
+	auto script_names_autocomplete = [] (Shell &shell,
+			const std::vector<std::string> &current_arguments,
+			const std::string &next_argument) -> std::vector<std::string> {
+		auto names = MicroPythonFile::scripts();
+
+		std::sort(names.begin(), names.end());
+		return names;
+	};
+
+	commands->add_command(ShellContext::MAIN, CommandFlags::USER,
+		flash_string_vector{F("run")}, flash_string_vector{F("<bus>"), F("<script>")},
+			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+		auto &bus_name = arguments[0];
+		auto &script_name = arguments[1];
+		auto bus = to_app(shell).bus(bus_name);
+
+		if (bus) {
+			if (MicroPythonFile::exists(script_name.c_str())) {
+				shell.block_with([bus, script_name] (Shell &shell, bool stop) mutable -> bool {
+					if (stop) {
+						return true;
+					} else {
+						auto &app = to_app(shell);
+
+						if (app.detach(bus)) {
+							auto mp = std::make_shared<MicroPythonFile>(script_name, bus);
+
+							app.attach(bus, mp);
+							if (!mp->start())
+								app.detach(bus, mp);
+
+							return true;
+						}
+					}
+
+					return false;
+				});
+			} else {
+				shell.printfln(F("Script \"%s\" not found"), script_name.c_str());
+			}
+		} else {
+			shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
+		}
+	}, [=] (Shell &shell,
+			const std::vector<std::string> &current_arguments,
+			const std::string &next_argument) -> std::vector<std::string> {
+		if (current_arguments.size() == 0) {
+			return bus_names_autocomplete(shell, current_arguments, next_argument);
+		} else if (current_arguments.size() == 1) {
+			return script_names_autocomplete(shell, current_arguments, next_argument);
+		} else {
+			return {};
+		}
+	});
+
 	auto indexes_autocomplete = [] (Shell &shell,
 			const std::vector<std::string> &current_arguments,
 			const std::string &next_argument) -> std::vector<std::string> {

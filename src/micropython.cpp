@@ -30,6 +30,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <vector>
 
 extern "C" {
 	#include <py/builtin.h>
@@ -40,6 +41,7 @@ extern "C" {
 	#include <py/mphal.h>
 	#include <py/mpstate.h>
 	#include <py/nlr.h>
+	#include <py/persistentcode.h>
 	#include <py/runtime.h>
 	#include <py/stackctrl.h>
 	#include <shared/runtime/interrupt_char.h>
@@ -69,6 +71,8 @@ using aurcor::micropython::PlatformPrint;
 using uuid::console::Shell;
 
 static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "mpy";
+
+static const char *directory_name = "/scripts";
 
 namespace aurcor {
 
@@ -294,24 +298,27 @@ void MicroPython::cleanup() {
 }
 
 std::string MicroPython::script_filename(const char *path) {
-	std::string filename{"/scripts/"};
+	std::string filename = directory_name;
 
+	filename.append(1, '/');
 	filename.append(app::normalise_filename(path));
 
 	return filename;
 }
 
+std::string MicroPython::log_prefix(const char type) {
+	std::vector<char> prefix(1 + name_.size() + 3 + 1);
+
+	::snprintf(prefix.data(), prefix.size(), "[%s] %c", name_.c_str(), type);
+
+	return prefix.data();
+}
+
 void MicroPython::log_exception(mp_obj_t exc, uuid::log::Level level) {
 	micropython_nlr_begin();
 
-	std::vector<char> prefix(1 + name_.size() + 3 + 1);
-
-	::snprintf(prefix.data(), prefix.size(), "[%s] E", name_.c_str());
-
-	LogPrint print{logger_, level, prefix.data()};
-
-	prefix.resize(0);
-	prefix.shrink_to_fit();
+	std::string prefix = log_prefix('E');
+	LogPrint print{logger_, level, prefix};
 
 	mp_stack_set_limit(TASK_EXC_STACK_LIMIT);
 
@@ -485,6 +492,75 @@ std::unique_ptr<aurcor::micropython::Print> MicroPythonShell::modulogging_print(
 	return std::make_unique<PlatformPrint>(level);
 }
 
+MicroPythonFile::MicroPythonFile(const std::string &name, std::shared_ptr<LEDBus> bus)
+		: MicroPython(name, bus), name_(name), stdout_prefix_(log_prefix('O')),
+		stdout_(logger_, uuid::log::Level::NOTICE, stdout_prefix_), log_prefix_(log_prefix('L')) {
+}
+
+MicroPythonFile::~MicroPythonFile() {
+	cleanup();
+}
+
+std::vector<std::string> MicroPythonFile::scripts() {
+	std::vector<std::string> names;
+	auto dir = app::FS.open(directory_name);
+
+	if (dir && dir.isDirectory()) {
+		while (1) {
+			auto file = dir.openNextFile();
+
+			if (file) {
+				std::string name = file.name();
+
+				if (name.length() > 4 && name.rfind(".mpy", name.length() - 4) == name.length() - 4) {
+					name.resize(name.length() - 4);
+					names.emplace_back(name);
+				}
+			} else {
+				break;
+			}
+		}
+	}
+
+	return names;
+}
+
+bool MicroPythonFile::exists(const char *name) {
+	return !!app::FS.open(script_filename(filename_ext(name).c_str()).c_str());
+}
+
+std::string MicroPythonFile::filename_ext(const char *name) {
+	std::string filename{name};
+	filename.append(".mpy");
+	return filename;
+}
+
+void MicroPythonFile::main() {
+	nlr_buf_t nlr;
+	nlr.ret_val = nullptr;
+	if (!nlr_push(&nlr)) {
+		mp_module_context_t *context = m_new_obj(mp_module_context_t);
+		context->module.globals = mp_globals_get();
+		mp_compiled_module_t cm = mp_raw_code_load_file(filename_ext(name_.c_str()).c_str(), context);
+		mp_obj_t module_fun = mp_make_function_from_raw_code(cm.rc, cm.context, NULL);
+
+		mp_call_function_0(module_fun);
+		mp_handle_pending(true);
+		nlr_pop();
+	} else {
+		mp_handle_pending(false);
+		log_exception(MP_OBJ_FROM_PTR(nlr.ret_val), uuid::log::NOTICE);
+	}
+}
+
+uuid::log::Level MicroPythonFile::modulogging_effective_level() {
+	return logger_.effective_level();
+}
+
+std::unique_ptr<aurcor::micropython::Print> MicroPythonFile::modulogging_print(uuid::log::Level level) {
+	return std::make_unique<LogPrint>(logger_, level, log_prefix_);
+}
+
 } // namespace aurcor
 
 using aurcor::MicroPython;
@@ -521,7 +597,7 @@ void aurcor::MicroPython::nlr_jump_fail(void *val) {
 
 	if (valid && !in_nlr_fail_) {
 		in_nlr_fail_ = true;
-		log_exception((mp_obj_t)address, level);
+		log_exception(MP_OBJ_FROM_PTR(address), level);
 		in_nlr_fail_ = false;
 	}
 
@@ -640,4 +716,8 @@ void aurcor::MicroPythonShell::mp_hal_stdout_tx_strn(const uint8_t *str, size_t 
 		str += written;
 		len -= written;
 	}
+}
+
+void aurcor::MicroPythonFile::mp_hal_stdout_tx_strn(const uint8_t *str, size_t len) {
+	stdout_.print(reinterpret_cast<const char *>(str), len);
 }

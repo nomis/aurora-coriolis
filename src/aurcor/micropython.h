@@ -147,6 +147,9 @@ protected:
 	void force_exit();
 	void abort() __attribute__((noreturn));
 
+	std::string log_prefix(char type);
+	void log_exception(mp_obj_t exc, uuid::log::Level level);
+
 	friend int ::mp_hal_stdin_rx_chr(void);
 	virtual int mp_hal_stdin_rx_chr(void);
 
@@ -170,7 +173,6 @@ private:
 
 	friend void ::nlr_jump_fail(void *val);
 	void nlr_jump_fail(void *val) __attribute__((noreturn));
-	void log_exception(mp_obj_t exc, uuid::log::Level level);
 
 	friend mp_uint_t ::mp_hal_begin_atomic_section(void);
 	void mp_hal_begin_atomic_section();
@@ -238,6 +240,37 @@ private:
 	IOBuffer stdout_{STDOUT_LEN};
 
 	typeof(mp_interrupt_char) *interrupt_char_{nullptr};
+};
+
+class MicroPythonFile final: public MicroPython,
+		public std::enable_shared_from_this<MicroPythonFile> {
+
+public:
+	MicroPythonFile(const std::string &name, std::shared_ptr<LEDBus> bus);
+	~MicroPythonFile() override;
+
+	static std::vector<std::string> scripts();
+	static bool exists(const char *name);
+
+	const char *type() const override { return "MicroPythonFile"; }
+
+	using MicroPython::start;
+
+protected:
+	void main() override;
+
+	void mp_hal_stdout_tx_strn(const uint8_t *str, size_t len) override;
+
+	uuid::log::Level modulogging_effective_level() override;
+	std::unique_ptr<aurcor::micropython::Print> modulogging_print(uuid::log::Level level) override;
+
+private:
+	static std::string filename_ext(const char *name);
+
+	std::string name_;
+	std::string stdout_prefix_;
+	aurcor::micropython::LogPrint stdout_;
+	std::string log_prefix_;
 };
 
 } // namespace aurcor

@@ -106,7 +106,7 @@ protected:
 
 private:
 	uuid::log::Logger &logger_;
-	const std::string prefix_;
+	const std::string &prefix_;
 	const uuid::log::Level level_;
 };
 
