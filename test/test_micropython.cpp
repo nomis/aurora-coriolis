@@ -35,13 +35,17 @@ extern "C" {
 
 #include <uuid/log.h>
 
+#include "aurcor/app.h"
 #include "aurcor/micropython.h"
+#include "aurcor/preset.h"
 #include "test_led_bus.h"
 #include "test_mp_print.h"
 
 using aurcor::MicroPython;
+using aurcor::Preset;
 
 static uuid::log::PrintHandler log_handler{Serial};
+static aurcor::App test_app;
 
 void TestMicroPython::init() {
 	log_handler.maximum_log_messages(SIZE_MAX);
@@ -78,7 +82,7 @@ void TestMicroPython::tearDown() {
 }
 
 TestMicroPython::TestMicroPython(std::shared_ptr<aurcor::LEDBus> bus)
-		: MicroPython("test", bus), bus_(bus) {
+		: MicroPython("test", bus, std::make_shared<Preset>(test_app, bus)), bus_(bus) {
 }
 
 void TestMicroPython::run(std::string script, bool safe) {

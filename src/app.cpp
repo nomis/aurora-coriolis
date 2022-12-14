@@ -33,6 +33,7 @@
 #include "aurcor/constants.h"
 #include "aurcor/led_bus.h"
 #include "aurcor/micropython.h"
+#include "aurcor/preset.h"
 #include "aurcor/uart_led_bus.h"
 
 namespace aurcor {
@@ -82,6 +83,9 @@ void App::start() {
 
 void App::loop() {
 	app::App::loop();
+
+	for (auto &preset : presets_)
+		preset.second->loop();
 }
 
 void App::add(const std::shared_ptr<LEDBus> &&bus) {
@@ -133,6 +137,29 @@ bool App::detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Micro
 	}
 
 	return true;
+}
+
+void App::start(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Preset> &preset) {
+	logger_.trace(F("Start preset \"%s\" on %s[%s]"),
+		preset->name().c_str(), bus->type(), bus->name());
+
+	auto it = presets_.find(bus);
+	if (it != presets_.end())
+		presets_.erase(it);
+
+	presets_.emplace(bus, preset);
+}
+
+void App::stop(const std::shared_ptr<LEDBus> &bus) {
+	auto it = presets_.find(bus);
+
+	if (it != presets_.end()) {
+		auto preset = it->second;
+
+		logger_.trace(F("Stop preset \"%s\" on %s[%s]"),
+			preset->name().c_str(), bus->type(), bus->name());
+		presets_.erase(it);
+	}
 }
 
 } // namespace aurcor

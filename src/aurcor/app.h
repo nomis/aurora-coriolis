@@ -32,6 +32,7 @@ namespace aurcor {
 
 class LEDBus;
 class MicroPython;
+class Preset;
 
 class App: public app::App {
 private:
@@ -53,12 +54,20 @@ public:
 	std::shared_ptr<LEDBus> bus(const std::string &name);
 	void attach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp);
 	bool detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp = nullptr);
+	void start(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Preset> &preset);
+	void stop(const std::shared_ptr<LEDBus> &bus);
 
 private:
+	App(App&&) = delete;
+	App(const App&) = delete;
+	App& operator=(App&&) = delete;
+	App& operator=(const App&) = delete;
+
 	void add(const std::shared_ptr<LEDBus> &&bus);
 
 	std::unordered_map<std::string,std::shared_ptr<LEDBus>> buses_;
 	std::unordered_map<std::shared_ptr<LEDBus>,std::shared_ptr<MicroPython>> mps_;
+	std::unordered_map<std::shared_ptr<LEDBus>,std::shared_ptr<Preset>> presets_;
 };
 
 } // namespace aurcor

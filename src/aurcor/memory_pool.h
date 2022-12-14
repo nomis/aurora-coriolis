@@ -43,6 +43,11 @@ public:
 	size_t size() const { return size_; }
 
 private:
+	MemoryBlock(MemoryBlock&&) = delete;
+	MemoryBlock(const MemoryBlock&) = delete;
+	MemoryBlock& operator=(MemoryBlock&&) = delete;
+	MemoryBlock& operator=(const MemoryBlock&) = delete;
+
 	std::weak_ptr<MemoryPool> blocks_;
 	MemoryAllocation data_;
 	const size_t size_;
@@ -60,6 +65,11 @@ public:
 
 private:
 	static uuid::log::Logger logger_;
+
+	MemoryPool(MemoryPool&&) = delete;
+	MemoryPool(const MemoryPool&) = delete;
+	MemoryPool& operator=(MemoryPool&&) = delete;
+	MemoryPool& operator=(const MemoryPool&) = delete;
 
 	void restore(MemoryAllocation data);
 

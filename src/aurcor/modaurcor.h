@@ -100,6 +100,7 @@ MP_DECLARE_CONST_FUN_OBJ_0(aurcor_time_us_obj);
 namespace aurcor {
 
 class MemoryBlock;
+class Preset;
 
 namespace micropython {
 
@@ -136,7 +137,7 @@ public:
 
 	static mp_obj_t rgb_to_hsv_tuple(size_t n_args, const mp_obj_t *args, bool exp);
 
-	PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus);
+	PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset);
 
 	mp_obj_t output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs, OutputType type, bool set_defaults);
 
@@ -174,6 +175,7 @@ private:
 
 	MemoryBlock *led_buffer_;
 	std::shared_ptr<LEDBus> bus_;
+	std::shared_ptr<Preset> preset_;
 	enum led_profile_id profile_{DEFAULT_PROFILE};
 	size_t wait_us_{0};
 	bool repeat_{DEFAULT_REPEAT};

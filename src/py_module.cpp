@@ -106,8 +106,8 @@ namespace aurcor {
 
 namespace micropython {
 
-PyModule::PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus)
-		: led_buffer_(led_buffer), bus_(std::move(bus)) {
+PyModule::PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset)
+		: led_buffer_(led_buffer), bus_(std::move(bus)), preset_(std::move(preset)) {
 }
 
 inline PyModule& PyModule::current() {

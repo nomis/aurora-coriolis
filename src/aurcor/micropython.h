@@ -87,6 +87,7 @@ extern "C" {
 namespace aurcor {
 
 class LEDBus;
+class Preset;
 
 /* Final derived classes need to call cleanup() in destructor */
 class MicroPython {
@@ -107,7 +108,7 @@ public:
 	static void setup(size_t pool_count);
 	static std::string script_filename(const char *path);
 
-	virtual const char *type() const = 0;
+	virtual const char* type() const = 0;
 	const std::string& name() const { return name_; }
 	bool stop();
 
@@ -131,7 +132,7 @@ protected:
 
 	static uuid::log::Logger logger_;
 
-	MicroPython(const std::string &name, std::shared_ptr<LEDBus> bus);
+	MicroPython(const std::string &name, std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset);
 
 	bool start();
 	virtual void main();
@@ -140,6 +141,7 @@ protected:
 
 	inline bool memory_blocks_available() const { return heap_ && pystack_ && ledbufs_; }
 	inline bool running() const { return running_; }
+	inline bool stopping() const { return stopping_; }
 
 	virtual void state_copy();
 	virtual void state_reset();
@@ -169,6 +171,11 @@ private:
 	static std::shared_ptr<MemoryPool> pystacks_;
 	static std::shared_ptr<MemoryPool> ledbufs_;
 
+	MicroPython(MicroPython&&) = delete;
+	MicroPython(const MicroPython&) = delete;
+	MicroPython& operator=(MicroPython&&) = delete;
+	MicroPython& operator=(const MicroPython&) = delete;
+
 	void running_thread();
 
 	friend void ::nlr_jump_fail(void *val);
@@ -187,6 +194,7 @@ private:
 	bool started_{false};
 	std::mutex active_;
 	std::atomic<bool> running_{false};
+	bool stopping_{false};
 	bool stopped_{false};
 	const char *where_;
 	jmp_buf abort_;
@@ -212,10 +220,10 @@ public:
 	static constexpr size_t STDIN_LEN = 32;
 	static constexpr size_t STDOUT_LEN = 128;
 
-	MicroPythonShell(const std::string &name, std::shared_ptr<LEDBus> bus);
+	MicroPythonShell(const std::string &name, std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset);
 	~MicroPythonShell() override;
 
-	const char *type() const override { return "MicroPythonShell"; }
+	const char* type() const override { return "MicroPythonShell"; }
 
 	bool start(uuid::console::Shell &shell);
 	bool shell_foreground(uuid::console::Shell &shell, bool stop);
@@ -246,15 +254,16 @@ class MicroPythonFile final: public MicroPython,
 		public std::enable_shared_from_this<MicroPythonFile> {
 
 public:
-	MicroPythonFile(const std::string &name, std::shared_ptr<LEDBus> bus);
+	MicroPythonFile(const std::string &name, std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset);
 	~MicroPythonFile() override;
 
 	static std::vector<std::string> scripts();
 	static bool exists(const char *name);
 
-	const char *type() const override { return "MicroPythonFile"; }
+	const char* type() const override { return "MicroPythonFile"; }
 
 	using MicroPython::start;
+	using MicroPython::running;
 
 protected:
 	void main() override;

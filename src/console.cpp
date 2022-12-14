@@ -32,6 +32,7 @@
 #include "aurcor/console.h"
 #include "aurcor/micropython.h"
 #include "aurcor/led_profile.h"
+#include "aurcor/preset.h"
 #include "app/config.h"
 #include "app/console.h"
 
@@ -53,15 +54,15 @@ using ::aurcor::MicroPythonShell;
 
 namespace aurcor {
 
-static inline AppShell &to_app_shell(Shell &shell) {
+static constexpr inline AppShell &to_app_shell(Shell &shell) {
 	return static_cast<AppShell&>(shell);
 }
 
-static inline App &to_app(Shell &shell) {
+static constexpr inline App &to_app(Shell &shell) {
 	return static_cast<App&>(to_app_shell(shell).app_);
 }
 
-static inline AurcorShell &to_shell(Shell &shell) {
+static constexpr inline AurcorShell &to_shell(Shell &shell) {
 	return static_cast<AurcorShell&>(shell);
 }
 
@@ -244,8 +245,12 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 				} else {
 					auto &app = to_app(shell);
 
+					app.stop(bus);
+
 					if (app.detach(bus)) {
-						mp = std::make_shared<MicroPythonShell>(to_app_shell(shell).console_name(), bus);
+						mp = std::make_shared<MicroPythonShell>(
+							to_app_shell(shell).console_name(), bus,
+							std::make_shared<Preset>(app, bus));
 
 						app.attach(bus, mp);
 						if (!mp->start(shell)) {
@@ -276,29 +281,14 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 			[=] (Shell &shell, const std::vector<std::string> &arguments) {
 		auto &bus_name = arguments[0];
 		auto &script_name = arguments[1];
-		auto bus = to_app(shell).bus(bus_name);
+		auto &app = to_app(shell);
+		auto bus = app.bus(bus_name);
 
 		if (bus) {
 			if (MicroPythonFile::exists(script_name.c_str())) {
-				shell.block_with([bus, script_name] (Shell &shell, bool stop) mutable -> bool {
-					if (stop) {
-						return true;
-					} else {
-						auto &app = to_app(shell);
-
-						if (app.detach(bus)) {
-							auto mp = std::make_shared<MicroPythonFile>(script_name, bus);
-
-							app.attach(bus, mp);
-							if (!mp->start())
-								app.detach(bus, mp);
-
-							return true;
-						}
-					}
-
-					return false;
-				});
+				auto preset = std::make_shared<Preset>(app, bus);
+				preset->script(script_name);
+				app.start(bus, preset);
 			} else {
 				shell.printfln(F("Script \"%s\" not found"), script_name.c_str());
 			}

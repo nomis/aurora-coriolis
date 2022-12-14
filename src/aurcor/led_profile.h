@@ -22,6 +22,7 @@
 #include <map>
 #include <mutex>
 #include <shared_mutex>
+#include <string>
 
 #include <CBOR.h>
 #include <CBOR_parsing.h>

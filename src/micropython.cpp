@@ -94,12 +94,12 @@ void MicroPython::setup(size_t pool_count) {
 }
 
 MicroPython::MicroPython(const std::string &name,
-		std::shared_ptr<LEDBus> bus)
+		std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset)
 		: name_(name + "/" + bus->name()),
 		heap_(std::move(heaps_->allocate())),
 		pystack_(std::move(pystacks_->allocate())),
 		ledbuf_(std::move(ledbufs_->allocate())),
-		modaurcor_(ledbuf_.get(), std::move(bus)) {
+		modaurcor_(ledbuf_.get(), std::move(bus), std::move(preset)) {
 	system_exit_exc_.base.type = &mp_type_SystemExit;
 	system_exit_exc_.traceback_alloc = 0;
 	system_exit_exc_.traceback_len = 0;
@@ -265,6 +265,8 @@ bool MicroPython::stop() {
 		return true;
 	}
 
+	stopping_ = true;
+
 	if (running_) {
 		logger_.trace(F("[%s] Stopping thread"), name_.c_str());
 		force_exit();
@@ -381,7 +383,8 @@ void MicroPython::AccessState::disable() {
 }
 
 MicroPythonShell::MicroPythonShell(const std::string &name,
-		std::shared_ptr<LEDBus> bus) : MicroPython(name, bus) {
+		std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset)
+		: MicroPython(name, bus, preset) {
 }
 
 MicroPythonShell::~MicroPythonShell() {
@@ -492,8 +495,9 @@ std::unique_ptr<aurcor::micropython::Print> MicroPythonShell::modulogging_print(
 	return std::make_unique<PlatformPrint>(level);
 }
 
-MicroPythonFile::MicroPythonFile(const std::string &name, std::shared_ptr<LEDBus> bus)
-		: MicroPython(name, bus), name_(name), stdout_prefix_(log_prefix('O')),
+MicroPythonFile::MicroPythonFile(const std::string &name,
+		std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset)
+		: MicroPython(name, bus, preset), name_(name), stdout_prefix_(log_prefix('O')),
 		stdout_(logger_, uuid::log::Level::NOTICE, stdout_prefix_), log_prefix_(log_prefix('L')) {
 }
 
@@ -549,7 +553,7 @@ void MicroPythonFile::main() {
 		nlr_pop();
 	} else {
 		mp_handle_pending(false);
-		log_exception(MP_OBJ_FROM_PTR(nlr.ret_val), uuid::log::NOTICE);
+		log_exception(MP_OBJ_FROM_PTR(nlr.ret_val), stopping() ? uuid::log::TRACE : uuid::log::NOTICE);
 	}
 }
 
