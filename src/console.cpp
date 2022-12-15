@@ -66,6 +66,9 @@ static constexpr inline AurcorShell &to_shell(Shell &shell) {
 	return static_cast<AurcorShell&>(shell);
 }
 
+namespace console {
+
+__attribute__((noinline))
 static void led_profile_result(AurcorShell &shell, LEDProfile::Result result = LEDProfile::Result::OK, const __FlashStringHelper *message = nullptr) {
 	switch (result) {
 	case LEDProfile::Result::OK:
@@ -98,18 +101,70 @@ static void led_profile_result(AurcorShell &shell, LEDProfile::Result result = L
 	}
 }
 
+__attribute__((noinline))
+static std::vector<std::string> bus_names_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	return to_app(shell).bus_names();
+}
+
+__attribute__((noinline))
+static std::vector<std::string> profile_names_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	auto profiles = LEDProfiles::lc_names();
+
+	std::sort(profiles.begin(), profiles.end());
+	return profiles;
+};
+
+__attribute__((noinline))
+static std::vector<std::string> indexes_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	if (current_arguments.empty()) {
+		std::vector<std::string> indexes;
+
+		for (auto &value : to_shell(shell).profile().indexes()) {
+			indexes.emplace_back(std::to_string(value));
+		}
+
+		return indexes;
+	} else {
+		return {};
+	}
+}
+
+__attribute__((noinline))
+static std::vector<std::string> script_names_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	auto names = MicroPythonFile::scripts();
+
+	std::sort(names.begin(), names.end());
+	return names;
+}
+
+__attribute__((noinline))
+static void show_length(Shell &shell, const std::vector<std::string> &arguments) {
+	shell.printfln(F("Length: %zu"), to_shell(shell).bus()->length());
+};
+
+__attribute__((noinline))
+static void show_direction(Shell &shell, const std::vector<std::string> &arguments) {
+	shell.printfln(F("Direction: %s"), to_shell(shell).bus()->reverse() ? "reverse" : "normal");
+};
+
+} // namespace console
+
+using namespace console;
+
 static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	#define NO_ARGUMENTS std::vector<std::string>{}
 
-	auto bus_names_autocomplete = [] (Shell &shell,
-			const std::vector<std::string> &current_arguments,
-			const std::string &next_argument) -> std::vector<std::string> {
-		return to_app(shell).bus_names();
-	};
-
 	commands->add_command(ShellContext::MAIN, CommandFlags::USER,
 		flash_string_vector{F("bus")}, flash_string_vector{F("<bus>")},
-			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+			[] (Shell &shell, const std::vector<std::string> &arguments) {
 		auto &bus_name = arguments[0];
 		auto bus = to_app(shell).bus(bus_name);
 
@@ -120,21 +175,13 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 		}
 	}, bus_names_autocomplete);
 
-	auto profile_names_autocomplete = [] (Shell &shell,
-			const std::vector<std::string> &current_arguments,
-			const std::string &next_argument) -> std::vector<std::string> {
-		auto profiles = LEDProfiles::lc_names();
-
-		std::sort(profiles.begin(), profiles.end());
-		return profiles;
-	};
-
 	commands->add_command(ShellContext::MAIN, CommandFlags::USER, flash_string_vector{F("profile")},
 			flash_string_vector{F("<bus>"), F("<profile>")},
 			[] (Shell &shell, const std::vector<std::string> &arguments) {
 		auto &bus_name = arguments[0];
 		auto &profile_name = arguments[1];
-		auto bus = to_app(shell).bus(bus_name);
+		auto &app = to_app(shell);
+		auto bus = app.bus(bus_name);
 
 		if (bus) {
 			enum led_profile_id profile_id;
@@ -150,7 +197,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 		} else {
 			shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
 		}
-	}, [=] (Shell &shell,
+	}, [] (Shell &shell,
 			const std::vector<std::string> &current_arguments,
 			const std::string &next_argument) -> std::vector<std::string> {
 		if (current_arguments.size() == 0) {
@@ -172,16 +219,8 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 		shell.print_all_available_commands();
 	});
 
-	auto show_length = [] (Shell &shell, const std::vector<std::string> &arguments) {
-		shell.printfln(F("Length: %zu"), to_shell(shell).bus()->length());
-	};
-
-	auto show_direction = [] (Shell &shell, const std::vector<std::string> &arguments) {
-		shell.printfln(F("Direction: %s"), to_shell(shell).bus()->reverse() ? "reverse" : "normal");
-	};
-
 	commands->add_command(ShellContext::BUS, CommandFlags::USER, flash_string_vector{F("length")}, flash_string_vector{F("[length]")},
-			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+			[] (Shell &shell, const std::vector<std::string> &arguments) {
 		if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
 			to_shell(shell).bus()->length(std::atol(arguments[0].c_str()));
 		}
@@ -194,7 +233,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	});
 
 	commands->add_command(ShellContext::BUS, CommandFlags::ADMIN, flash_string_vector{F("normal")},
-			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+			[] (Shell &shell, const std::vector<std::string> &arguments) {
 		to_shell(shell).bus()->reverse(false);
 		show_direction(shell, NO_ARGUMENTS);
 	});
@@ -215,22 +254,48 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	}, profile_names_autocomplete);
 
 	commands->add_command(ShellContext::BUS, CommandFlags::ADMIN, flash_string_vector{F("reverse")},
-			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+			[] (Shell &shell, const std::vector<std::string> &arguments) {
 		to_shell(shell).bus()->reverse(true);
 		show_direction(shell, NO_ARGUMENTS);
 	});
 
+	commands->add_command(ShellContext::BUS, CommandFlags::USER,
+		flash_string_vector{F("run")}, flash_string_vector{F("<script>")},
+			[] (Shell &shell, const std::vector<std::string> &arguments) {
+		auto &script_name = arguments[0];
+		auto &app = to_app(shell);
+		auto &bus = to_shell(shell).bus();
+
+		if (MicroPythonFile::exists(script_name.c_str())) {
+			auto preset = std::make_shared<Preset>(app, bus);
+			preset->script(script_name);
+			app.start(bus, preset);
+		} else {
+			shell.printfln(F("Script \"%s\" not found"), script_name.c_str());
+		}
+	}, script_names_autocomplete);
+
+	commands->add_command(ShellContext::BUS, CommandFlags::USER, flash_string_vector{F("stop")},
+			[] (Shell &shell, const std::vector<std::string> &arguments) {
+		auto &app = to_app(shell);
+		auto &bus = to_shell(shell).bus();
+
+		app.stop(bus);
+		app.detach(bus);
+	});
+
 	commands->add_command(ShellContext::BUS, CommandFlags::USER, flash_string_vector{F("show")},
-			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+			[] (Shell &shell, const std::vector<std::string> &arguments) {
 		show_length(shell, NO_ARGUMENTS);
 		show_direction(shell, NO_ARGUMENTS);
 	});
 
 	commands->add_command(ShellContext::MAIN, CommandFlags::USER,
 		flash_string_vector{F("mpy")}, flash_string_vector{F("<bus>")},
-			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+			[] (Shell &shell, const std::vector<std::string> &arguments) {
 		auto &bus_name = arguments[0];
-		auto bus = to_app(shell).bus(bus_name);
+		auto &app = to_app(shell);
+		auto bus = app.bus(bus_name);
 		std::shared_ptr<MicroPythonShell> mp;
 
 		if (bus) {
@@ -267,18 +332,9 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 		}
 	}, bus_names_autocomplete);
 
-	auto script_names_autocomplete = [] (Shell &shell,
-			const std::vector<std::string> &current_arguments,
-			const std::string &next_argument) -> std::vector<std::string> {
-		auto names = MicroPythonFile::scripts();
-
-		std::sort(names.begin(), names.end());
-		return names;
-	};
-
 	commands->add_command(ShellContext::MAIN, CommandFlags::USER,
 		flash_string_vector{F("run")}, flash_string_vector{F("<bus>"), F("<script>")},
-			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+			[] (Shell &shell, const std::vector<std::string> &arguments) {
 		auto &bus_name = arguments[0];
 		auto &script_name = arguments[1];
 		auto &app = to_app(shell);
@@ -295,7 +351,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 		} else {
 			shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
 		}
-	}, [=] (Shell &shell,
+	}, [] (Shell &shell,
 			const std::vector<std::string> &current_arguments,
 			const std::string &next_argument) -> std::vector<std::string> {
 		if (current_arguments.size() == 0) {
@@ -307,21 +363,20 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 		}
 	});
 
-	auto indexes_autocomplete = [] (Shell &shell,
-			const std::vector<std::string> &current_arguments,
-			const std::string &next_argument) -> std::vector<std::string> {
-		if (current_arguments.empty()) {
-			std::vector<std::string> indexes;
+	commands->add_command(ShellContext::MAIN, CommandFlags::USER,
+		flash_string_vector{F("stop")}, flash_string_vector{F("<bus>")},
+			[] (Shell &shell, const std::vector<std::string> &arguments) {
+		auto &bus_name = arguments[0];
+		auto &app = to_app(shell);
+		auto bus = app.bus(bus_name);
 
-			for (auto &value : to_shell(shell).profile().indexes()) {
-				indexes.emplace_back(std::to_string(value));
-			}
-
-			return indexes;
+		if (bus) {
+			app.stop(bus);
+			app.detach(bus);
 		} else {
-			return {};
+			shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
 		}
-	};
+	}, bus_names_autocomplete);
 
 	commands->add_command(ShellContext::BUS_PROFILE, CommandFlags::ADMIN, flash_string_vector{F("adjust")},
 			flash_string_vector{F("<index>"), F("<+/- red>"), F("<+/- green>"), F("<+/- blue>")},
@@ -397,7 +452,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	}, indexes_autocomplete);
 
 	commands->add_command(ShellContext::BUS_PROFILE, CommandFlags::USER, flash_string_vector{F("show")},
-			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+			[] (Shell &shell, const std::vector<std::string> &arguments) {
 		led_profile_result(to_shell(shell));
 	});
 
@@ -408,7 +463,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 
 		led_profile_result(aurcor_shell, aurcor_shell.profile().set(std::atol(arguments[0].c_str()),
 			std::atol(arguments[1].c_str()), std::atol(arguments[2].c_str()), std::atol(arguments[3].c_str())));
-	}, [=] (Shell &shell,
+	}, [] (Shell &shell,
 			const std::vector<std::string> &current_arguments,
 			const std::string &next_argument) -> std::vector<std::string> {
 		if (!current_arguments.empty()) {
@@ -433,7 +488,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	});
 
 	commands->add_command(ShellContext::BUS_PROFILE, CommandFlags::ADMIN, flash_string_vector{F("save")},
-			[=] (Shell &shell, const std::vector<std::string> &arguments) {
+			[] (Shell &shell, const std::vector<std::string> &arguments) {
 		auto &aurcor_shell = to_shell(shell);
 
 		led_profile_result(aurcor_shell, aurcor_shell.bus()->save_profile(aurcor_shell.profile_id()), F("Saved"));

@@ -40,7 +40,7 @@ public:
 	void enter_bus_profile_context(std::shared_ptr<LEDBus> bus, enum led_profile_id profile);
 	bool exit_context() override;
 
-	inline std::shared_ptr<LEDBus> bus() { return bus_; }
+	inline std::shared_ptr<LEDBus>& bus() { return bus_; }
 	inline LEDProfile& profile() { return bus_->profile(profile_); }
 	inline enum led_profile_id profile_id() { return profile_; }
 
