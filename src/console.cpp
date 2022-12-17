@@ -68,6 +68,10 @@ static constexpr inline AurcorShell &to_shell(Shell &shell) {
 
 namespace console {
 
+namespace bus_preset {
+	static void show(Shell &shell, const std::vector<std::string> &arguments);
+}
+
 __attribute__((noinline))
 static void led_profile_result(AurcorShell &shell, LEDProfile::Result result = LEDProfile::Result::OK, const __FlashStringHelper *message = nullptr) {
 	switch (result) {
@@ -326,6 +330,7 @@ static void edit(Shell &shell, const std::vector<std::string> &arguments) {
 
 	if (preset) {
 		aurcor_shell.enter_bus_preset_context(preset);
+		bus_preset::show(shell, {});
 	} else {
 		shell.printfln(F("Preset not running"));
 	}
@@ -469,12 +474,21 @@ static void save(Shell &shell, const std::vector<std::string> &arguments) {
 
 namespace bus_preset {
 
+/* <description> */
+static void desc(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &description = arguments[0];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset().description(description))
+		shell.printfln(F("Invalid description"));
+}
+
 /* <name> */
 static void rename(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &name = arguments[0];
 	auto &aurcor_shell = to_shell(shell);
 
-	if (!aurcor_shell.preset()->name(name))
+	if (!aurcor_shell.preset().name(name))
 		shell.printfln(F("Invalid name"));
 }
 
@@ -484,10 +498,18 @@ static void script(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &aurcor_shell = to_shell(shell);
 
 	if (MicroPythonFile::exists(script_name.c_str())) {
-		aurcor_shell.preset()->script(script_name);
+		aurcor_shell.preset().script(script_name);
 	} else {
 		shell.printfln(F("Script \"%s\" not found"), script_name.c_str());
 	}
+}
+
+static void show(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &preset = to_shell(shell).preset();
+
+	shell.printfln(F("Name:        %s"), preset.name().c_str());
+	shell.printfln(F("Description: %s"), preset.description().c_str());
+	shell.printfln(F("Script:      %s"), preset.script().c_str());
 }
 
 } // namespace bus_preset
@@ -553,8 +575,10 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_preset, user, {F("exit")}, context::exit);
 	commands->add_command(context::bus_preset, user, {F("help")}, AppShell::main_help_function);
 	commands->add_command(context::bus_preset, user, {F("logout")}, AppShell::main_logout_function);
+	commands->add_command(context::bus_preset, admin, {F("desc")}, {F("<description>")}, bus_preset::desc);
 	commands->add_command(context::bus_preset, admin, {F("rename")}, {F("<name>")}, bus_preset::rename);
 	commands->add_command(context::bus_preset, admin, {F("script")}, {F("<script>")}, bus_preset::script, script_names_autocomplete);
+	commands->add_command(context::bus_preset, user, {F("show")}, bus_preset::show);
 }
 
 AurcorShell::AurcorShell(app::App &app, Stream &stream, unsigned int context, unsigned int flags)

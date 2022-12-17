@@ -18,6 +18,10 @@
 
 #pragma once
 
+#ifndef ENV_NATIVE
+# include <esp_timer.h>
+#endif
+
 #include <algorithm>
 #include <cstdint>
 #include <string>
@@ -66,5 +70,6 @@ static inline constexpr unsigned int uint_divide(unsigned int divided, unsigned 
 }
 
 bool allowed_file_name(const std::string &name);
+bool allowed_text(const std::string &text);
 
 } // namespace aurcor

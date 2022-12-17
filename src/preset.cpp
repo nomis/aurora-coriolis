@@ -70,6 +70,28 @@ bool Preset::name(std::string name) {
 	return true;
 }
 
+std::string Preset::description() const {
+	std::shared_lock data_lock{data_mutex_};
+	return description_;
+}
+
+bool Preset::description(std::string description) {
+	if (!allowed_text(description))
+		return false;
+
+	if (description.length() > MAX_DESCRIPTION_LENGTH)
+		description.resize(MAX_DESCRIPTION_LENGTH);
+
+	std::unique_lock data_lock{data_mutex_};
+
+	if (description_ != description) {
+		description_ = description;
+		modified_ = true;
+	}
+
+	return true;
+}
+
 std::string Preset::script() const {
 	std::shared_lock data_lock{data_mutex_};
 	return script_;

@@ -40,4 +40,14 @@ bool allowed_file_name(const std::string &name) {
 	return !name.empty();
 }
 
+bool allowed_text(const std::string &text) {
+	for (auto c : text) {
+		if (c >= 0x20 && c <= 0x7E)
+			continue;
+		return false;
+	}
+
+	return true;
+}
+
 } // namespace aurcor

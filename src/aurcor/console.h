@@ -45,7 +45,7 @@ public:
 	inline std::shared_ptr<LEDBus>& bus() { return bus_; }
 	inline LEDProfile& profile() { return bus_->profile(profile_); }
 	inline enum led_profile_id profile_id() { return profile_; }
-	inline std::shared_ptr<Preset>& preset() { return *preset_; }
+	inline Preset& preset() { return **preset_; }
 
 protected:
 	AurcorShell(app::App &app, Stream &stream, unsigned int context, unsigned int flags);

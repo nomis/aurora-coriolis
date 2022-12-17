@@ -34,12 +34,16 @@ class MicroPythonFile;
 class Preset: public std::enable_shared_from_this<Preset> {
 public:
 	static constexpr size_t MAX_NAME_LENGTH = 48;
+	static constexpr size_t MAX_DESCRIPTION_LENGTH = 48;
 
 	Preset(App &app, std::shared_ptr<LEDBus> bus, std::string name = "");
 	~Preset() = default;
 
 	std::string name() const;
 	bool name(std::string name);
+
+	std::string description() const;
+	bool description(std::string description);
 
 	std::string script() const;
 	void script(const std::string &script);
@@ -72,6 +76,7 @@ private:
 
 	mutable std::shared_mutex data_mutex_;
 	std::string name_;
+	std::string description_;
 	std::string script_;
 	bool script_changed_{false};
 
