@@ -39,7 +39,7 @@ public:
 	Preset(App &app, std::shared_ptr<LEDBus> bus, std::string name = "");
 	~Preset() = default;
 
-	std::string name() const;
+	std::string name(bool allow_unnamed = false) const;
 	bool name(std::string name);
 
 	std::string description() const;

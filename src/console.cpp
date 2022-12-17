@@ -198,6 +198,26 @@ static std::vector<std::string> bus_profile_index_values_autocomplete(Shell &she
 	}
 }
 
+__attribute__((noinline))
+static std::vector<std::string> preset_current_name_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	auto name = to_shell(shell).preset().name(true);
+
+	if (!name.empty()) {
+		return {name};
+	} else {
+		return {};
+	}
+}
+
+__attribute__((noinline))
+static std::vector<std::string> preset_current_description_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	return {to_shell(shell).preset().description()};
+}
+
 namespace main {
 
 /* <bus> */
@@ -575,8 +595,8 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_preset, user, {F("exit")}, context::exit);
 	commands->add_command(context::bus_preset, user, {F("help")}, AppShell::main_help_function);
 	commands->add_command(context::bus_preset, user, {F("logout")}, AppShell::main_logout_function);
-	commands->add_command(context::bus_preset, admin, {F("desc")}, {F("<description>")}, bus_preset::desc);
-	commands->add_command(context::bus_preset, admin, {F("rename")}, {F("<name>")}, bus_preset::rename);
+	commands->add_command(context::bus_preset, admin, {F("desc")}, {F("<description>")}, bus_preset::desc, preset_current_description_autocomplete);
+	commands->add_command(context::bus_preset, admin, {F("rename")}, {F("<name>")}, bus_preset::rename, preset_current_name_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("script")}, {F("<script>")}, bus_preset::script, script_names_autocomplete);
 	commands->add_command(context::bus_preset, user, {F("show")}, bus_preset::show);
 }

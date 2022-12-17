@@ -43,10 +43,10 @@ Preset::Preset(App &app, std::shared_ptr<LEDBus> bus, std::string name)
 
 }
 
-std::string Preset::name() const {
+std::string Preset::name(bool allow_unnamed) const {
 	std::shared_lock data_lock{data_mutex_};
 
-	if (name_.empty()) {
+	if (name_.empty() && !allow_unnamed) {
 		return "<unnamed>";
 	} else {
 		return name_;
