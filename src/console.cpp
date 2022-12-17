@@ -467,6 +467,31 @@ static void save(Shell &shell, const std::vector<std::string> &arguments) {
 
 } // namespace profile
 
+namespace bus_preset {
+
+/* <name> */
+static void rename(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &name = arguments[0];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset()->name(name))
+		shell.printfln(F("Invalid name"));
+}
+
+/* <script> */
+static void script(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &script_name = arguments[0];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (MicroPythonFile::exists(script_name.c_str())) {
+		aurcor_shell.preset()->script(script_name);
+	} else {
+		shell.printfln(F("Script \"%s\" not found"), script_name.c_str());
+	}
+}
+
+} // namespace bus_preset
+
 namespace context {
 
 static constexpr auto main = ShellContext::MAIN;
@@ -528,6 +553,8 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_preset, user, {F("exit")}, context::exit);
 	commands->add_command(context::bus_preset, user, {F("help")}, AppShell::main_help_function);
 	commands->add_command(context::bus_preset, user, {F("logout")}, AppShell::main_logout_function);
+	commands->add_command(context::bus_preset, admin, {F("rename")}, {F("<name>")}, bus_preset::rename);
+	commands->add_command(context::bus_preset, admin, {F("script")}, {F("<script>")}, bus_preset::script, script_names_autocomplete);
 }
 
 AurcorShell::AurcorShell(app::App &app, Stream &stream, unsigned int context, unsigned int flags)

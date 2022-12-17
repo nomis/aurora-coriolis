@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <string>
 
 extern "C" {
 	#include <py/mpconfig.h>
@@ -63,5 +64,7 @@ static inline constexpr int int_divide(int divided, int divisor, unsigned int bi
 static inline constexpr unsigned int uint_divide(unsigned int divided, unsigned int divisor, unsigned int bits) {
 	return ((divided << (bits + 1U)) / divisor + (1U << bits)) >> (bits + 1U);
 }
+
+bool allowed_file_name(const std::string &name);
 
 } // namespace aurcor

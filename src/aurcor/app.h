@@ -35,15 +35,6 @@ class MicroPython;
 class Preset;
 
 class App: public app::App {
-private:
-#if defined(ARDUINO_LOLIN_S2_MINI)
-
-#elif defined(ENV_NATIVE)
-
-#else
-# error "Unknown board"
-#endif
-
 public:
 	App();
 	void init() override;

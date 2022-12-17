@@ -26,6 +26,7 @@
 
 #include "aurcor/app.h"
 #include "aurcor/micropython.h"
+#include "aurcor/util.h"
 
 #ifndef PSTR_ALIGN
 # define PSTR_ALIGN 4
@@ -52,13 +53,21 @@ std::string Preset::name() const {
 	}
 }
 
-void Preset::name(const std::string &name) {
+bool Preset::name(std::string name) {
+	if (!allowed_file_name(name))
+		return false;
+
+	if (name.length() > MAX_NAME_LENGTH)
+		name.resize(MAX_NAME_LENGTH);
+
 	std::unique_lock data_lock{data_mutex_};
 
 	if (name_ != name) {
 		name_ = name;
 		modified_ = true;
 	}
+
+	return true;
 }
 
 std::string Preset::script() const {
@@ -72,8 +81,11 @@ void Preset::script(const std::string &script) {
 	if (script_ != script) {
 		script_ = script;
 		modified_ = true;
-		if (running_)
+		if (running_) {
 			script_changed_ = true;
+		} else {
+			stop_time_ms_ = 0;
+		}
 	}
 }
 
