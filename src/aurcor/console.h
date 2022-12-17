@@ -47,6 +47,8 @@ public:
 	inline enum led_profile_id profile_id() { return profile_; }
 	inline Preset& preset() { return **preset_; }
 
+	bool preset_active(bool exit = true);
+
 protected:
 	AurcorShell(app::App &app, Stream &stream, unsigned int context, unsigned int flags);
 

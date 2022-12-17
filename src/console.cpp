@@ -499,6 +499,9 @@ static void desc(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &description = arguments[0];
 	auto &aurcor_shell = to_shell(shell);
 
+	if (!aurcor_shell.preset_active())
+		return;
+
 	if (!aurcor_shell.preset().description(description))
 		shell.printfln(F("Invalid description"));
 }
@@ -507,6 +510,9 @@ static void desc(Shell &shell, const std::vector<std::string> &arguments) {
 static void rename(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &name = arguments[0];
 	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
 
 	if (!aurcor_shell.preset().name(name))
 		shell.printfln(F("Invalid name"));
@@ -517,6 +523,9 @@ static void script(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &script_name = arguments[0];
 	auto &aurcor_shell = to_shell(shell);
 
+	if (!aurcor_shell.preset_active())
+		return;
+
 	if (MicroPythonFile::exists(script_name.c_str())) {
 		aurcor_shell.preset().script(script_name);
 	} else {
@@ -525,7 +534,12 @@ static void script(Shell &shell, const std::vector<std::string> &arguments) {
 }
 
 static void show(Shell &shell, const std::vector<std::string> &arguments) {
-	auto &preset = to_shell(shell).preset();
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	auto &preset = aurcor_shell.preset();
 
 	shell.printfln(F("Name:        %s"), preset.name().c_str());
 	shell.printfln(F("Description: %s"), preset.description().c_str());
@@ -682,11 +696,16 @@ std::string AurcorShell::context_text() {
 			std::string text{"/bus/"};
 
 			text.append(bus_->name());
-			text.append("/preset/");
-			text.append(preset_->get()->name().c_str());
 
-			if (preset_->get()->modified())
-				text.append("(unsaved)");
+			text.append("/preset/");
+			if (preset_active(false)) {
+				text.append(preset_->get()->name().c_str());
+
+				if (preset_->get()->modified())
+					text.append("(unsaved)");
+			} else {
+				text.append("<detached>");
+			}
 
 			return text;
 		}
@@ -696,6 +715,24 @@ std::string AurcorShell::context_text() {
 	}
 
 	return AppShell::context_text();
+}
+
+bool AurcorShell::preset_active(bool exit) {
+	if (preset_) {
+		auto preset = to_app(*this).edit(bus_);
+		if (preset && *preset == *preset_) {
+			return true;
+		}
+
+		preset_.reset();
+	}
+
+	if (exit) {
+		printfln(F("Preset no longer running"));
+		exit_context();
+	}
+
+	return false;
 }
 
 } // namespace aurcor
