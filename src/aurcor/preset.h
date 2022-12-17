@@ -46,14 +46,8 @@ public:
 	 * thread. Making these thread-safe would require an extra mutex to avoid
 	 * blocking other readers when saving the preset.
 	 */
-	bool editing() const { return editing_; }
-	void editing(bool editing) {
-			if (editing) {
-				editing_++;
-			} else {
-				editing_--;
-			}
-	}
+	bool editing() const { return !editing_.expired(); }
+	std::shared_ptr<std::shared_ptr<Preset>> edit();
 	bool modified() const { return modified_; }
 
 	bool load();
@@ -79,7 +73,7 @@ private:
 	std::string script_;
 	bool script_changed_{false};
 
-	size_t editing_{0};
+	std::weak_ptr<std::shared_ptr<Preset>> editing_;
 	bool modified_{false};
 };
 

@@ -150,6 +150,14 @@ void App::start(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Preset
 	presets_.emplace(bus, preset);
 }
 
+std::shared_ptr<std::shared_ptr<Preset>> App::edit(const std::shared_ptr<LEDBus> &bus) {
+	auto it = presets_.find(bus);
+	if (it != presets_.end())
+		return it->second->edit();
+
+	return nullptr;
+}
+
 void App::stop(const std::shared_ptr<LEDBus> &bus) {
 	auto it = presets_.find(bus);
 

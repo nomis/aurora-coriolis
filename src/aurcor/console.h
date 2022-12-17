@@ -30,6 +30,7 @@
 namespace aurcor {
 
 class LEDProfile;
+class Preset;
 
 class AurcorShell: public app::AppShell {
 public:
@@ -38,6 +39,7 @@ public:
 	void enter_bus_context(std::shared_ptr<LEDBus> bus);
 	void enter_bus_profile_context(enum led_profile_id profile);
 	void enter_bus_profile_context(std::shared_ptr<LEDBus> bus, enum led_profile_id profile);
+	void enter_bus_preset_context(std::shared_ptr<std::shared_ptr<Preset>> preset);
 	bool exit_context() override;
 
 	inline std::shared_ptr<LEDBus>& bus() { return bus_; }
@@ -53,6 +55,7 @@ protected:
 private:
 	std::shared_ptr<LEDBus> bus_;
 	enum led_profile_id profile_{LED_PROFILE_NORMAL};
+	std::shared_ptr<std::shared_ptr<Preset>> preset_;
 };
 
 } // namespace aurcor

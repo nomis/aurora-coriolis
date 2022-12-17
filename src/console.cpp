@@ -320,6 +320,17 @@ static void show_direction(Shell &shell, const std::vector<std::string> &argumen
 	shell.printfln(F("Direction: %s"), to_shell(shell).bus()->reverse() ? "reverse" : "normal");
 };
 
+static void edit(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &aurcor_shell = to_shell(shell);
+	auto preset = to_app(shell).edit(aurcor_shell.bus());
+
+	if (preset) {
+		aurcor_shell.enter_bus_preset_context(preset);
+	} else {
+		shell.printfln(F("Preset not running"));
+	}
+}
+
 /* [length] */
 static void length(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
@@ -461,6 +472,7 @@ namespace context {
 static constexpr auto main = ShellContext::MAIN;
 static constexpr auto bus = ShellContext::BUS;
 static constexpr auto bus_profile = ShellContext::BUS_PROFILE;
+static constexpr auto bus_preset = ShellContext::BUS_PRESET;
 
 __attribute__((noinline))
 static void exit(Shell &shell, const std::vector<std::string> &arguments) {
@@ -483,6 +495,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::main, user, {F("run")}, {F("<bus>"), F("<script>")}, main::run, bus_script_names_autocomplete);
 	commands->add_command(context::main, user, {F("stop")}, {F("<bus>")}, main::stop, bus_names_autocomplete);
 
+	commands->add_command(context::bus, admin, {F("edit")}, bus::edit);
 	commands->add_command(context::bus, user, {F("exit")}, context::exit);
 	commands->add_command(context::bus, user, {F("help")}, AppShell::main_help_function);
 	commands->add_command(context::bus, user, {F("length")}, {F("[length]")}, bus::length);
@@ -511,6 +524,10 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 			{F("<index>"), F("<red>"), F("<green>"), F("<blue>")},
 			bus_profile::set, bus_profile_index_values_autocomplete);
 	commands->add_command(context::bus_profile, admin, {F("save")}, bus_profile::save);
+
+	commands->add_command(context::bus_preset, user, {F("exit")}, context::exit);
+	commands->add_command(context::bus_preset, user, {F("help")}, AppShell::main_help_function);
+	commands->add_command(context::bus_preset, user, {F("logout")}, AppShell::main_logout_function);
 }
 
 AurcorShell::AurcorShell(app::App &app, Stream &stream, unsigned int context, unsigned int flags)
@@ -540,12 +557,22 @@ void AurcorShell::enter_bus_profile_context(std::shared_ptr<LEDBus> bus, enum le
 	}
 }
 
+void AurcorShell::enter_bus_preset_context(std::shared_ptr<std::shared_ptr<Preset>> preset) {
+	if (context() == ShellContext::BUS) {
+		enter_context(ShellContext::BUS_PRESET);
+		preset_ = preset;
+	}
+}
+
 bool AurcorShell::exit_context() {
 	auto prev_context = context();
 	bool ret = AppShell::exit_context();
 	auto new_context = context();
 	if (prev_context == ShellContext::BUS || new_context == ShellContext::MAIN) {
 		bus_.reset();
+	}
+	if (prev_context == ShellContext::BUS_PRESET || new_context == ShellContext::MAIN) {
+		preset_.reset();
 	}
 	return ret;
 }
@@ -575,6 +602,19 @@ std::string AurcorShell::context_text() {
 			text.append(LEDProfiles::lc_name(profile_));
 
 			if (profile().modified())
+				text.append("(unsaved)");
+
+			return text;
+		}
+
+	case ShellContext::BUS_PRESET: {
+			std::string text{"/bus/"};
+
+			text.append(bus_->name());
+			text.append("/preset/");
+			text.append(preset_->get()->name().c_str());
+
+			if (preset_->get()->modified())
 				text.append("(unsaved)");
 
 			return text;

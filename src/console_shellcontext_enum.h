@@ -18,3 +18,4 @@
 
 	BUS,
 	BUS_PROFILE,
+	BUS_PRESET,

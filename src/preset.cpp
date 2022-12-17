@@ -77,6 +77,17 @@ void Preset::script(const std::string &script) {
 	}
 }
 
+std::shared_ptr<std::shared_ptr<Preset>> Preset::edit() {
+	auto ref = editing_.lock();
+
+	if (!ref) {
+		ref = std::make_shared<std::shared_ptr<Preset>>(shared_from_this());
+		editing_ = ref;
+	}
+
+	return ref;
+}
+
 void Preset::loop() {
 	if (running_ && !mp_->running()) {
 		stop_time_ms_ = uuid::get_uptime_ms();
