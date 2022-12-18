@@ -159,6 +159,16 @@ static std::vector<std::string> script_names_autocomplete(Shell &shell,
 }
 
 __attribute__((noinline))
+static std::vector<std::string> preset_names_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	auto profiles = Preset::names();
+
+	std::sort(profiles.begin(), profiles.end());
+	return profiles;
+}
+
+__attribute__((noinline))
 static std::vector<std::string> bus_script_names_autocomplete(Shell &shell,
 			const std::vector<std::string> &current_arguments,
 			const std::string &next_argument) {
@@ -166,6 +176,19 @@ static std::vector<std::string> bus_script_names_autocomplete(Shell &shell,
 		return bus_names_autocomplete(shell, current_arguments, next_argument);
 	} else if (current_arguments.size() == 1) {
 		return script_names_autocomplete(shell, current_arguments, next_argument);
+	} else {
+		return {};
+	}
+}
+
+__attribute__((noinline))
+static std::vector<std::string> bus_preset_names_autocomplete(Shell &shell,
+			const std::vector<std::string> &current_arguments,
+			const std::string &next_argument) {
+	if (current_arguments.size() == 0) {
+		return bus_names_autocomplete(shell, current_arguments, next_argument);
+	} else if (current_arguments.size() == 1) {
+		return preset_names_autocomplete(shell, current_arguments, next_argument);
 	} else {
 		return {};
 	}
@@ -325,6 +348,31 @@ static void run(Shell &shell, const std::vector<std::string> &arguments) {
 	}
 }
 
+/* <bus> <preset> */
+static void start(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &bus_name = arguments[0];
+	auto &preset_name = arguments[1];
+	auto &app = to_app(shell);
+	auto bus = app.bus(bus_name);
+
+	if (bus) {
+		auto preset = std::make_shared<Preset>(app, bus);
+
+		if (!preset->name(preset_name)) {
+			shell.printfln(F("Invalid name"));
+			return;
+		}
+
+		if (preset->load()) {
+			app.start(bus, preset);
+		} else {
+			shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
+		}
+	} else {
+		shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
+	}
+}
+
 /* <bus> */
 static void stop(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &bus_name = arguments[0];
@@ -410,6 +458,25 @@ static void run(Shell &shell, const std::vector<std::string> &arguments) {
 		app.start(bus, preset);
 	} else {
 		shell.printfln(F("Script \"%s\" not found"), script_name.c_str());
+	}
+}
+
+/* <preset> */
+static void start(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &preset_name = arguments[0];
+	auto &app = to_app(shell);
+	auto &bus = to_shell(shell).bus();
+	auto preset = std::make_shared<Preset>(app, bus);
+
+	if (!preset->name(preset_name)) {
+		shell.printfln(F("Invalid name"));
+		return;
+	}
+
+	if (preset->load()) {
+		app.start(bus, preset);
+	} else {
+		shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
 	}
 }
 
@@ -619,6 +686,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::main, user, {F("mpy")}, {F("<bus>")}, main::mpy, bus_names_autocomplete);
 	commands->add_command(context::main, user, {F("profile")}, {F("<bus>"), F("<profile>")}, main::profile, bus_profile_names_autocomplete);
 	commands->add_command(context::main, user, {F("run")}, {F("<bus>"), F("<script>")}, main::run, bus_script_names_autocomplete);
+	commands->add_command(context::main, user, {F("start")}, {F("<bus>"), F("<preset>")}, main::start, bus_preset_names_autocomplete);
 	commands->add_command(context::main, user, {F("stop")}, {F("<bus>")}, main::stop, bus_names_autocomplete);
 
 	commands->add_command(context::bus, admin, {F("edit")}, bus::edit);
@@ -630,6 +698,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus, user, {F("profile")}, {F("<profile>")}, bus::profile, profile_names_autocomplete);
 	commands->add_command(context::bus, admin, {F("reverse")}, bus::reverse);
 	commands->add_command(context::bus, user, {F("run")}, {F("<script>")}, bus::run, script_names_autocomplete);
+	commands->add_command(context::bus, user, {F("start")}, {F("<preset>")}, bus::start, preset_names_autocomplete);
 	commands->add_command(context::bus, user, {F("stop")}, bus::stop);
 	commands->add_command(context::bus, user, {F("show")}, bus::show);
 

@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 extern "C" {
 	#include <py/mpconfig.h>
@@ -71,5 +72,6 @@ static inline constexpr unsigned int uint_divide(unsigned int divided, unsigned 
 
 bool allowed_file_name(const std::string &name);
 bool allowed_text(const std::string &text);
+std::vector<std::string> list_filenames(const char *directory_name, const char *extension);
 
 } // namespace aurcor

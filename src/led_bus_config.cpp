@@ -117,7 +117,7 @@ bool LEDBusConfig::load() {
 	auto filename = make_filename(bus_name_);
 	std::unique_lock data_lock{data_mutex_};
 
-	logger_.log(Level::DEBUG, F("Reading config from file %s"), filename.c_str());
+	logger_.debug(F("Reading config from file %s"), filename.c_str());
 
 	auto file = FS.open(filename.c_str(), "r");
 	if (file) {
@@ -134,7 +134,7 @@ bool LEDBusConfig::load() {
 
 		return result;
 	} else {
-		logger_.log(Level::DEBUG, F("Unable to open config file %s for reading"), filename.c_str());
+		logger_.debug(F("Unable to open config file %s for reading"), filename.c_str());
 		return false;
 	}
 }

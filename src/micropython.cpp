@@ -61,6 +61,7 @@ extern "C" {
 #include "aurcor/memory_pool.h"
 #include "aurcor/mp_print.h"
 #include "aurcor/mp_reader.h"
+#include "aurcor/util.h"
 
 #ifndef PSTR_ALIGN
 # define PSTR_ALIGN 4
@@ -506,27 +507,7 @@ MicroPythonFile::~MicroPythonFile() {
 }
 
 std::vector<std::string> MicroPythonFile::scripts() {
-	std::vector<std::string> names;
-	auto dir = app::FS.open(directory_name);
-
-	if (dir && dir.isDirectory()) {
-		while (1) {
-			auto file = dir.openNextFile();
-
-			if (file) {
-				std::string name = file.name();
-
-				if (name.length() > 4 && name.rfind(".mpy", name.length() - 4) == name.length() - 4) {
-					name.resize(name.length() - 4);
-					names.emplace_back(name);
-				}
-			} else {
-				break;
-			}
-		}
-	}
-
-	return names;
+	return list_filenames(directory_name, ".mpy");
 }
 
 bool MicroPythonFile::exists(const char *name) {

@@ -18,7 +18,11 @@
 
 #include "aurcor/util.h"
 
+#include <cstring>
 #include <string>
+#include <vector>
+
+#include "app/fs.h"
 
 namespace aurcor {
 
@@ -48,6 +52,31 @@ bool allowed_text(const std::string &text) {
 	}
 
 	return true;
+}
+
+std::vector<std::string> list_filenames(const char *directory_name, const char *extension) {
+	std::vector<std::string> names;
+	const size_t extension_len = std::strlen(extension);
+	auto dir = app::FS.open(directory_name);
+
+	if (dir && dir.isDirectory()) {
+		while (1) {
+			auto file = dir.openNextFile();
+
+			if (file) {
+				std::string name = file.name();
+
+				if (name.length() > extension_len && name.rfind(extension, name.length() - extension_len) == name.length() - extension_len) {
+					name.resize(name.length() - extension_len);
+					names.emplace_back(name);
+				}
+			} else {
+				break;
+			}
+		}
+	}
+
+	return names;
 }
 
 } // namespace aurcor

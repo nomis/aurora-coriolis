@@ -21,6 +21,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <string>
+#include <vector>
 
 #include <CBOR.h>
 #include <CBOR_parsing.h>
@@ -42,6 +43,8 @@ public:
 
 	Preset(App &app, std::shared_ptr<LEDBus> bus, std::string name = "");
 	~Preset() = default;
+
+	static std::vector<std::string> names();
 
 	std::string name(bool allow_unnamed = false) const;
 	bool name(std::string name);

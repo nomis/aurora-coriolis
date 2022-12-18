@@ -54,6 +54,10 @@ Preset::Preset(App &app, std::shared_ptr<LEDBus> bus, std::string name)
 	reset();
 }
 
+std::vector<std::string> Preset::names() {
+	return list_filenames(directory_name, ".cbor");
+}
+
 std::string Preset::name(bool allow_unnamed) const {
 	std::shared_lock data_lock{data_mutex_};
 
@@ -169,7 +173,7 @@ bool Preset::load() {
 	auto filename = make_filename();
 	std::unique_lock data_lock{data_mutex_};
 
-	logger_.notice(F("Reading preset from file %s to bus %s"), filename.c_str(), bus_->name());
+	logger_.info(F("Reading preset from file %s to bus %s"), filename.c_str(), bus_->name());
 
 	auto file = FS.open(filename.c_str(), "r");
 	if (file) {
