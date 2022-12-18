@@ -264,6 +264,27 @@ static void bus(Shell &shell, const std::vector<std::string> &arguments) {
 	}
 }
 
+/* <bus> */
+static void edit(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &bus_name = arguments[0];
+	auto &app = to_app(shell);
+	auto &aurcor_shell = to_shell(shell);
+	auto bus = app.bus(bus_name);
+
+	if (bus) {
+		auto preset = app.edit(bus);
+
+		if (preset) {
+			aurcor_shell.enter_bus_preset_context(bus, preset);
+			bus_preset::show(shell, {});
+		} else {
+			shell.printfln(F("Preset not running"));
+		}
+	} else {
+		shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
+	}
+}
+
 /* <bus> <profile> */
 static void profile(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &bus_name = arguments[0];
@@ -683,6 +704,7 @@ using namespace console;
 
 static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::main, user, {F("bus")}, {F("<bus>")}, main::bus, bus_names_autocomplete);
+	commands->add_command(context::main, admin, {F("edit")}, {F("<bus>")}, main::edit, bus_names_autocomplete);
 	commands->add_command(context::main, user, {F("mpy")}, {F("<bus>")}, main::mpy, bus_names_autocomplete);
 	commands->add_command(context::main, user, {F("profile")}, {F("<bus>"), F("<profile>")}, main::profile, bus_profile_names_autocomplete);
 	commands->add_command(context::main, user, {F("run")}, {F("<bus>"), F("<script>")}, main::run, bus_script_names_autocomplete);
@@ -761,6 +783,14 @@ void AurcorShell::enter_bus_profile_context(std::shared_ptr<LEDBus> bus, enum le
 void AurcorShell::enter_bus_preset_context(std::shared_ptr<std::shared_ptr<Preset>> preset) {
 	if (context() == ShellContext::BUS) {
 		enter_context(ShellContext::BUS_PRESET);
+		preset_ = preset;
+	}
+}
+
+void AurcorShell::enter_bus_preset_context(std::shared_ptr<LEDBus> bus, std::shared_ptr<std::shared_ptr<Preset>> preset) {
+	if (context() == ShellContext::MAIN) {
+		enter_context(ShellContext::BUS_PRESET);
+		bus_ = bus;
 		preset_ = preset;
 	}
 }

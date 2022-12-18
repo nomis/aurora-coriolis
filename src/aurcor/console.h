@@ -40,6 +40,7 @@ public:
 	void enter_bus_profile_context(enum led_profile_id profile);
 	void enter_bus_profile_context(std::shared_ptr<LEDBus> bus, enum led_profile_id profile);
 	void enter_bus_preset_context(std::shared_ptr<std::shared_ptr<Preset>> preset);
+	void enter_bus_preset_context(std::shared_ptr<LEDBus> bus, std::shared_ptr<std::shared_ptr<Preset>> preset);
 	bool exit_context() override;
 
 	inline std::shared_ptr<LEDBus>& bus() { return bus_; }
