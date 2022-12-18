@@ -559,6 +559,8 @@ static void save(Shell &shell, const std::vector<std::string> &arguments) {
 
 	if (!aurcor_shell.preset().save())
 		shell.printfln(F("Failed to save preset"));
+
+	to_app(shell).refresh(aurcor_shell.preset().name());
 }
 
 /* <script> */

@@ -123,7 +123,7 @@ bool App::detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Micro
 	auto it = mps_.find(bus);
 
 	if (it != mps_.end()) {
-		auto other_mp = it->second;
+		auto &other_mp = it->second;
 
 		if (mp && other_mp != mp)
 			return false;
@@ -158,14 +158,29 @@ std::shared_ptr<std::shared_ptr<Preset>> App::edit(const std::shared_ptr<LEDBus>
 	return nullptr;
 }
 
+void App::refresh(const std::string &preset_name) {
+	for (auto &bus_preset : presets_) {
+		auto &preset = *bus_preset.second;
+		if (preset.name() == preset_name
+				&& !preset.editing()
+				&& !preset.modified()) {
+			auto &bus = *bus_preset.first;
+
+			logger_.debug(F("Automatically reloading preset \"%s\" on %s[%s]"),
+				preset.name().c_str(), bus.type(), bus.name());
+			preset.load();
+		}
+	}
+}
+
 void App::stop(const std::shared_ptr<LEDBus> &bus) {
 	auto it = presets_.find(bus);
 
 	if (it != presets_.end()) {
-		auto preset = it->second;
+		auto &preset = *it->second;
 
 		logger_.trace(F("Stop preset \"%s\" on %s[%s]"),
-			preset->name().c_str(), bus->type(), bus->name());
+			preset.name().c_str(), bus->type(), bus->name());
 		presets_.erase(it);
 	}
 }
