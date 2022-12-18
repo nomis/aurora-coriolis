@@ -91,11 +91,15 @@ void LEDBusConfig::reverse(bool value) {
 void LEDBusConfig::reset() {
 	std::unique_lock data_lock{data_mutex_};
 
-	length_constrained(0);
-	reverse_ = false;
-
+	reset_locked();
 	data_lock.unlock();
 	save();
+}
+
+void LEDBusConfig::reset_locked() {
+	length_constrained(0);
+	length_set_ = true;
+	reverse_ = false;
 }
 
 std::string LEDBusConfig::make_filename(const char *bus_name) {
@@ -141,10 +145,11 @@ bool inline LEDBusConfig::load(cbor::Reader &reader) {
 	bool indefinite;
 
 	if (!cbor::expectMap(reader, &length, &indefinite) || indefinite) {
-		if (VERBOSE)
-			logger_.trace(F("File does not contain a definite length map"));
+		logger_.trace(F("File does not contain a definite length map"));
 		return false;
 	}
+
+	reset_locked();
 
 	while (length-- > 0) {
 		std::string key;

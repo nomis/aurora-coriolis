@@ -22,6 +22,10 @@
 #include <shared_mutex>
 #include <string>
 
+#include <CBOR.h>
+#include <CBOR_parsing.h>
+#include <CBOR_streams.h>
+
 #include <uuid/log.h>
 
 #include "aurcor/app.h"
@@ -57,7 +61,7 @@ public:
 	bool modified() const { return modified_; }
 
 	bool load();
-	void save();
+	bool save();
 
 	void loop();
 
@@ -66,7 +70,14 @@ private:
 
 	static uuid::log::Logger logger_;
 
+	bool description_constrained(std::string &description);
+
+	std::string make_filename() const;
 	bool restart() const;
+
+	void reset();
+	bool load(qindesign::cbor::Reader &reader);
+	void save(qindesign::cbor::Writer &writer);
 
 	App &app_;
 	std::shared_ptr<LEDBus> bus_;

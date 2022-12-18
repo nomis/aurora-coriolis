@@ -54,13 +54,9 @@ protected:
 	bool save();
 
 private:
-#ifdef ENV_NATIVE
-	static constexpr bool VERBOSE = true;
-#else
-	static constexpr bool VERBOSE = false;
-#endif
-
 	static std::string make_filename(const char *bus_name);
+
+	void reset_locked();
 
 	bool load(qindesign::cbor::Reader &reader);
 	void save(qindesign::cbor::Writer &writer);

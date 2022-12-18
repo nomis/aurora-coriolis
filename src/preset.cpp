@@ -22,8 +22,14 @@
 #include <shared_mutex>
 #include <string>
 
+#include <CBOR.h>
+#include <CBOR_parsing.h>
+#include <CBOR_streams.h>
+
 #include <uuid/log.h>
 
+#include "app/fs.h"
+#include "app/util.h"
 #include "aurcor/app.h"
 #include "aurcor/micropython.h"
 #include "aurcor/util.h"
@@ -32,7 +38,12 @@
 # define PSTR_ALIGN 4
 #endif
 
+namespace cbor = qindesign::cbor;
+using app::FS;
+
 static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "preset";
+
+static const char *directory_name = "/presets";
 
 namespace aurcor {
 
@@ -40,7 +51,7 @@ uuid::log::Logger Preset::logger_{FPSTR(__pstr__logger_name), uuid::log::Facilit
 
 Preset::Preset(App &app, std::shared_ptr<LEDBus> bus, std::string name)
 		: app_(app), bus_(bus), name_(name) {
-
+	reset();
 }
 
 std::string Preset::name(bool allow_unnamed) const {
@@ -76,11 +87,8 @@ std::string Preset::description() const {
 }
 
 bool Preset::description(std::string description) {
-	if (!allowed_text(description))
+	if (!description_constrained(description))
 		return false;
-
-	if (description.length() > MAX_DESCRIPTION_LENGTH)
-		description.resize(MAX_DESCRIPTION_LENGTH);
 
 	std::unique_lock data_lock{data_mutex_};
 
@@ -88,6 +96,16 @@ bool Preset::description(std::string description) {
 		description_ = description;
 		modified_ = true;
 	}
+
+	return true;
+}
+
+bool Preset::description_constrained(std::string &description) {
+	if (!allowed_text(description))
+		return false;
+
+	if (description.length() > MAX_DESCRIPTION_LENGTH)
+		description.resize(MAX_DESCRIPTION_LENGTH);
 
 	return true;
 }
@@ -120,6 +138,142 @@ std::shared_ptr<std::shared_ptr<Preset>> Preset::edit() {
 	}
 
 	return ref;
+}
+
+std::string Preset::make_filename() const {
+	std::string filename;
+
+	filename.append(directory_name);
+	filename.append("/");
+	filename.append(name_);
+	filename.append(".cbor");
+
+	return filename;
+}
+
+void Preset::reset() {
+	if (!script_.empty()) {
+		if (running_) {
+			script_changed_ = true;
+		} else {
+			stop_time_ms_ = 0;
+		}
+	}
+
+	description_ = "";
+	script_ = "";
+	modified_ = false;
+}
+
+bool Preset::load() {
+	auto filename = make_filename();
+	std::unique_lock data_lock{data_mutex_};
+
+	logger_.notice(F("Reading preset from file %s to bus %s"), filename.c_str(), bus_->name());
+
+	auto file = FS.open(filename.c_str(), "r");
+	if (file) {
+		cbor::Reader reader{file};
+
+		if (!cbor::expectValue(reader, cbor::DataType::kTag, cbor::kSelfDescribeTag))
+			file.seek(0);
+
+		if (!load(reader)) {
+			logger_.err(F("Preset file %s contains invalid data that has been ignored"), filename.c_str());
+			return false;
+		}
+
+		return true;
+	} else {
+		logger_.err(F("Unable to open preset file %s for reading"), filename.c_str());
+		return false;
+	}
+}
+
+bool Preset::load(cbor::Reader &reader) {
+	uint64_t entries;
+	bool indefinite;
+
+	if (!cbor::expectMap(reader, &entries, &indefinite) || indefinite) {
+		logger_.trace(F("File does not contain a definite length map"));
+		return false;
+	}
+
+	auto old_script = script_;
+	reset();
+	modified_ = true;
+
+	while (entries-- > 0) {
+		std::string key;
+
+		if (!app::read_text(reader, key))
+			return false;
+
+		if (key == "desc") {
+			std::string value;
+
+			if (!app::read_text(reader, value))
+				return false;
+
+			if (description_constrained(value))
+				description_ = value;
+		} else if (key == "script") {
+			std::string value;
+
+			if (!app::read_text(reader, value))
+				return false;
+
+			script_ = value;
+		} else if (!reader.isWellFormed()) {
+			return false;
+		}
+	}
+
+	if (script_ == old_script)
+		script_changed_ = false;
+
+	modified_ = false;
+	return true;
+}
+
+bool Preset::save() {
+	std::shared_lock data_lock{data_mutex_};
+	if (name_.empty())
+		return false;
+	auto filename = make_filename();
+
+	logger_.notice(F("Writing preset from bus %s to file %s"), bus_->name(), filename.c_str());
+
+	auto file = FS.open(filename.c_str(), "w", true);
+	if (!file) {
+		logger_.err(F("Unable to open preset file %s for writing"), filename.c_str());
+		return false;
+	}
+
+	cbor::Writer writer{file};
+
+	writer.writeTag(cbor::kSelfDescribeTag);
+	save(writer);
+
+	if (file.getWriteError()) {
+		logger_.err(F("Failed to write preset file %s: %u"), filename.c_str(), file.getWriteError());
+		file.close();
+		FS.remove(filename.c_str());
+		return false;
+	} else {
+		modified_ = false;
+		return true;
+	}
+}
+
+void Preset::save(cbor::Writer &writer) {
+	writer.beginMap(2);
+
+	app::write_text(writer, "desc");
+	app::write_text(writer, description_);
+
+	app::write_text(writer, "script");
+	app::write_text(writer, script_);
 }
 
 void Preset::loop() {

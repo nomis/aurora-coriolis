@@ -26,6 +26,9 @@ void setup() {
 	try {
 		application.start();
 	} catch (...) {
+#ifdef ENV_NATIVE
+		throw;
+#endif
 		application.exception(F("setup"));
 	}
 }
@@ -35,6 +38,9 @@ void loop() {
 		application.loop();
 		::yield();
 	} catch (...) {
+#ifdef ENV_NATIVE
+		throw;
+#endif
 		application.exception(F("loop"));
 	}
 }

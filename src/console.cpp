@@ -515,6 +515,16 @@ static void desc(Shell &shell, const std::vector<std::string> &arguments) {
 		shell.printfln(F("Invalid description"));
 }
 
+static void reload(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	if (!aurcor_shell.preset().load())
+		shell.printfln(F("Failed to reload preset"));
+}
+
 /* <name> */
 static void rename(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &name = arguments[0];
@@ -525,6 +535,30 @@ static void rename(Shell &shell, const std::vector<std::string> &arguments) {
 
 	if (!aurcor_shell.preset().name(name))
 		shell.printfln(F("Invalid name"));
+}
+
+/* [name] */
+static void save(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	if (!arguments.empty()) {
+		auto &name = arguments[0];
+		if (!aurcor_shell.preset().name(name)) {
+			shell.printfln(F("Invalid name"));
+			return;
+		}
+	}
+
+	if (aurcor_shell.preset().name().empty()) {
+		shell.printfln(F("Unable to save preset without a name"));
+		return;
+	}
+
+	if (!aurcor_shell.preset().save())
+		shell.printfln(F("Failed to save preset"));
 }
 
 /* <script> */
@@ -617,9 +651,11 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 
 	commands->add_command(context::bus_preset, user, {F("exit")}, context::exit);
 	commands->add_command(context::bus_preset, user, {F("help")}, AppShell::main_help_function);
+	commands->add_command(context::bus_preset, admin, {F("reload")}, bus_preset::reload);
 	commands->add_command(context::bus_preset, user, {F("logout")}, AppShell::main_logout_function);
 	commands->add_command(context::bus_preset, admin, {F("desc")}, {F("<description>")}, bus_preset::desc, preset_current_description_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("rename")}, {F("<name>")}, bus_preset::rename, preset_current_name_autocomplete);
+	commands->add_command(context::bus_preset, admin, {F("save")}, {F("[name]")}, bus_preset::save);
 	commands->add_command(context::bus_preset, admin, {F("script")}, {F("<script>")}, bus_preset::script, script_names_autocomplete);
 	commands->add_command(context::bus_preset, user, {F("show")}, bus_preset::show);
 }
