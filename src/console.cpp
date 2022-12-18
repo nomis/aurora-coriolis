@@ -202,20 +202,29 @@ __attribute__((noinline))
 static std::vector<std::string> preset_current_name_autocomplete(Shell &shell,
 		const std::vector<std::string> &current_arguments,
 		const std::string &next_argument) {
-	auto name = to_shell(shell).preset().name(true);
+	auto &aurcor_shell = to_shell(shell);
 
-	if (!name.empty()) {
-		return {name};
-	} else {
-		return {};
+	if (!aurcor_shell.preset_active()) {
+		auto name = aurcor_shell.preset().name(true);
+
+		if (!name.empty())
+			return {name};
 	}
+
+	return {};
 }
 
 __attribute__((noinline))
 static std::vector<std::string> preset_current_description_autocomplete(Shell &shell,
 		const std::vector<std::string> &current_arguments,
 		const std::string &next_argument) {
-	return {to_shell(shell).preset().description()};
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active()) {
+		return {aurcor_shell.preset().description()};
+	}
+
+	return {};
 }
 
 namespace main {
