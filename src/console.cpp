@@ -475,8 +475,29 @@ static void show_direction(Shell &shell, const std::vector<std::string> &argumen
 	shell.printfln(F("Direction: %s"), to_shell(shell).bus()->reverse() ? "reverse" : "normal");
 };
 
+/* [preset] */
 static void edit(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &aurcor_shell = to_shell(shell);
+
+	if (!arguments.empty()) {
+		auto &preset_name = arguments[0];
+		auto &app = to_app(shell);
+		auto &bus = to_shell(shell).bus();
+		auto preset = std::make_shared<Preset>(app, bus);
+
+		if (!preset->name(preset_name)) {
+			shell.printfln(F("Invalid name"));
+			return;
+		}
+
+		if (preset->load()) {
+			app.start(bus, preset);
+		} else {
+			shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
+			return;
+		}
+	}
+
 	auto preset = to_app(shell).edit(aurcor_shell.bus());
 
 	if (preset) {
@@ -760,7 +781,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::main, user, {F("start")}, {F("[bus]"), F("<preset>")}, main::start, bus_preset_names_autocomplete);
 	commands->add_command(context::main, user, {F("stop")}, {F("[bus]")}, main::stop, bus_names_autocomplete);
 
-	commands->add_command(context::bus, admin, {F("edit")}, bus::edit);
+	commands->add_command(context::bus, admin, {F("edit")}, {F("[preset]")}, bus::edit);
 	commands->add_command(context::bus, user, {F("length")}, {F("[length]")}, bus::length);
 	commands->add_command(context::bus, admin, {F("normal")}, bus::normal);
 	commands->add_command(context::bus, user, {F("profile")}, {F("<profile>")}, bus::profile, profile_names_autocomplete);
