@@ -688,11 +688,6 @@ static constexpr auto bus = ShellContext::BUS;
 static constexpr auto bus_profile = ShellContext::BUS_PROFILE;
 static constexpr auto bus_preset = ShellContext::BUS_PRESET;
 
-__attribute__((noinline))
-static void exit(Shell &shell, const std::vector<std::string> &arguments) {
-	shell.exit_context();
-}
-
 } // namespace context
 
 static constexpr auto user = CommandFlags::USER;
@@ -712,10 +707,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::main, user, {F("stop")}, {F("<bus>")}, main::stop, bus_names_autocomplete);
 
 	commands->add_command(context::bus, admin, {F("edit")}, bus::edit);
-	commands->add_command(context::bus, user, {F("exit")}, context::exit);
-	commands->add_command(context::bus, user, {F("help")}, AppShell::main_help_function);
 	commands->add_command(context::bus, user, {F("length")}, {F("[length]")}, bus::length);
-	commands->add_command(context::bus, user, {F("logout")}, AppShell::main_logout_function);
 	commands->add_command(context::bus, admin, {F("normal")}, bus::normal);
 	commands->add_command(context::bus, user, {F("profile")}, {F("<profile>")}, bus::profile, profile_names_autocomplete);
 	commands->add_command(context::bus, admin, {F("reverse")}, bus::reverse);
@@ -729,9 +721,6 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 			bus_profile::adjust, indexes_autocomplete);
 	commands->add_command(context::bus_profile, admin, {F("compact")}, bus_profile::compact);
 	commands->add_command(context::bus_profile, admin, {F("cp")}, {F("<index>"), F("<index>")}, bus_profile::cp, indexes_autocomplete);
-	commands->add_command(context::bus_profile, user, {F("exit")}, context::exit);
-	commands->add_command(context::bus_profile, user, {F("help")}, AppShell::main_help_function);
-	commands->add_command(context::bus_profile, user, {F("logout")}, AppShell::main_logout_function);
 	commands->add_command(context::bus_profile, admin, {F("mv")}, {F("<index>"), F("<index>")}, bus_profile::mv, indexes_autocomplete);
 	commands->add_command(context::bus_profile, admin, {F("reload")}, bus_profile::reload);
 	commands->add_command(context::bus_profile, admin, {F("reset")}, bus_profile::reset);
@@ -742,10 +731,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 			bus_profile::set, bus_profile_index_values_autocomplete);
 	commands->add_command(context::bus_profile, admin, {F("save")}, bus_profile::save);
 
-	commands->add_command(context::bus_preset, user, {F("exit")}, context::exit);
-	commands->add_command(context::bus_preset, user, {F("help")}, AppShell::main_help_function);
 	commands->add_command(context::bus_preset, admin, {F("reload")}, bus_preset::reload);
-	commands->add_command(context::bus_preset, user, {F("logout")}, AppShell::main_logout_function);
 	commands->add_command(context::bus_preset, admin, {F("desc")}, {F("<description>")}, bus_preset::desc, preset_current_description_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("rename")}, {F("<name>")}, bus_preset::rename, preset_current_name_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("save")}, {F("[name]")}, bus_preset::save);
