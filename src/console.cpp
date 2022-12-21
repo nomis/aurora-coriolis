@@ -127,7 +127,13 @@ static std::vector<std::string> bus_profile_names_autocomplete(Shell &shell,
 		const std::vector<std::string> &current_arguments,
 		const std::string &next_argument) {
 	if (current_arguments.size() == 0) {
-		return bus_names_autocomplete(shell, current_arguments, next_argument);
+		std::vector<std::string> values;
+		auto bus_names = bus_names_autocomplete(shell, current_arguments, next_argument);
+		auto profile_names = profile_names_autocomplete(shell, current_arguments, next_argument);
+
+		values.insert(values.end(), bus_names.begin(), bus_names.end());
+		values.insert(values.end(), profile_names.begin(), profile_names.end());
+		return values;
 	} else if (current_arguments.size() == 1) {
 		return profile_names_autocomplete(shell, current_arguments, next_argument);
 	} else {
@@ -173,7 +179,13 @@ static std::vector<std::string> bus_script_names_autocomplete(Shell &shell,
 			const std::vector<std::string> &current_arguments,
 			const std::string &next_argument) {
 	if (current_arguments.size() == 0) {
-		return bus_names_autocomplete(shell, current_arguments, next_argument);
+		std::vector<std::string> values;
+		auto bus_names = bus_names_autocomplete(shell, current_arguments, next_argument);
+		auto script_names = script_names_autocomplete(shell, current_arguments, next_argument);
+
+		values.insert(values.end(), bus_names.begin(), bus_names.end());
+		values.insert(values.end(), script_names.begin(), script_names.end());
+		return values;
 	} else if (current_arguments.size() == 1) {
 		return script_names_autocomplete(shell, current_arguments, next_argument);
 	} else {
@@ -186,7 +198,13 @@ static std::vector<std::string> bus_preset_names_autocomplete(Shell &shell,
 			const std::vector<std::string> &current_arguments,
 			const std::string &next_argument) {
 	if (current_arguments.size() == 0) {
-		return bus_names_autocomplete(shell, current_arguments, next_argument);
+		std::vector<std::string> values;
+		auto bus_names = bus_names_autocomplete(shell, current_arguments, next_argument);
+		auto preset_names = preset_names_autocomplete(shell, current_arguments, next_argument);
+
+		values.insert(values.end(), bus_names.begin(), bus_names.end());
+		values.insert(values.end(), preset_names.begin(), preset_names.end());
+		return values;
 	} else if (current_arguments.size() == 1) {
 		return preset_names_autocomplete(shell, current_arguments, next_argument);
 	} else {
@@ -250,26 +268,54 @@ static std::vector<std::string> preset_current_description_autocomplete(Shell &s
 	return {};
 }
 
-namespace main {
+static std::shared_ptr<LEDBus> default_bus(Shell &shell) {
+	Config config;
 
-/* <bus> */
-static void bus(Shell &shell, const std::vector<std::string> &arguments) {
-	auto &bus_name = arguments[0];
-	auto bus = to_app(shell).bus(bus_name);
-
-	if (bus) {
-		to_shell(shell).enter_bus_context(bus);
+	if (config.default_bus().empty()) {
+		shell.printfln(F("Default bus not set"));
+		return nullptr;
 	} else {
-		shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
+		auto bus = to_app(shell).bus(config.default_bus());
+
+		if (!bus) {
+			shell.printfln(F("Default bus \"%s\" not found"), config.default_bus().c_str());
+		}
+
+		return bus;
 	}
 }
 
-/* <bus> */
+static std::shared_ptr<LEDBus> lookup_bus_or_default(Shell &shell, const std::vector<std::string> &arguments, size_t index) {
+	if (arguments.size() > index) {
+		auto &bus_name = arguments[index];
+		auto bus = to_app(shell).bus(bus_name);
+
+		if (!bus) {
+			shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
+		}
+
+		return bus;
+	} else {
+		return default_bus(shell);
+	}
+}
+
+namespace main {
+
+/* [bus] */
+static void bus(Shell &shell, const std::vector<std::string> &arguments) {
+	auto bus = lookup_bus_or_default(shell, arguments, 0);
+
+	if (bus) {
+		to_shell(shell).enter_bus_context(bus);
+	}
+}
+
+/* [bus] */
 static void edit(Shell &shell, const std::vector<std::string> &arguments) {
-	auto &bus_name = arguments[0];
 	auto &app = to_app(shell);
 	auto &aurcor_shell = to_shell(shell);
-	auto bus = app.bus(bus_name);
+	auto bus = lookup_bus_or_default(shell, arguments, 0);
 
 	if (bus) {
 		auto preset = app.edit(bus);
@@ -280,17 +326,14 @@ static void edit(Shell &shell, const std::vector<std::string> &arguments) {
 		} else {
 			shell.printfln(F("Preset not running"));
 		}
-	} else {
-		shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
 	}
 }
 
-/* <bus> <profile> */
+/* [bus] <profile> */
 static void profile(Shell &shell, const std::vector<std::string> &arguments) {
-	auto &bus_name = arguments[0];
-	auto &profile_name = arguments[1];
-	auto &app = to_app(shell);
-	auto bus = app.bus(bus_name);
+	const bool has_bus_name = (arguments.size() >= 2);
+	auto &profile_name = has_bus_name ? arguments[1] : arguments[0];
+	auto bus = has_bus_name ? lookup_bus_or_default(shell, arguments, 0) : default_bus(shell);
 
 	if (bus) {
 		enum led_profile_id profile_id;
@@ -303,16 +346,12 @@ static void profile(Shell &shell, const std::vector<std::string> &arguments) {
 		} else {
 			shell.printfln(F("Profile \"%s\" not found"), profile_name.c_str());
 		}
-	} else {
-		shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
 	}
 }
 
-/* <bus> */
+/* [bus] */
 static void mpy(Shell &shell, const std::vector<std::string> &arguments) {
-	auto &bus_name = arguments[0];
-	auto &app = to_app(shell);
-	auto bus = app.bus(bus_name);
+	auto bus = lookup_bus_or_default(shell, arguments, 0);
 	std::shared_ptr<MicroPythonShell> mp;
 
 	if (bus) {
@@ -344,17 +383,15 @@ static void mpy(Shell &shell, const std::vector<std::string> &arguments) {
 
 			return false;
 		});
-	} else {
-		shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
 	}
 }
 
-/* <bus> <script> */
+/* [bus] <script> */
 static void run(Shell &shell, const std::vector<std::string> &arguments) {
-	auto &bus_name = arguments[0];
-	auto &script_name = arguments[1];
+	const bool has_bus_name = (arguments.size() >= 2);
+	auto &script_name = has_bus_name ? arguments[1] : arguments[0];
 	auto &app = to_app(shell);
-	auto bus = app.bus(bus_name);
+	auto bus = has_bus_name ? lookup_bus_or_default(shell, arguments, 0) : default_bus(shell);
 
 	if (bus) {
 		if (MicroPythonFile::exists(script_name.c_str())) {
@@ -364,17 +401,38 @@ static void run(Shell &shell, const std::vector<std::string> &arguments) {
 		} else {
 			shell.printfln(F("Script \"%s\" not found"), script_name.c_str());
 		}
-	} else {
-		shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
 	}
 }
 
-/* <bus> <preset> */
+/* [bus] */
+static void set_default_bus(Shell &shell, const std::vector<std::string> &arguments) {
+	Config config;
+
+	if (arguments.empty()) {
+		config.default_bus("");
+	} else {
+		auto &bus_name = arguments[0];
+		auto &app = to_app(shell);
+		auto bus = app.bus(bus_name);
+
+		if (bus) {
+			config.default_bus(bus_name);
+		} else {
+			shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
+			return;
+		}
+	}
+
+	config.commit();
+	shell.printfln(F("Default bus = %s"), config.default_bus().empty() ? "<unset>" : config.default_bus().c_str());
+}
+
+/* [bus] <preset> */
 static void start(Shell &shell, const std::vector<std::string> &arguments) {
-	auto &bus_name = arguments[0];
-	auto &preset_name = arguments[1];
+	const bool has_bus_name = (arguments.size() >= 2);
+	auto &preset_name = has_bus_name ? arguments[1] : arguments[0];
 	auto &app = to_app(shell);
-	auto bus = app.bus(bus_name);
+	auto bus = has_bus_name ? lookup_bus_or_default(shell, arguments, 0) : default_bus(shell);
 
 	if (bus) {
 		auto preset = std::make_shared<Preset>(app, bus);
@@ -389,22 +447,17 @@ static void start(Shell &shell, const std::vector<std::string> &arguments) {
 		} else {
 			shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
 		}
-	} else {
-		shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
 	}
 }
 
-/* <bus> */
+/* [bus] */
 static void stop(Shell &shell, const std::vector<std::string> &arguments) {
-	auto &bus_name = arguments[0];
 	auto &app = to_app(shell);
-	auto bus = app.bus(bus_name);
+	auto bus = lookup_bus_or_default(shell, arguments, 0);
 
 	if (bus) {
 		app.stop(bus);
 		app.detach(bus);
-	} else {
-		shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
 	}
 }
 
@@ -698,13 +751,14 @@ static constexpr auto admin = CommandFlags::ADMIN;
 using namespace console;
 
 static inline void setup_commands(std::shared_ptr<Commands> &commands) {
-	commands->add_command(context::main, user, {F("bus")}, {F("<bus>")}, main::bus, bus_names_autocomplete);
-	commands->add_command(context::main, admin, {F("edit")}, {F("<bus>")}, main::edit, bus_names_autocomplete);
-	commands->add_command(context::main, user, {F("mpy")}, {F("<bus>")}, main::mpy, bus_names_autocomplete);
-	commands->add_command(context::main, user, {F("profile")}, {F("<bus>"), F("<profile>")}, main::profile, bus_profile_names_autocomplete);
-	commands->add_command(context::main, user, {F("run")}, {F("<bus>"), F("<script>")}, main::run, bus_script_names_autocomplete);
-	commands->add_command(context::main, user, {F("start")}, {F("<bus>"), F("<preset>")}, main::start, bus_preset_names_autocomplete);
-	commands->add_command(context::main, user, {F("stop")}, {F("<bus>")}, main::stop, bus_names_autocomplete);
+	commands->add_command(context::main, user, {F("bus")}, {F("[bus]")}, main::bus, bus_names_autocomplete);
+	commands->add_command(context::main, admin, {F("edit")}, {F("[bus]")}, main::edit, bus_names_autocomplete);
+	commands->add_command(context::main, user, {F("mpy")}, {F("[bus]")}, main::mpy, bus_names_autocomplete);
+	commands->add_command(context::main, user, {F("profile")}, {F("[bus]"), F("<profile>")}, main::profile, bus_profile_names_autocomplete);
+	commands->add_command(context::main, user, {F("run")}, {F("[bus]"), F("<script>")}, main::run, bus_script_names_autocomplete);
+	commands->add_command(context::main, admin, {F("set"), F("default"), F("bus")}, {F("[bus]")}, main::set_default_bus, bus_names_autocomplete);
+	commands->add_command(context::main, user, {F("start")}, {F("[bus]"), F("<preset>")}, main::start, bus_preset_names_autocomplete);
+	commands->add_command(context::main, user, {F("stop")}, {F("[bus]")}, main::stop, bus_names_autocomplete);
 
 	commands->add_command(context::bus, admin, {F("edit")}, bus::edit);
 	commands->add_command(context::bus, user, {F("length")}, {F("[length]")}, bus::length);
@@ -847,6 +901,16 @@ std::string AurcorShell::context_text() {
 	}
 
 	return AppShell::context_text();
+}
+
+void AurcorShell::set_command(Shell &shell) {
+	Config config;
+
+	AppShell::set_command(shell);
+
+	if (shell.has_flags(CommandFlags::ADMIN)) {
+		shell.printfln(F("Default bus = %s"), config.default_bus().empty() ? "<unset>" : config.default_bus().c_str());
+	}
 }
 
 bool AurcorShell::preset_active(bool exit) {

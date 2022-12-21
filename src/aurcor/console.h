@@ -48,6 +48,7 @@ public:
 	inline enum led_profile_id profile_id() { return profile_; }
 	inline Preset& preset() { return **preset_; }
 
+	void set_command(Shell &shell) override;
 	bool preset_active(bool exit = true);
 
 protected:

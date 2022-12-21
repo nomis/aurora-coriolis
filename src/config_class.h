@@ -16,4 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define MCU_APP_CONFIG_DATA
+#define MCU_APP_CONFIG_DATA \
+	MCU_APP_CONFIG_SIMPLE(std::string, "", default_bus, "", "")
+
+public:
+    std::string default_bus() const;
+    void default_bus(const std::string &default_bus);
+
+private:
+	static std::string default_bus_;
