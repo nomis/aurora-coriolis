@@ -31,6 +31,7 @@
 
 #include "app/fs.h"
 #include "app/util.h"
+#include "aurcor/preset.h"
 #include "aurcor/util.h"
 
 #ifndef PSTR_ALIGN
@@ -88,6 +89,20 @@ void LEDBusConfig::reverse(bool value) {
 	}
 }
 
+std::string LEDBusConfig::default_preset() const {
+	std::shared_lock data_lock{data_mutex_};
+	return default_preset_;
+}
+
+void LEDBusConfig::default_preset(std::string value) {
+	std::unique_lock data_lock{data_mutex_};
+	if (default_preset_ != value) {
+		default_preset_ = value;
+		data_lock.unlock();
+		save();
+	}
+}
+
 void LEDBusConfig::reset() {
 	std::unique_lock data_lock{data_mutex_};
 
@@ -100,6 +115,7 @@ void LEDBusConfig::reset_locked() {
 	length_constrained(0);
 	length_set_ = true;
 	reverse_ = false;
+	default_preset_ = "";
 }
 
 std::string LEDBusConfig::make_filename(const char *bus_name) {
@@ -168,6 +184,16 @@ bool inline LEDBusConfig::load(cbor::Reader &reader) {
 		} else if (key == "reverse") {
 			if (!cbor::expectBoolean(reader, &reverse_))
 				return false;
+		} else if (key == "default_preset") {
+			std::string value;
+
+			if (!app::read_text(reader, value))
+				return false;
+
+			if (value.length() > Preset::MAX_NAME_LENGTH)
+				value.resize(Preset::MAX_NAME_LENGTH);
+
+			default_preset_ = value;
 		} else if (!reader.isWellFormed()) {
 			return false;
 		}
@@ -204,13 +230,16 @@ bool LEDBusConfig::save() {
 }
 
 void LEDBusConfig::save(cbor::Writer &writer) {
-	writer.beginMap(2);
+	writer.beginMap(3);
 
 	app::write_text(writer, "length");
 	writer.writeUnsignedInt(length_);
 
 	app::write_text(writer, "reverse");
 	writer.writeBoolean(reverse_);
+
+	app::write_text(writer, "default_preset");
+	app::write_text(writer, default_preset_);
 }
 
 } // namespace aurcor

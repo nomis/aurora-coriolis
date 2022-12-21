@@ -45,6 +45,9 @@ public:
 	bool reverse() const;
 	void reverse(bool value);
 
+	std::string default_preset() const;
+	void default_preset(std::string value);
+
 	void reset();
 
 protected:
@@ -68,6 +71,7 @@ private:
 	size_t length_;
 	bool length_set_{false};
 	bool reverse_{false};
+	std::string default_preset_;
 };
 
 } // namespace aurcor

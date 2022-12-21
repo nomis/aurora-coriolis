@@ -53,6 +53,8 @@ public:
 	inline void length(size_t value) { config_.length(value); }
 	inline bool reverse() const { return config_.reverse(); }
 	inline void reverse(bool value) { config_.reverse(value); }
+	inline std::string default_preset() const { return config_.default_preset(); }
+	inline void default_preset(std::string value) { config_.default_preset(value); }
 
 	inline LEDProfile& profile(enum led_profile_id id) { return profiles_.get(id); }
 	inline const LEDProfile& profile(enum led_profile_id id) const { return profiles_.get(id); }

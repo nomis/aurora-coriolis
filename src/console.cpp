@@ -175,6 +175,19 @@ static std::vector<std::string> preset_names_autocomplete(Shell &shell,
 }
 
 __attribute__((noinline))
+static std::vector<std::string> preset_names_default_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	if (current_arguments.size() == 0) {
+		return preset_names_autocomplete(shell, current_arguments, next_argument);
+	} else if (current_arguments.size() == 1) {
+		return {"default"};
+	} else {
+		return {};
+	}
+}
+
+__attribute__((noinline))
 static std::vector<std::string> bus_script_names_autocomplete(Shell &shell,
 			const std::vector<std::string> &current_arguments,
 			const std::string &next_argument) {
@@ -194,7 +207,7 @@ static std::vector<std::string> bus_script_names_autocomplete(Shell &shell,
 }
 
 __attribute__((noinline))
-static std::vector<std::string> bus_preset_names_autocomplete(Shell &shell,
+static std::vector<std::string> bus_preset_names_default_autocomplete(Shell &shell,
 			const std::vector<std::string> &current_arguments,
 			const std::string &next_argument) {
 	if (current_arguments.size() == 0) {
@@ -207,6 +220,8 @@ static std::vector<std::string> bus_preset_names_autocomplete(Shell &shell,
 		return values;
 	} else if (current_arguments.size() == 1) {
 		return preset_names_autocomplete(shell, current_arguments, next_argument);
+	} else if (current_arguments.size() == 2) {
+		return {"default"};
 	} else {
 		return {};
 	}
@@ -300,6 +315,12 @@ static std::shared_ptr<LEDBus> lookup_bus_or_default(Shell &shell, const std::ve
 	}
 }
 
+namespace bus {
+
+static void show_default_preset(Shell &shell, std::shared_ptr<LEDBus> &bus);
+
+} // namespace bus
+
 namespace main {
 
 /* [bus] */
@@ -308,6 +329,33 @@ static void bus(Shell &shell, const std::vector<std::string> &arguments) {
 
 	if (bus) {
 		to_shell(shell).enter_bus_context(bus);
+	}
+}
+
+/* [bus] <preset> */
+static void default_(Shell &shell, const std::vector<std::string> &arguments) {
+	const bool has_bus_name = (arguments.size() >= 2);
+	auto &preset_name = has_bus_name ? arguments[1] : arguments[0];
+	auto bus = has_bus_name ? lookup_bus_or_default(shell, arguments, 0) : default_bus(shell);
+
+	if (bus) {
+		if (!preset_name.empty()) {
+			auto &app = to_app(shell);
+			auto preset = std::make_shared<Preset>(app, bus);
+
+			if (!preset->name(preset_name)) {
+				shell.printfln(F("Invalid name"));
+				return;
+			}
+
+			if (!preset->load()) {
+				shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
+				return;
+			}
+		}
+
+		bus->default_preset(preset_name);
+		aurcor::console::bus::show_default_preset(shell, bus);
 	}
 }
 
@@ -427,7 +475,7 @@ static void set_default_bus(Shell &shell, const std::vector<std::string> &argume
 	shell.printfln(F("Default bus = %s"), config.default_bus().empty() ? "<unset>" : config.default_bus().c_str());
 }
 
-/* [bus] <preset> */
+/* [bus] <preset> [default] */
 static void start(Shell &shell, const std::vector<std::string> &arguments) {
 	const bool has_bus_name = (arguments.size() >= 2);
 	auto &preset_name = has_bus_name ? arguments[1] : arguments[0];
@@ -446,6 +494,14 @@ static void start(Shell &shell, const std::vector<std::string> &arguments) {
 			app.start(bus, preset);
 		} else {
 			shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
+			return;
+		}
+
+		if (arguments.size() >= 3 && arguments[2] == "default") {
+			if (shell.has_any_flags(CommandFlags::ADMIN)) {
+				bus->default_preset(preset_name);
+				aurcor::console::bus::show_default_preset(shell, bus);
+			}
 		}
 	}
 }
@@ -466,14 +522,48 @@ static void stop(Shell &shell, const std::vector<std::string> &arguments) {
 namespace bus {
 
 __attribute__((noinline))
-static void show_length(Shell &shell, const std::vector<std::string> &arguments) {
+static void show_length(Shell &shell) {
 	shell.printfln(F("Length: %zu"), to_shell(shell).bus()->length());
 };
 
 __attribute__((noinline))
-static void show_direction(Shell &shell, const std::vector<std::string> &arguments) {
+static void show_direction(Shell &shell) {
 	shell.printfln(F("Direction: %s"), to_shell(shell).bus()->reverse() ? "reverse" : "normal");
 };
+
+__attribute__((noinline))
+static void show_default_preset(Shell &shell, std::shared_ptr<LEDBus> &bus) {
+	auto default_preset = bus->default_preset();
+	shell.printfln(F("Default preset: %s"), default_preset.empty() ? "<unset>" : default_preset.c_str());
+};
+
+/* [preset] */
+static void default_(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &bus = to_shell(shell).bus();
+
+	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
+		auto &preset_name = arguments[0];
+
+		if (!preset_name.empty()) {
+			auto &app = to_app(shell);
+			auto preset = std::make_shared<Preset>(app, bus);
+
+			if (!preset->name(preset_name)) {
+				shell.printfln(F("Invalid name"));
+				return;
+			}
+
+			if (!preset->load()) {
+				shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
+				return;
+			}
+		}
+
+		bus->default_preset(preset_name);
+	}
+
+	show_default_preset(shell, bus);
+}
 
 /* [preset] */
 static void edit(Shell &shell, const std::vector<std::string> &arguments) {
@@ -513,12 +603,12 @@ static void length(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
 		to_shell(shell).bus()->length(std::atol(arguments[0].c_str()));
 	}
-	show_length(shell, {});
+	show_length(shell);
 }
 
 static void normal(Shell &shell, const std::vector<std::string> &arguments) {
 	to_shell(shell).bus()->reverse(false);
-	show_direction(shell, {});
+	show_direction(shell);
 }
 
 /* <profile> */
@@ -538,7 +628,7 @@ static void profile(Shell &shell, const std::vector<std::string> &arguments) {
 
 static void reverse(Shell &shell, const std::vector<std::string> &arguments) {
 	to_shell(shell).bus()->reverse(true);
-	show_direction(shell, {});
+	show_direction(shell);
 }
 
 /* <script> */
@@ -556,7 +646,7 @@ static void run(Shell &shell, const std::vector<std::string> &arguments) {
 	}
 }
 
-/* <preset> */
+/* <preset> [default] */
 static void start(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &preset_name = arguments[0];
 	auto &app = to_app(shell);
@@ -572,6 +662,14 @@ static void start(Shell &shell, const std::vector<std::string> &arguments) {
 		app.start(bus, preset);
 	} else {
 		shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
+		return;
+	}
+
+	if (arguments.size() >= 2 && arguments[1] == "default") {
+		if (shell.has_any_flags(CommandFlags::ADMIN)) {
+			bus->default_preset(preset_name);
+			show_default_preset(shell, bus);
+		}
 	}
 }
 
@@ -584,8 +682,9 @@ static void stop(Shell &shell, const std::vector<std::string> &arguments) {
 }
 
 static void show(Shell &shell, const std::vector<std::string> &arguments) {
-	show_length(shell, {});
-	show_direction(shell, {});
+	show_length(shell);
+	show_direction(shell);
+	show_default_preset(shell, to_shell(shell).bus());
 }
 
 } // namespace bus
@@ -773,21 +872,23 @@ using namespace console;
 
 static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::main, user, {F("bus")}, {F("[bus]")}, main::bus, bus_names_autocomplete);
+	commands->add_command(context::main, admin, {F("default")}, {F("[bus]"), F("<preset>")}, main::default_, bus_preset_names_default_autocomplete);
 	commands->add_command(context::main, admin, {F("edit")}, {F("[bus]")}, main::edit, bus_names_autocomplete);
 	commands->add_command(context::main, user, {F("mpy")}, {F("[bus]")}, main::mpy, bus_names_autocomplete);
 	commands->add_command(context::main, user, {F("profile")}, {F("[bus]"), F("<profile>")}, main::profile, bus_profile_names_autocomplete);
 	commands->add_command(context::main, user, {F("run")}, {F("[bus]"), F("<script>")}, main::run, bus_script_names_autocomplete);
 	commands->add_command(context::main, admin, {F("set"), F("default"), F("bus")}, {F("[bus]")}, main::set_default_bus, bus_names_autocomplete);
-	commands->add_command(context::main, user, {F("start")}, {F("[bus]"), F("<preset>")}, main::start, bus_preset_names_autocomplete);
+	commands->add_command(context::main, user, {F("start")}, {F("[bus]"), F("<preset>"), F("[default]")}, main::start, bus_preset_names_default_autocomplete);
 	commands->add_command(context::main, user, {F("stop")}, {F("[bus]")}, main::stop, bus_names_autocomplete);
 
+	commands->add_command(context::bus, user, {F("default")}, {F("[preset]")}, bus::default_, preset_names_autocomplete);
 	commands->add_command(context::bus, admin, {F("edit")}, {F("[preset]")}, bus::edit);
 	commands->add_command(context::bus, user, {F("length")}, {F("[length]")}, bus::length);
 	commands->add_command(context::bus, admin, {F("normal")}, bus::normal);
 	commands->add_command(context::bus, user, {F("profile")}, {F("<profile>")}, bus::profile, profile_names_autocomplete);
 	commands->add_command(context::bus, admin, {F("reverse")}, bus::reverse);
 	commands->add_command(context::bus, user, {F("run")}, {F("<script>")}, bus::run, script_names_autocomplete);
-	commands->add_command(context::bus, user, {F("start")}, {F("<preset>")}, bus::start, preset_names_autocomplete);
+	commands->add_command(context::bus, user, {F("start")}, {F("<preset>"), F("[default]")}, bus::start, preset_names_default_autocomplete);
 	commands->add_command(context::bus, user, {F("stop")}, bus::stop);
 	commands->add_command(context::bus, user, {F("show")}, bus::show);
 
@@ -929,7 +1030,7 @@ void AurcorShell::set_command(Shell &shell) {
 
 	AppShell::set_command(shell);
 
-	if (shell.has_flags(CommandFlags::ADMIN)) {
+	if (shell.has_any_flags(CommandFlags::ADMIN)) {
 		shell.printfln(F("Default bus = %s"), config.default_bus().empty() ? "<unset>" : config.default_bus().c_str());
 	}
 }

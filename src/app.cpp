@@ -67,10 +67,6 @@ void App::init() {
 #endif
 
 	MicroPython::setup(buses_.size());
-}
-
-void App::start() {
-	app::App::start();
 
 #ifndef ENV_NATIVE
 	auto cfg = esp_pthread_get_default_config();
@@ -79,6 +75,33 @@ void App::start() {
 	cfg.inherit_cfg = true;
 	esp_pthread_set_cfg(&cfg);
 #endif
+
+	for (auto &entry : buses_) {
+		auto &bus = entry.second;
+		auto preset_name = bus->default_preset();
+
+		if (preset_name.empty())
+			continue;
+
+		auto preset = std::make_shared<Preset>(*this, bus);
+
+		if (!preset->name(preset_name)) {
+			logger_.err(F("Default preset \"%s\" for bus \"%s\" is invalid"), preset_name.c_str(), bus->name());
+			continue;
+		}
+
+		if (!preset->load()) {
+			logger_.err(F("Default preset \"%s\" for bus \"%s\" not found"), preset_name.c_str(), bus->name());
+			continue;
+		}
+
+		start(bus, preset);
+		preset->loop();
+	}
+}
+
+void App::start() {
+	app::App::start();
 }
 
 void App::loop() {
