@@ -62,9 +62,13 @@ public:
 	bool editing() const { return !editing_.expired(); }
 	std::shared_ptr<std::shared_ptr<Preset>> edit();
 	bool modified() const { return modified_; }
+	void modified(bool modified) { modified_ = modified; }
 
 	bool load();
 	bool save();
+
+	bool rename(const Preset &destination);
+	bool remove();
 
 	void loop();
 

@@ -196,6 +196,28 @@ void App::refresh(const std::string &preset_name) {
 	}
 }
 
+void App::renamed(const std::string &preset_from_name, const std::string &preset_to_name) {
+	refresh(preset_to_name);
+
+	for (auto &bus_preset : presets_) {
+		auto &preset = *bus_preset.second;
+		if (preset.name() == preset_from_name) {
+			auto &bus = *bus_preset.first;
+
+			if (!preset_to_name.empty() && !preset.editing() && !preset.modified()) {
+				logger_.trace(F("Automatically renaming preset \"%s\" on %s[%s] to \"%s\""),
+					preset.name().c_str(), bus.type(), bus.name(), preset_to_name.c_str());
+				preset.name(preset_to_name);
+				preset.modified(false);
+			} else {
+				logger_.trace(F("Automatically marking preset \"%s\" on %s[%s] as modified (deleted)"),
+					preset.name().c_str(), bus.type(), bus.name());
+				preset.modified(true);
+			}
+		}
+	}
+}
+
 void App::stop(const std::shared_ptr<LEDBus> &bus) {
 	auto it = presets_.find(bus);
 

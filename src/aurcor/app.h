@@ -48,6 +48,8 @@ public:
 	void start(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Preset> &preset);
 	std::shared_ptr<std::shared_ptr<Preset>> edit(const std::shared_ptr<LEDBus> &bus);
 	void refresh(const std::string &preset_name);
+	void renamed(const std::string &preset_from_name, const std::string &preset_to_name);
+	inline void deleted(const std::string &preset_from_name) { renamed(preset_from_name, ""); }
 	void stop(const std::shared_ptr<LEDBus> &bus);
 
 private:

@@ -434,6 +434,54 @@ static void mpy(Shell &shell, const std::vector<std::string> &arguments) {
 	}
 }
 
+/* <preset> <preset> */
+static void mv(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &preset_from_name = arguments[0];
+	auto &preset_to_name = arguments[1];
+	auto &app = to_app(shell);
+	auto preset_from = std::make_shared<Preset>(app, nullptr);
+	auto preset_to = std::make_shared<Preset>(app, nullptr);
+
+	if (!preset_from->name(preset_from_name)) {
+		shell.printfln(F("Invalid source name"));
+		return;
+	}
+
+	if (!preset_to->name(preset_to_name)) {
+		shell.printfln(F("Invalid destination name"));
+		return;
+	}
+
+	if (preset_from->name() == preset_to->name())
+		return;
+
+	if (!preset_from->rename(*preset_to)) {
+		shell.printfln(F("Preset \"%s\" not found"), preset_from_name.c_str());
+		return;
+	}
+
+	app.renamed(preset_from_name, preset_to_name);
+}
+
+/* <preset> */
+static void rm(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &preset_name = arguments[0];
+	auto &app = to_app(shell);
+	auto preset = std::make_shared<Preset>(app, nullptr);
+
+	if (!preset->name(preset_name)) {
+		shell.printfln(F("Invalid name"));
+		return;
+	}
+
+	if (!preset->remove()) {
+		shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
+		return;
+	}
+
+	app.deleted(preset_name);
+}
+
 /* [bus] <script> */
 static void run(Shell &shell, const std::vector<std::string> &arguments) {
 	const bool has_bus_name = (arguments.size() >= 2);
@@ -875,8 +923,10 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::main, admin, {F("default")}, {F("[bus]"), F("<preset>")}, main::default_, bus_preset_names_default_autocomplete);
 	commands->add_command(context::main, admin, {F("edit")}, {F("[bus]")}, main::edit, bus_names_autocomplete);
 	commands->add_command(context::main, user, {F("mpy")}, {F("[bus]")}, main::mpy, bus_names_autocomplete);
+	commands->add_command(context::main, admin, {F("mv")}, {F("<preset>"), F("<preset>")}, main::mv, preset_names_autocomplete);
 	commands->add_command(context::main, user, {F("profile")}, {F("[bus]"), F("<profile>")}, main::profile, bus_profile_names_autocomplete);
 	commands->add_command(context::main, user, {F("run")}, {F("[bus]"), F("<script>")}, main::run, bus_script_names_autocomplete);
+	commands->add_command(context::main, admin, {F("rm")}, {F("<preset>")}, main::rm, preset_names_autocomplete);
 	commands->add_command(context::main, admin, {F("set"), F("default"), F("bus")}, {F("[bus]")}, main::set_default_bus, bus_names_autocomplete);
 	commands->add_command(context::main, user, {F("start")}, {F("[bus]"), F("<preset>"), F("[default]")}, main::start, bus_preset_names_default_autocomplete);
 	commands->add_command(context::main, user, {F("stop")}, {F("[bus]")}, main::stop, bus_names_autocomplete);

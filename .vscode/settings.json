@@ -2,13 +2,14 @@
 	"C_Cpp.default.cppStandard": "c++17",
 	"C_Cpp.default.cStandard": "c11",
 	"C_Cpp.default.includePath": [
-		"${workspaceFolder}/.pio/**",
 		"${workspaceFolder}/include",
 		"${workspaceFolder}/lib/micropython/port/build/genhdr",
 		"${workspaceFolder}/lib/micropython/src",
 		"${workspaceFolder}/src",
 		"${workspaceFolder}/src/app/native",
-		"${workspaceFolder}/test"
+		"${workspaceFolder}/test",
+		"${workspaceFolder}/../mcu-uuid-*/src",
+		"${workspaceFolder}/.pio/**"
 	],
 	"C_Cpp.default.defines": [
 		"ARDUINO",

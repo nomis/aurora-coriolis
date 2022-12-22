@@ -280,6 +280,49 @@ void Preset::save(cbor::Writer &writer) {
 	app::write_text(writer, script_);
 }
 
+bool Preset::rename(const Preset &destination) {
+	std::unique_lock data_lock{data_mutex_};
+	std::shared_lock data_lock2{destination.data_mutex_};
+
+	if (name_.empty() || destination.name_.empty())
+		return false;
+
+	auto filename_from = make_filename();
+	auto filename_to = destination.make_filename();
+
+	if (FS.exists(filename_from.c_str())) {
+		if (FS.exists(filename_to.c_str())) {
+			logger_.notice(F("Deleting preset file %s"), filename_to.c_str());
+			FS.remove(filename_to.c_str());
+		}
+
+		logger_.notice(F("Renaming preset file from %s to %s"), filename_from.c_str(), filename_to.c_str());
+		FS.rename(filename_from.c_str(), filename_to.c_str());
+		name_ = destination.name_;
+		return true;
+	} else {
+		return false;
+	}
+}
+
+bool Preset::remove() {
+	std::shared_lock data_lock{data_mutex_};
+
+	if (name_.empty())
+		return false;
+
+	auto filename = make_filename();
+
+	if (FS.exists(filename.c_str())) {
+		logger_.notice(F("Deleting preset file %s"), filename.c_str());
+		FS.remove(filename.c_str());
+		modified_ = true;
+		return true;
+	} else {
+		return false;
+	}
+}
+
 void Preset::loop() {
 	if (running_ && !mp_->running()) {
 		stop_time_ms_ = uuid::get_uptime_ms();
