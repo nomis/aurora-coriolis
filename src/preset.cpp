@@ -133,6 +133,20 @@ void Preset::script(const std::string &script) {
 	}
 }
 
+bool Preset::reverse() const {
+	std::shared_lock data_lock{data_mutex_};
+	return reverse_;
+}
+
+void Preset::reverse(bool reverse) {
+	std::unique_lock data_lock{data_mutex_};
+
+	if (reverse_ != reverse) {
+		reverse_ = reverse;
+		modified_ = true;
+	}
+}
+
 std::shared_ptr<std::shared_ptr<Preset>> Preset::edit() {
 	auto ref = editing_.lock();
 
@@ -166,6 +180,7 @@ void Preset::reset() {
 
 	description_ = "";
 	script_ = "";
+	reverse_ = false;
 	modified_ = false;
 }
 
@@ -229,6 +244,9 @@ bool Preset::load(cbor::Reader &reader) {
 				return false;
 
 			script_ = value;
+		} else if (key == "reverse") {
+			if (!cbor::expectBoolean(reader, &reverse_))
+				return false;
 		} else if (!reader.isWellFormed()) {
 			return false;
 		}
@@ -272,13 +290,16 @@ bool Preset::save() {
 }
 
 void Preset::save(cbor::Writer &writer) {
-	writer.beginMap(2);
+	writer.beginMap(3);
 
 	app::write_text(writer, "desc");
 	app::write_text(writer, description_);
 
 	app::write_text(writer, "script");
 	app::write_text(writer, script_);
+
+	app::write_text(writer, "reverse");
+	writer.writeBoolean(reverse_);
 }
 
 bool Preset::rename(const Preset &destination) {

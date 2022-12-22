@@ -62,7 +62,7 @@ bool LEDBus::ready() const {
 	return !busy_;
 }
 
-void LEDBus::write(const uint8_t *data, size_t size) {
+void LEDBus::write(const uint8_t *data, size_t size, bool reverse_order) {
 	if (!semaphore_)
 		return;
 
@@ -74,7 +74,7 @@ void LEDBus::write(const uint8_t *data, size_t size) {
 	busy_ = true;
 	last_update_us_ = current_time_us();
 
-	start(data, size);
+	start(data, size, reverse_order ^ reverse());
 }
 
 void LEDBus::finish() {
@@ -94,16 +94,15 @@ IRAM_ATTR void LEDBus::finish_isr() {
 NullLEDBus::NullLEDBus(const char *name) : LEDBus(name, MAX_LEDS / 10) {
 }
 
-void NullLEDBus::start(const uint8_t *data, size_t length) {
+void NullLEDBus::start(const uint8_t *data, size_t length, bool reverse_order) {
 	finish();
 }
 
 ByteBufferLEDBus::ByteBufferLEDBus(const char *name) : LEDBus(name) {
 }
 
-void ByteBufferLEDBus::start(const uint8_t *data, size_t size) {
+void ByteBufferLEDBus::start(const uint8_t *data, size_t size, bool reverse_order) {
 	const size_t max_bytes = length() * BYTES_PER_LED;
-	const bool reverse_order = reverse();
 
 	size = std::min(max_bytes, size);
 

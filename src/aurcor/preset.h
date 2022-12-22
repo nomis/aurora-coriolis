@@ -55,6 +55,9 @@ public:
 	std::string script() const;
 	void script(const std::string &script);
 
+	bool reverse() const;
+	void reverse(bool reverse);
+
 	/* Not protected by a mutex; assumes modifications only happen from one
 	 * thread. Making these thread-safe would require an extra mutex to avoid
 	 * blocking other readers when saving the preset.
@@ -97,6 +100,7 @@ private:
 	std::string description_;
 	std::string script_;
 	bool script_changed_{false};
+	bool reverse_{false};
 
 	std::weak_ptr<std::shared_ptr<Preset>> editing_;
 	bool modified_{false};

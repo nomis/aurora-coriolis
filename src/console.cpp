@@ -400,15 +400,16 @@ static void list_buses(Shell &shell, const std::vector<std::string> &arguments) 
 static void list_presets(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &app = to_app(shell);
 
-	shell.printfln(F("Name                                             Description "));
-	shell.printfln(F("------------------------------------------------ ------------------------------------------------"));
+	shell.printfln(F("Name                                             Description                                      Direction"));
+	shell.printfln(F("------------------------------------------------ ------------------------------------------------ ---------"));
 
 	for (auto &preset_name : Preset::names()) {
 		auto preset = std::make_shared<Preset>(app, nullptr);
 
 		if (preset->name(preset_name) && preset->load()) {
 			shell.printfln(F("%-48s %-48s"),
-				preset->name().c_str(), preset->description().c_str());
+				preset->name().c_str(), preset->description().c_str(),
+				preset->reverse() ? "reverse" : "normal");
 		}
 	}
 }
@@ -882,6 +883,24 @@ static void name(Shell &shell, const std::vector<std::string> &arguments) {
 		shell.printfln(F("Invalid name"));
 }
 
+static void normal(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	aurcor_shell.preset().reverse(false);
+}
+
+static void reverse(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	aurcor_shell.preset().reverse(true);
+}
+
 /* [name] */
 static void save(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &aurcor_shell = to_shell(shell);
@@ -934,6 +953,7 @@ static void show(Shell &shell, const std::vector<std::string> &arguments) {
 	shell.printfln(F("Name:        %s"), preset.name().c_str());
 	shell.printfln(F("Description: %s"), preset.description().c_str());
 	shell.printfln(F("Script:      %s"), preset.script().c_str());
+	shell.printfln(F("Direction:   %s"), preset.reverse() ? "reverse" : "normal");
 }
 
 } // namespace bus_preset
@@ -998,6 +1018,8 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_preset, admin, {F("reload")}, bus_preset::reload);
 	commands->add_command(context::bus_preset, admin, {F("desc")}, {F("<description>")}, bus_preset::desc, preset_current_description_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("name")}, {F("<name>")}, bus_preset::name, preset_current_name_autocomplete);
+	commands->add_command(context::bus_preset, admin, {F("normal")}, bus_preset::normal);
+	commands->add_command(context::bus_preset, admin, {F("reverse")}, bus_preset::reverse);
 	commands->add_command(context::bus_preset, admin, {F("save")}, {F("[name]")}, bus_preset::save);
 	commands->add_command(context::bus_preset, admin, {F("script")}, {F("<script>")}, bus_preset::script, script_names_autocomplete);
 	commands->add_command(context::bus_preset, user, {F("show")}, bus_preset::show);

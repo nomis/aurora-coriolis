@@ -63,10 +63,10 @@ public:
 
 	inline uint64_t last_update_us() const { return last_update_us_; }
 	bool ready() const;
-	void write(const uint8_t *data, size_t size); /* data is in RGB order */
+	void write(const uint8_t *data, size_t size, bool reverse_order); /* data is in RGB order */
 
 protected:
-	virtual void start(const uint8_t *data, size_t size) = 0;
+	virtual void start(const uint8_t *data, size_t size, bool reverse_order) = 0;
 	void finish();
 	IRAM_ATTR void finish_isr();
 
@@ -94,7 +94,7 @@ public:
 	const char *type() const override { return "NullLEDBus"; }
 
 protected:
-	void start(const uint8_t *data, size_t size) final override;
+	void start(const uint8_t *data, size_t size, bool reverse_order) final override;
 };
 
 class ByteBufferLEDBus: public LEDBus {
@@ -103,7 +103,7 @@ public:
 	virtual ~ByteBufferLEDBus() = default;
 
 protected:
-	void start(const uint8_t *data, size_t size) final override;
+	void start(const uint8_t *data, size_t size, bool reverse_order) final override;
 	virtual void transmit() = 0;
 
 	std::array<uint8_t,MAX_BYTES> buffer_{};

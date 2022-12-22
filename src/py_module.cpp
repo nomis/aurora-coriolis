@@ -38,6 +38,7 @@ extern "C" {
 # include "aurcor/led_profiles.h"
 # include "aurcor/memory_pool.h"
 # include "aurcor/micropython.h"
+# include "aurcor/preset.h"
 # include "aurcor/util.h"
 #endif
 
@@ -391,7 +392,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 			mp_hal_delay_us(start_us - now_us);
 	}
 
-	bus_->write(buffer, out_bytes);
+	bus_->write(buffer, out_bytes, preset_->reverse());
 
 	return MP_ROM_NONE;
 }
