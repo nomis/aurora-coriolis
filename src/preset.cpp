@@ -173,7 +173,8 @@ bool Preset::load() {
 	auto filename = make_filename();
 	std::unique_lock data_lock{data_mutex_};
 
-	logger_.info(F("Reading preset from file %s to bus %s"), filename.c_str(), bus_->name());
+	if (bus_)
+		logger_.info(F("Reading preset from file %s to bus %s"), filename.c_str(), bus_->name());
 
 	auto file = FS.open(filename.c_str(), "r");
 	if (file) {

@@ -377,6 +377,42 @@ static void edit(Shell &shell, const std::vector<std::string> &arguments) {
 	}
 }
 
+static void list_buses(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &app = to_app(shell);
+
+	shell.printfln(F("Name         Length Direction  Current Preset                                   Default Preset"));
+	shell.printfln(F("------------ ------ ---------  ------------------------------------------------ ------------------------------------------------"));
+
+	for (auto &bus_name : app.bus_names()) {
+		auto bus = app.bus(bus_name);
+		auto preset = app.edit(bus);
+
+		if (bus) {
+			shell.printfln(F("%-12s %6u %-9s %c%-48s %-48s"), bus->name(), bus->length(),
+				bus->reverse() ? "reverse" : "normal",
+				preset ? (preset->get()->modified() ? '*' : ' ') : ' ',
+				preset ? preset->get()->name().c_str() : "<none>",
+				bus->default_preset().empty() ? "<unset>" : bus->default_preset().c_str());
+		}
+	}
+}
+
+static void list_presets(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &app = to_app(shell);
+
+	shell.printfln(F("Name                                             Description "));
+	shell.printfln(F("------------------------------------------------ ------------------------------------------------"));
+
+	for (auto &preset_name : Preset::names()) {
+		auto preset = std::make_shared<Preset>(app, nullptr);
+
+		if (preset->name(preset_name) && preset->load()) {
+			shell.printfln(F("%-48s %-48s"),
+				preset->name().c_str(), preset->description().c_str());
+		}
+	}
+}
+
 /* [bus] <profile> */
 static void profile(Shell &shell, const std::vector<std::string> &arguments) {
 	const bool has_bus_name = (arguments.size() >= 2);
@@ -835,7 +871,7 @@ static void reload(Shell &shell, const std::vector<std::string> &arguments) {
 }
 
 /* <name> */
-static void rename(Shell &shell, const std::vector<std::string> &arguments) {
+static void name(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &name = arguments[0];
 	auto &aurcor_shell = to_shell(shell);
 
@@ -922,6 +958,8 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::main, user, {F("bus")}, {F("[bus]")}, main::bus, bus_names_autocomplete);
 	commands->add_command(context::main, admin, {F("default")}, {F("[bus]"), F("<preset>")}, main::default_, bus_preset_names_default_autocomplete);
 	commands->add_command(context::main, admin, {F("edit")}, {F("[bus]")}, main::edit, bus_names_autocomplete);
+	commands->add_command(context::main, user, {F("list"), F("buses")}, main::list_buses);
+	commands->add_command(context::main, user, {F("list"), F("presets")}, main::list_presets);
 	commands->add_command(context::main, user, {F("mpy")}, {F("[bus]")}, main::mpy, bus_names_autocomplete);
 	commands->add_command(context::main, admin, {F("mv")}, {F("<preset>"), F("<preset>")}, main::mv, preset_names_autocomplete);
 	commands->add_command(context::main, user, {F("profile")}, {F("[bus]"), F("<profile>")}, main::profile, bus_profile_names_autocomplete);
@@ -959,7 +997,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 
 	commands->add_command(context::bus_preset, admin, {F("reload")}, bus_preset::reload);
 	commands->add_command(context::bus_preset, admin, {F("desc")}, {F("<description>")}, bus_preset::desc, preset_current_description_autocomplete);
-	commands->add_command(context::bus_preset, admin, {F("rename")}, {F("<name>")}, bus_preset::rename, preset_current_name_autocomplete);
+	commands->add_command(context::bus_preset, admin, {F("name")}, {F("<name>")}, bus_preset::name, preset_current_name_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("save")}, {F("[name]")}, bus_preset::save);
 	commands->add_command(context::bus_preset, admin, {F("script")}, {F("<script>")}, bus_preset::script, script_names_autocomplete);
 	commands->add_command(context::bus_preset, user, {F("show")}, bus_preset::show);
