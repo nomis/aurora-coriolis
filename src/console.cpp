@@ -332,6 +332,16 @@ static void bus(Shell &shell, const std::vector<std::string> &arguments) {
 	}
 }
 
+/* [bus] */
+static void clear(Shell &shell, const std::vector<std::string> &arguments) {
+	auto bus = lookup_bus_or_default(shell, arguments, 0);
+
+	if (bus) {
+		shell.logger().info("Clearing bus \"%s\" from console %s", bus->name(), to_shell(shell).console_name().c_str());
+		bus->clear();
+	}
+}
+
 /* [bus] <preset> */
 static void default_(Shell &shell, const std::vector<std::string> &arguments) {
 	const bool has_bus_name = (arguments.size() >= 2);
@@ -598,7 +608,10 @@ static void stop(Shell &shell, const std::vector<std::string> &arguments) {
 
 	if (bus) {
 		app.stop(bus);
-		app.detach(bus);
+
+		shell.block_with([bus] (Shell &shell, bool stop) mutable -> bool {
+			return to_app(shell).detach(bus, nullptr, true);
+		});
 	}
 }
 
@@ -621,6 +634,13 @@ static void show_default_preset(Shell &shell, std::shared_ptr<LEDBus> &bus) {
 	auto default_preset = bus->default_preset();
 	shell.printfln(F("Default preset: %s"), default_preset.empty() ? "<unset>" : default_preset.c_str());
 };
+
+static void clear(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &bus = to_shell(shell).bus();
+
+	shell.logger().info("Clearing bus \"%s\" from console %s", bus->name(), to_shell(shell).console_name().c_str());
+	bus->clear();
+}
 
 /* [preset] */
 static void default_(Shell &shell, const std::vector<std::string> &arguments) {
@@ -763,7 +783,10 @@ static void stop(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &bus = to_shell(shell).bus();
 
 	app.stop(bus);
-	app.detach(bus);
+
+	shell.block_with([bus] (Shell &shell, bool stop) mutable -> bool {
+		return to_app(shell).detach(bus, nullptr, true);
+	});
 }
 
 static void show(Shell &shell, const std::vector<std::string> &arguments) {
@@ -976,6 +999,7 @@ using namespace console;
 
 static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::main, user, {F("bus")}, {F("[bus]")}, main::bus, bus_names_autocomplete);
+	commands->add_command(context::main, user, {F("clear")}, {F("[bus]")}, main::clear, bus_names_autocomplete);
 	commands->add_command(context::main, admin, {F("default")}, {F("[bus]"), F("<preset>")}, main::default_, bus_preset_names_default_autocomplete);
 	commands->add_command(context::main, admin, {F("edit")}, {F("[bus]")}, main::edit, bus_names_autocomplete);
 	commands->add_command(context::main, user, {F("list"), F("buses")}, main::list_buses);
@@ -990,6 +1014,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::main, user, {F("stop")}, {F("[bus]")}, main::stop, bus_names_autocomplete);
 
 	commands->add_command(context::bus, user, {F("default")}, {F("[preset]")}, bus::default_, preset_names_autocomplete);
+	commands->add_command(context::bus, user, {F("clear")}, bus::clear);
 	commands->add_command(context::bus, admin, {F("edit")}, {F("[preset]")}, bus::edit);
 	commands->add_command(context::bus, user, {F("length")}, {F("[length]")}, bus::length);
 	commands->add_command(context::bus, admin, {F("normal")}, bus::normal);

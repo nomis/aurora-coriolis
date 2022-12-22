@@ -44,7 +44,7 @@ public:
 	std::vector<std::string> bus_names() const;
 	std::shared_ptr<LEDBus> bus(const std::string &name);
 	void attach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp);
-	bool detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp = nullptr);
+	bool detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp = nullptr, bool clear = false);
 	void start(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Preset> &preset);
 	std::shared_ptr<std::shared_ptr<Preset>> edit(const std::shared_ptr<LEDBus> &bus);
 	void refresh(const std::string &preset_name);

@@ -64,6 +64,7 @@ public:
 	inline uint64_t last_update_us() const { return last_update_us_; }
 	bool ready() const;
 	void write(const uint8_t *data, size_t size, bool reverse_order); /* data is in RGB order */
+	void clear();
 
 protected:
 	virtual void start(const uint8_t *data, size_t size, bool reverse_order) = 0;

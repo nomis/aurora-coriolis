@@ -142,7 +142,7 @@ void App::attach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Micro
 	mps_.emplace(bus, mp);
 }
 
-bool App::detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp) {
+bool App::detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp, bool clear) {
 	auto it = mps_.find(bus);
 
 	if (it != mps_.end()) {
@@ -158,6 +158,9 @@ bool App::detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Micro
 			other_mp->type(), other_mp->name().c_str(), bus->type(), bus->name());
 		mps_.erase(it);
 	}
+
+	if (clear)
+		bus->clear();
 
 	return true;
 }

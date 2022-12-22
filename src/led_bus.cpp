@@ -77,6 +77,10 @@ void LEDBus::write(const uint8_t *data, size_t size, bool reverse_order) {
 	start(data, size, reverse_order ^ reverse());
 }
 
+void LEDBus::clear() {
+	write(nullptr, 0, false);
+}
+
 void LEDBus::finish() {
 	busy_ = false;
 	if (xSemaphoreGive(semaphore_) != pdTRUE)
