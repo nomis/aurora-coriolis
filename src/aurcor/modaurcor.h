@@ -62,6 +62,16 @@ mp_obj_t aurcor_rgb_to_exp_hsv_tuple(size_t n_args, const mp_obj_t *args);
 MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_rgb_to_exp_hsv_tuple_obj);
 
 
+mp_obj_t aurcor_length(void);
+MP_DECLARE_CONST_FUN_OBJ_0(aurcor_length_obj);
+
+mp_obj_t aurcor_register_config(mp_obj_t dict);
+MP_DECLARE_CONST_FUN_OBJ_1(aurcor_register_config_obj);
+
+mp_obj_t aurcor_config(mp_obj_t dict);
+MP_DECLARE_CONST_FUN_OBJ_1(aurcor_config_obj);
+
+
 mp_obj_t aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_rgb_obj);
 
@@ -139,6 +149,9 @@ public:
 
 	PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset);
 
+	mp_obj_t length();
+	mp_obj_t register_config(mp_obj_t dict);
+	mp_obj_t config(mp_obj_t dict);
 	mp_obj_t output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs, OutputType type, bool set_defaults);
 
 private:
@@ -162,6 +175,9 @@ private:
 	static constexpr bool HSV_TO_RGB_USE_FLOAT = false;
 	static constexpr bool RGB_TO_HSV_USE_FLOAT = false;
 
+	friend mp_obj_t ::aurcor_length();
+	friend mp_obj_t ::aurcor_register_config(mp_obj_t dict);
+	friend mp_obj_t ::aurcor_config(mp_obj_t dict);
 	friend mp_obj_t ::aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_exp_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
@@ -175,6 +191,7 @@ private:
 
 	MemoryBlock *led_buffer_;
 	std::shared_ptr<LEDBus> bus_;
+	size_t bus_length_;
 	std::shared_ptr<Preset> preset_;
 	enum led_profile_id profile_{DEFAULT_PROFILE};
 	size_t wait_us_{0};

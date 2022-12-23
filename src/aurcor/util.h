@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -73,5 +74,24 @@ static inline constexpr unsigned int uint_divide(unsigned int divided, unsigned 
 bool allowed_file_name(const std::string &name);
 bool allowed_text(const std::string &text);
 std::vector<std::string> list_filenames(const char *directory_name, const char *extension);
+
+template <class T>
+static constexpr size_t rounded_sizeof() {
+	return (sizeof(T) + (alignof(T) - 1)) / alignof(T) * alignof(T);
+}
+
+namespace container {
+
+template <class T, class V>
+static inline void add(std::set<T> &container, const V &&value) {
+	container.insert(value);
+}
+
+template <class T, class V>
+static inline void add(std::vector<T> &container, const V &&value) {
+	container.push_back(value);
+}
+
+} // namespace
 
 } // namespace aurcor

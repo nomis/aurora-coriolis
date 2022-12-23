@@ -51,6 +51,18 @@ using aurcor::micropython::PyModule;
 
 extern "C" {
 
+mp_obj_t aurcor_length() {
+	return PyModule::current().length();
+}
+
+mp_obj_t aurcor_register_config(mp_obj_t dict) {
+	return PyModule::current().register_config(dict);
+}
+
+mp_obj_t aurcor_config(mp_obj_t dict) {
+	return PyModule::current().config(dict);
+}
+
 mp_obj_t aurcor_hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args) {
 	PyModule::hsv_to_rgb_buffer(n_args, args, false);
 	return MP_ROM_NONE;
@@ -108,11 +120,32 @@ namespace aurcor {
 namespace micropython {
 
 PyModule::PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset)
-		: led_buffer_(led_buffer), bus_(std::move(bus)), preset_(std::move(preset)) {
+		: led_buffer_(led_buffer), bus_(std::move(bus)), bus_length_(bus_->length()), preset_(std::move(preset)) {
 }
 
 inline PyModule& PyModule::current() {
 	return MicroPython::current().modaurcor_;
+}
+
+mp_obj_t PyModule::length() {
+	return MP_OBJ_NEW_SMALL_INT(bus_length_);
+}
+
+mp_obj_t PyModule::register_config(mp_obj_t dict) {
+	preset_->register_config(dict);
+	return MP_ROM_NONE;
+}
+
+mp_obj_t PyModule::config(mp_obj_t dict) {
+	bool ret = preset_->populate_config(dict);
+	size_t bus_length = bus_->length();
+
+	if (bus_length != bus_length_) {
+		bus_length_ = bus_length;
+		ret = true;
+	}
+
+	return mp_obj_new_bool(ret);
 }
 
 mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs, OutputType type, bool set_defaults) {
@@ -222,7 +255,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 	ssize_t signed_rotate_length = parsed_args[ARG_rotate].u_int;
 	auto values = parsed_args[ARG_values].u_obj;
 	uint8_t *buffer = led_buffer_->begin();
-	const size_t max_bytes = std::min(bus_->length() * BYTES_PER_LED, led_buffer_->size());
+	const size_t max_bytes = std::min(bus_length_ * BYTES_PER_LED, led_buffer_->size());
 	size_t in_bytes = max_bytes;
 	size_t out_bytes = 0;
 

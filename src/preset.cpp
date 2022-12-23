@@ -147,6 +147,41 @@ void Preset::reverse(bool reverse) {
 	}
 }
 
+void Preset::register_config(mp_obj_t dict) {
+	micropython_nlr_begin();
+
+	std::unique_lock data_lock{data_mutex_};
+
+	micropython_nlr_try();
+
+	config_.register_config(dict);
+	config_changed_ = true;
+
+	micropython_nlr_finally();
+	micropython_nlr_end();
+}
+
+bool Preset::populate_config(mp_obj_t dict) {
+	volatile bool ret = false;
+
+	micropython_nlr_begin();
+
+	std::shared_lock data_lock{data_mutex_};
+
+	micropython_nlr_try();
+
+	if (config_changed_) {
+		config_.populate_config(dict);
+		config_changed_ = false;
+		ret = true;
+	}
+
+	micropython_nlr_finally();
+	micropython_nlr_end();
+
+	return ret;
+}
+
 std::shared_ptr<std::shared_ptr<Preset>> Preset::edit() {
 	auto ref = editing_.lock();
 
@@ -256,6 +291,7 @@ bool Preset::load(cbor::Reader &reader) {
 		script_changed_ = false;
 
 	modified_ = false;
+	config_changed_ = true;
 	return true;
 }
 
