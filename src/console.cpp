@@ -1153,6 +1153,9 @@ std::string AurcorShell::context_text() {
 			return text;
 		}
 
+	case ShellContext::MAIN:
+	case ShellContext::FILESYSTEM:
+	case ShellContext::END:
 	default:
 		break;
 	}

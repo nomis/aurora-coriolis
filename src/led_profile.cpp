@@ -349,10 +349,14 @@ LEDProfile::Result LEDProfile::load(const char *bus_name, const char *profile_na
 			logger_.err(F("Profile file %s contains too many entries (truncated)"), filename.c_str());
 			break;
 
+		case Result::NOT_FOUND:
+		case Result::OUT_OF_RANGE:
 		case Result::PARSE_ERROR:
+		case Result::IO_ERROR:
 			logger_.err(F("Profile file %s contains invalid data that has been ignored"), filename.c_str());
 			break;
 
+		case Result::OK:
 		default:
 			break;
 		}
