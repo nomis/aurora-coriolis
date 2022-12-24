@@ -82,7 +82,13 @@ void TestMicroPython::tearDown() {
 }
 
 TestMicroPython::TestMicroPython(std::shared_ptr<aurcor::LEDBus> bus)
-		: MicroPython("test", bus, std::make_shared<Preset>(test_app, bus)), bus_(bus) {
+		: MicroPython("test", bus,
+			std::make_shared<aurcor::Preset>(test_app, bus)), bus_(bus) {
+}
+
+TestMicroPython::TestMicroPython(std::shared_ptr<aurcor::LEDBus> bus,
+		std::shared_ptr<aurcor::Preset> preset)
+		: MicroPython("test", bus, preset), bus_(bus) {
 }
 
 void TestMicroPython::run(std::string script, bool safe) {

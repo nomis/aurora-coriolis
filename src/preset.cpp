@@ -282,6 +282,9 @@ bool Preset::load(cbor::Reader &reader) {
 		} else if (key == "reverse") {
 			if (!cbor::expectBoolean(reader, &reverse_))
 				return false;
+		} else if (key == "config") {
+			if (!reader.isWellFormed())
+				return false;
 		} else if (!reader.isWellFormed()) {
 			return false;
 		}
@@ -326,7 +329,7 @@ bool Preset::save() {
 }
 
 void Preset::save(cbor::Writer &writer) {
-	writer.beginMap(3);
+	writer.beginMap(4);
 
 	app::write_text(writer, "desc");
 	app::write_text(writer, description_);
@@ -336,6 +339,9 @@ void Preset::save(cbor::Writer &writer) {
 
 	app::write_text(writer, "reverse");
 	writer.writeBoolean(reverse_);
+
+	app::write_text(writer, "config");
+	config_.save(writer);
 }
 
 bool Preset::rename(const Preset &destination) {

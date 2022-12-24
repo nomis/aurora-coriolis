@@ -37,6 +37,7 @@ public:
 	static void tearDown();
 
 	TestMicroPython(std::shared_ptr<aurcor::LEDBus> bus);
+	TestMicroPython(std::shared_ptr<aurcor::LEDBus> bus, std::shared_ptr<aurcor::Preset> preset);
 	virtual ~TestMicroPython() = default;
 
 	const char *type() const override { return "TestMicroPython"; }

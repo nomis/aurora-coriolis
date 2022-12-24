@@ -48,26 +48,26 @@ public:
 
 	enum Type {
 		BOOL,
-		INT32,
+		S32,
 		RGB,
 
-		LIST_UINT16,
-		LIST_INT32,
+		LIST_U16,
+		LIST_S32,
 		LIST_RGB,
 
-		SET_UINT16,
-		SET_INT32,
+		SET_U16,
+		SET_S32,
 		SET_RGB,
 
 		INVALID,
 	};
 
 	class BoolProperty;
-	class Int32Property;
-	class ListUInt16Property;
-	class ListInt32Property;
-	class SetUInt16Property;
-	class SetInt32Property;
+	class S32Property;
+	class ListU16Property;
+	class ListS32Property;
+	class SetU16Property;
+	class SetS32Property;
 
 	class Property {
 	private:
@@ -92,18 +92,18 @@ public:
 		size_t size(bool values) const;
 
 		inline BoolProperty& as_bool() { return static_cast<BoolProperty&>(*this); }
-		inline Int32Property& as_int32() { return static_cast<Int32Property&>(*this); }
-		inline ListUInt16Property& as_uint16_list() { return static_cast<ListUInt16Property&>(*this); }
-		inline ListInt32Property& as_int32_list() { return static_cast<ListInt32Property&>(*this); }
-		inline SetUInt16Property& as_uint16_set() { return static_cast<SetUInt16Property&>(*this); }
-		inline SetInt32Property& as_int32_set() { return static_cast<SetInt32Property&>(*this); }
+		inline S32Property& as_s32() { return static_cast<S32Property&>(*this); }
+		inline ListU16Property& as_u16_list() { return static_cast<ListU16Property&>(*this); }
+		inline ListS32Property& as_s32_list() { return static_cast<ListS32Property&>(*this); }
+		inline SetU16Property& as_u16_set() { return static_cast<SetU16Property&>(*this); }
+		inline SetS32Property& as_s32_set() { return static_cast<SetS32Property&>(*this); }
 
 		inline const BoolProperty& as_bool() const { return static_cast<const BoolProperty&>(*this); }
-		inline const Int32Property& as_int32() const { return static_cast<const Int32Property&>(*this); }
-		inline const ListUInt16Property& as_uint16_list() const { return static_cast<const ListUInt16Property&>(*this); }
-		inline const ListInt32Property& as_int32_list() const { return static_cast<const ListInt32Property&>(*this); }
-		inline const SetUInt16Property& as_uint16_set() const { return static_cast<const SetUInt16Property&>(*this); }
-		inline const SetInt32Property& as_int32_set() const { return static_cast<const SetInt32Property&>(*this); }
+		inline const S32Property& as_s32() const { return static_cast<const S32Property&>(*this); }
+		inline const ListU16Property& as_u16_list() const { return static_cast<const ListU16Property&>(*this); }
+		inline const ListS32Property& as_s32_list() const { return static_cast<const ListS32Property&>(*this); }
+		inline const SetU16Property& as_u16_set() const { return static_cast<const SetU16Property&>(*this); }
+		inline const SetS32Property& as_s32_set() const { return static_cast<const SetS32Property&>(*this); }
 
 	protected:
 		Property(Type type) { type_ = type; has_default_ = false; has_value_ = false; }
@@ -141,6 +141,8 @@ public:
 
 		using Property::has_default;
 		using Property::clear_default;
+		using Property::has_value;
+		using Property::clear_value;
 		using Property::has_any;
 
 		size_t size(bool values) const { return rounded_sizeof<BoolProperty>(); }
@@ -152,9 +154,9 @@ public:
 
 	static_assert(sizeof(BoolProperty) <= sizeof(uintptr_t), "BoolProperty is minimum size");
 
-	class Int32Property: public Property {
+	class S32Property: public Property {
 	public:
-		Int32Property(bool rgb) : Property(rgb ? Type::RGB : Type::INT32) {}
+		S32Property(bool rgb) : Property(rgb ? Type::RGB : Type::S32) {}
 
 		inline int32_t get_default() const { return default_; }
 		inline void set_default(int32_t value) { default_ = value; default_set(); }
@@ -166,20 +168,22 @@ public:
 
 		using Property::has_default;
 		using Property::clear_default;
+		using Property::has_value;
+		using Property::clear_value;
 		using Property::has_any;
 
-		size_t size(bool values) const { return rounded_sizeof<Int32Property>(); }
+		size_t size(bool values) const { return rounded_sizeof<S32Property>(); }
 
 	private:
 		int32_t default_;
 		int32_t value_;
 	};
 
-	static_assert(sizeof(Int32Property) <= 3 * sizeof(uintptr_t), "Int32Property is minimum size");
+	static_assert(sizeof(S32Property) <= 3 * sizeof(uintptr_t), "Int32Property is minimum size");
 
-	class ListUInt16Property: public Property {
+	class ListU16Property: public Property {
 	public:
-		ListUInt16Property() : Property(Type::LIST_UINT16) {}
+		ListU16Property() : Property(Type::LIST_U16) {}
 
 		inline std::vector<uint16_t>& defaults() { return defaults_; }
 		inline const std::vector<uint16_t>& defaults() const { return defaults_; }
@@ -194,7 +198,7 @@ public:
 		inline const std::vector<uint16_t>& get_any() const { if (has_value()) { return values(); } else { return defaults(); } }
 
 		size_t size(bool values) const {
-			return rounded_sizeof<ListUInt16Property>()
+			return rounded_sizeof<ListU16Property>()
 				+ rounded_sizeof<uint16_t>() * (values ? values_ : defaults_).size();
 		}
 
@@ -203,9 +207,9 @@ public:
 		std::vector<uint16_t> values_;
 	};
 
-	class ListInt32Property: public Property {
+	class ListS32Property: public Property {
 	public:
-		ListInt32Property(bool rgb) : Property(rgb ? Type::LIST_RGB : Type::LIST_INT32) {}
+		ListS32Property(bool rgb) : Property(rgb ? Type::LIST_RGB : Type::LIST_S32) {}
 
 		inline std::vector<int32_t>& defaults() { return defaults_; }
 		inline const std::vector<int32_t>& defaults() const { return defaults_; }
@@ -220,7 +224,7 @@ public:
 		inline const std::vector<int32_t>& get_any() const { if (has_value()) { return values(); } else { return defaults(); } }
 
 		size_t size(bool values) const {
-			return rounded_sizeof<ListInt32Property>()
+			return rounded_sizeof<ListS32Property>()
 				+ rounded_sizeof<int32_t>() * (values ? values_ : defaults_).size();
 		}
 
@@ -229,9 +233,9 @@ public:
 		std::vector<int32_t> values_;
 	};
 
-	class SetUInt16Property: public Property {
+	class SetU16Property: public Property {
 	public:
-		SetUInt16Property() : Property(Type::SET_UINT16) {}
+		SetU16Property() : Property(Type::SET_U16) {}
 
 		inline std::set<uint16_t>& defaults() { return defaults_; }
 		inline const std::set<uint16_t>& defaults() const { return defaults_; }
@@ -246,7 +250,7 @@ public:
 		inline const std::set<uint16_t>& get_any() const { if (has_value()) { return values(); } else { return defaults(); } }
 
 		size_t size(bool values) const {
-			return rounded_sizeof<SetUInt16Property>()
+			return rounded_sizeof<SetU16Property>()
 				+ rounded_sizeof<uint16_t>() * (values ? values_ : defaults_).size();
 		}
 
@@ -255,9 +259,9 @@ public:
 		std::set<uint16_t> values_;
 	};
 
-	class SetInt32Property: public Property {
+	class SetS32Property: public Property {
 	public:
-		SetInt32Property(bool rgb) : Property(rgb ? Type::SET_RGB : Type::SET_INT32) {}
+		SetS32Property(bool rgb) : Property(rgb ? Type::SET_RGB : Type::SET_S32) {}
 
 		inline std::set<int32_t>& defaults() { return defaults_; }
 		inline const std::set<int32_t>& defaults() const { return defaults_; }
@@ -272,7 +276,7 @@ public:
 		inline const std::set<int32_t>& get_any() const { if (has_value()) { return values(); } else { return defaults(); } }
 
 		size_t size(bool values) const {
-			return rounded_sizeof<SetInt32Property>()
+			return rounded_sizeof<SetS32Property>()
 				+ rounded_sizeof<int32_t>() * (values ? values_ : defaults_).size();
 		}
 
@@ -291,6 +295,17 @@ public:
 
 	bool load(qindesign::cbor::Reader &reader);
 	void save(qindesign::cbor::Writer &writer);
+	void write_key(qindesign::cbor::Writer &writer, const std::string &key, const char *type);
+	void save_one_rgb(qindesign::cbor::Writer &writer, uint32_t value);
+	template <class T>
+	void save_container_uint(qindesign::cbor::Writer &writer,
+		const std::string &key, const char *type, T &values);
+	template <class T>
+	void save_container_int(qindesign::cbor::Writer &writer,
+		const std::string &key, const char *type, T &values);
+	template <class T>
+	void save_container_rgb(qindesign::cbor::Writer &writer,
+		const std::string &key, const char *type, T &values);
 
 private:
 	static size_t entry_base_size(const std::string &key);

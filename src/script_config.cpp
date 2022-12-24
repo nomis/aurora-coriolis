@@ -18,6 +18,7 @@
 
 #include "aurcor/script_config.h"
 
+#include <cstring>
 #include <mutex>
 #include <set>
 #include <shared_mutex>
@@ -38,6 +39,7 @@ extern "C" {
 
 #include <uuid/log.h>
 
+#include "app/util.h"
 #include "aurcor/micropython.h"
 #include "aurcor/util.h"
 
@@ -50,29 +52,29 @@ inline ScriptConfig::Property::pointer_type ScriptConfig::Property::create(Scrip
 	case BOOL:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::BoolProperty()};
 
-	case INT32:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::Int32Property(false)};
+	case S32:
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::S32Property(false)};
 
 	case RGB:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::Int32Property(true)};
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::S32Property(true)};
 
-	case LIST_UINT16:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListUInt16Property()};
+	case LIST_U16:
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListU16Property()};
 
-	case LIST_INT32:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListInt32Property(false)};
+	case LIST_S32:
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListS32Property(false)};
 
 	case LIST_RGB:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListInt32Property(true)};
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListS32Property(true)};
 
-	case SET_UINT16:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetUInt16Property()};
+	case SET_U16:
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetU16Property()};
 
-	case SET_INT32:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetInt32Property(false)};
+	case SET_S32:
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetS32Property(false)};
 
 	case SET_RGB:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetInt32Property(true)};
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetS32Property(true)};
 
 	case INVALID:
 	default:
@@ -86,36 +88,36 @@ void ScriptConfig::Property::Deleter::operator()(Property *property) {
 		delete static_cast<ScriptConfig::BoolProperty*>(property);
 		break;
 
-	case INT32:
-		delete static_cast<ScriptConfig::Int32Property*>(property);
+	case S32:
+		delete static_cast<ScriptConfig::S32Property*>(property);
 		break;
 
 	case RGB:
-		delete static_cast<ScriptConfig::Int32Property*>(property);
+		delete static_cast<ScriptConfig::S32Property*>(property);
 		break;
 
-	case LIST_UINT16:
-		delete static_cast<ScriptConfig::ListUInt16Property*>(property);
+	case LIST_U16:
+		delete static_cast<ScriptConfig::ListU16Property*>(property);
 		break;
 
-	case LIST_INT32:
-		delete static_cast<ScriptConfig::ListInt32Property*>(property);
+	case LIST_S32:
+		delete static_cast<ScriptConfig::ListS32Property*>(property);
 		break;
 
 	case LIST_RGB:
-		delete static_cast<ScriptConfig::ListInt32Property*>(property);
+		delete static_cast<ScriptConfig::ListS32Property*>(property);
 		break;
 
-	case SET_UINT16:
-		delete static_cast<ScriptConfig::SetUInt16Property*>(property);
+	case SET_U16:
+		delete static_cast<ScriptConfig::SetU16Property*>(property);
 		break;
 
-	case SET_INT32:
-		delete static_cast<ScriptConfig::SetInt32Property*>(property);
+	case SET_S32:
+		delete static_cast<ScriptConfig::SetS32Property*>(property);
 		break;
 
 	case SET_RGB:
-		delete static_cast<ScriptConfig::SetInt32Property*>(property);
+		delete static_cast<ScriptConfig::SetS32Property*>(property);
 		break;
 
 	case INVALID:
@@ -130,23 +132,23 @@ size_t ScriptConfig::Property::size(bool values) const {
 	case BOOL:
 		return as_bool().size(values);
 
-	case INT32:
+	case S32:
 	case RGB:
-		return as_int32().size(values);
+		return as_s32().size(values);
 
-	case LIST_UINT16:
-		return as_int32_list().size(values);
+	case LIST_U16:
+		return as_s32_list().size(values);
 
-	case LIST_INT32:
+	case LIST_S32:
 	case LIST_RGB:
-		return as_int32_list().size(values);
+		return as_s32_list().size(values);
 
-	case SET_UINT16:
-		return as_uint16_set().size(values);
+	case SET_U16:
+		return as_u16_set().size(values);
 
-	case SET_INT32:
+	case SET_S32:
 	case SET_RGB:
-		return as_int32_set().size(values);
+		return as_s32_set().size(values);
 
 	case INVALID:
 	default:
@@ -160,28 +162,28 @@ bool ScriptConfig::Property::clear_default(Property &property) {
 		property.as_bool().clear_default();
 		return property.as_bool().has_value();
 
-	case INT32:
+	case S32:
 	case RGB:
-		property.as_int32().clear_default();
-		return property.as_int32().has_value();
+		property.as_s32().clear_default();
+		return property.as_s32().has_value();
 
-	case LIST_UINT16:
-		property.as_int32_list().clear_default();
-		return property.as_int32_list().has_value();
+	case LIST_U16:
+		property.as_s32_list().clear_default();
+		return property.as_s32_list().has_value();
 
-	case LIST_INT32:
+	case LIST_S32:
 	case LIST_RGB:
-		property.as_int32_list().clear_default();
-		return property.as_int32_list().has_value();
+		property.as_s32_list().clear_default();
+		return property.as_s32_list().has_value();
 
-	case SET_UINT16:
-		property.as_uint16_set().clear_default();
-		return property.as_uint16_set().has_value();
+	case SET_U16:
+		property.as_u16_set().clear_default();
+		return property.as_u16_set().has_value();
 
-	case SET_INT32:
+	case SET_S32:
 	case SET_RGB:
-		property.as_int32_set().clear_default();
-		return property.as_int32_set().has_value();
+		property.as_s32_set().clear_default();
+		return property.as_s32_set().has_value();
 
 	case INVALID:
 	default:
@@ -195,28 +197,28 @@ bool ScriptConfig::Property::clear_value(Property &property) {
 		property.as_bool().clear_value();
 		return property.as_bool().has_default();
 
-	case INT32:
+	case S32:
 	case RGB:
-		property.as_int32().clear_value();
-		return property.as_int32().has_default();
+		property.as_s32().clear_value();
+		return property.as_s32().has_default();
 
-	case LIST_UINT16:
-		property.as_int32_list().clear_value();
-		return property.as_int32_list().has_default();
+	case LIST_U16:
+		property.as_s32_list().clear_value();
+		return property.as_s32_list().has_default();
 
-	case LIST_INT32:
+	case LIST_S32:
 	case LIST_RGB:
-		property.as_int32_list().clear_value();
-		return property.as_int32_list().has_default();
+		property.as_s32_list().clear_value();
+		return property.as_s32_list().has_default();
 
-	case SET_UINT16:
-		property.as_uint16_set().clear_value();
-		return property.as_uint16_set().has_default();
+	case SET_U16:
+		property.as_u16_set().clear_value();
+		return property.as_u16_set().has_default();
 
-	case SET_INT32:
+	case SET_S32:
 	case SET_RGB:
-		property.as_int32_set().clear_value();
-		return property.as_int32_set().has_default();
+		property.as_s32_set().clear_value();
+		return property.as_s32_set().has_default();
 
 	case INVALID:
 	default:
@@ -225,23 +227,23 @@ bool ScriptConfig::Property::clear_value(Property &property) {
 }
 
 ScriptConfig::Type ScriptConfig::type_of(const std::string &type) {
-	if (type == "o") {
+	if (type == "bool") {
 		return Type::BOOL;
-	} else if (type == "i") {
-		return Type::INT32;
-	} else if (type == "C") {
+	} else if (type == "s32") {
+		return Type::S32;
+	} else if (type == "rgb") {
 		return Type::RGB;
-	} else if (type == "[H") {
-		return Type::LIST_UINT16;
-	} else if (type == "[i") {
-		return Type::LIST_INT32;
-	} else if (type == "[C") {
+	} else if (type == "list_u16") {
+		return Type::LIST_U16;
+	} else if (type == "list_s32") {
+		return Type::LIST_S32;
+	} else if (type == "list_rgb") {
 		return Type::LIST_RGB;
-	} else if (type == "{H") {
-		return Type::SET_UINT16;
-	} else if (type == "{i") {
-		return Type::SET_INT32;
-	} else if (type == "{C") {
+	} else if (type == "set_u16") {
+		return Type::SET_U16;
+	} else if (type == "set_s32") {
+		return Type::SET_S32;
+	} else if (type == "set_rgb") {
 		return Type::SET_RGB;
 	} else {
 		return Type::INVALID;
@@ -332,7 +334,6 @@ void ScriptConfig::register_config(mp_obj_t dict) {
 	auto property_it = properties_.end();
 
 	micropython_nlr_try();
-
 	if (mp_obj_get_type(dict) != &mp_type_dict)
 		mp_raise_TypeError(MP_ERROR_TEXT("parameter must be a dict"));
 
@@ -408,36 +409,36 @@ void ScriptConfig::register_config(mp_obj_t dict) {
 				property.as_bool().set_default(mp_obj_is_true(default_value));
 				break;
 
-			case INT32:
-				property.as_int32().set_default(mp_obj_get_int(default_value));
+			case S32:
+				property.as_s32().set_default(mp_obj_get_int(default_value));
 				break;
 
 			case RGB:
-				property.as_int32().set_default(convert_rgb_value(default_value));
+				property.as_s32().set_default(convert_rgb_value(default_value));
 				break;
 
-			case LIST_UINT16:
-				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_uint16_list(), total_size);
+			case LIST_U16:
+				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_u16_list(), total_size);
 				break;
 
-			case LIST_INT32:
-				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_int32_list(), total_size);
+			case LIST_S32:
+				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_s32_list(), total_size);
 				break;
 
 			case LIST_RGB:
-				convert_container_values(default_value, convert_rgb_value, property.as_int32_list(), total_size);
+				convert_container_values(default_value, convert_rgb_value, property.as_s32_list(), total_size);
 				break;
 
-			case SET_UINT16:
-				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_uint16_set(), total_size);
+			case SET_U16:
+				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_u16_set(), total_size);
 				break;
 
-			case SET_INT32:
-				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_int32_set(), total_size);
+			case SET_S32:
+				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_s32_set(), total_size);
 				break;
 
 			case SET_RGB:
-				convert_container_values(default_value, convert_rgb_value, property.as_int32_set(), total_size);
+				convert_container_values(default_value, convert_rgb_value, property.as_s32_set(), total_size);
 				break;
 
 			case INVALID:
@@ -480,31 +481,31 @@ void ScriptConfig::populate_config(mp_obj_t dict) {
 			}
 			break;
 
-		case INT32:
+		case S32:
 		case RGB:
-			if (property.as_int32().has_any()) {
-				elem->value = MP_OBJ_NEW_SMALL_INT(property.as_int32().get_any());
+			if (property.as_s32().has_any()) {
+				elem->value = MP_OBJ_NEW_SMALL_INT(property.as_s32().get_any());
 			} else {
 				elem->value = mp_const_none;
 			}
 			break;
 
-		case LIST_UINT16:
-			elem->value = create_list(property.as_uint16_list().get_any());
+		case LIST_U16:
+			elem->value = create_list(property.as_u16_list().get_any());
 			break;
 
-		case LIST_INT32:
+		case LIST_S32:
 		case LIST_RGB:
-			elem->value = create_list(property.as_int32_list().get_any());
+			elem->value = create_list(property.as_s32_list().get_any());
 			break;
 
-		case SET_UINT16:
-			elem->value = create_set(property.as_uint16_set().get_any(), set_uint16_it);
+		case SET_U16:
+			elem->value = create_set(property.as_u16_set().get_any(), set_uint16_it);
 			break;
 
-		case SET_INT32:
+		case SET_S32:
 		case SET_RGB:
-			elem->value = create_set(property.as_int32_set().get_any(), set_int32_it);
+			elem->value = create_set(property.as_s32_set().get_any(), set_int32_it);
 			break;
 
 		case INVALID:
@@ -514,6 +515,166 @@ void ScriptConfig::populate_config(mp_obj_t dict) {
 
 	micropython_nlr_finally();
 	micropython_nlr_end();
+}
+
+void ScriptConfig::write_key(cbor::Writer &writer, const std::string &key, const char *type) {
+	size_t type_length = strlen(type);
+	writer.beginText(key.length() + 1 + type_length);
+	writer.writeBytes(reinterpret_cast<const uint8_t*>(key.c_str()), key.length());
+	writer.write('/');
+	writer.writeBytes(reinterpret_cast<const uint8_t*>(type), type_length);
+}
+
+void ScriptConfig::save_one_rgb(qindesign::cbor::Writer &writer, uint32_t value) {
+	writer.beginArray(3);
+	writer.writeUnsignedInt((value >> 16) & 0xFF);
+	writer.writeUnsignedInt((value >>  8) & 0xFF);
+	writer.writeUnsignedInt( value        & 0xFF);
+}
+
+template <class T>
+void ScriptConfig::save_container_uint(qindesign::cbor::Writer &writer,
+		const std::string &key, const char *type, T &values) {
+	if (!values.empty()) {
+		write_key(writer, key, type);
+		writer.beginArray(values.size());
+		for (auto &value : values) {
+			writer.writeUnsignedInt(value);
+		}
+	}
+}
+
+template <class T>
+void ScriptConfig::save_container_int(qindesign::cbor::Writer &writer,
+		const std::string &key, const char *type, T &values) {
+	if (!values.empty()) {
+		write_key(writer, key, type);
+		writer.beginArray(values.size());
+		for (auto &value : values) {
+			writer.writeInt(value);
+		}
+	}
+}
+
+template <class T>
+void ScriptConfig::save_container_rgb(qindesign::cbor::Writer &writer,
+		const std::string &key, const char *type, T &values) {
+	if (!values.empty()) {
+		write_key(writer, key, type);
+		writer.beginArray(values.size());
+		for (auto &value : values) {
+			save_one_rgb(writer, value);
+		}
+	}
+}
+
+void ScriptConfig::save(qindesign::cbor::Writer &writer) {
+	size_t count = 0;
+
+	for (const auto &entry : properties_) {
+		auto &property = *entry.second;
+
+		switch (property.type()) {
+		case BOOL:
+			if (property.as_bool().has_value())
+				count++;
+			break;
+
+		case S32:
+			if (property.as_s32().has_value())
+				count++;
+			break;
+
+		case RGB:
+			if (property.as_s32().has_value())
+				count++;
+			break;
+
+		case LIST_U16:
+			if (property.as_u16_list().has_value())
+				count++;
+			break;
+
+		case LIST_S32:
+		case LIST_RGB:
+			if (property.as_s32_list().has_value())
+				count++;
+			break;
+
+		case SET_U16:
+			if (property.as_u16_set().has_value())
+				count++;
+			break;
+
+		case SET_S32:
+		case SET_RGB:
+			if (property.as_s32_set().has_value())
+				count++;
+			break;
+
+		case INVALID:
+		default:
+			break;
+		}
+	}
+
+	writer.beginMap(count);
+
+	for (const auto &entry : properties_) {
+		auto &key = entry.first;
+		auto &property = *entry.second;
+
+		switch (property.type()) {
+		case BOOL:
+			if (property.as_bool().has_value()) {
+				write_key(writer, key, "bool");
+				writer.writeBoolean(property.as_bool().get_value());
+			}
+			break;
+
+		case S32:
+			if (property.as_s32().has_value()) {
+				write_key(writer, key, "s32");
+				writer.writeInt(property.as_s32().get_value());
+			}
+			break;
+
+		case RGB:
+			if (property.as_s32().has_value()) {
+				write_key(writer, key, "rgb");
+				save_one_rgb(writer, property.as_s32().get_value());
+			}
+			break;
+
+		case LIST_U16:
+			save_container_uint(writer, key, "list_u16", property.as_u16_list().values());
+			break;
+
+		case LIST_S32:
+			save_container_int(writer, key, "list_s32", property.as_s32_list().values());
+			break;
+
+		case LIST_RGB:
+			save_container_rgb(writer, key, "list_rgb", property.as_s32_list().values());
+			break;
+
+		case SET_U16:
+			save_container_uint(writer, key, "set_u16", property.as_u16_set().values());
+			break;
+
+		case SET_S32:
+			save_container_int(writer, key, "set_s32", property.as_s32_set().values());
+			break;
+
+		case SET_RGB:
+			save_container_rgb(writer, key, "set_rgb", property.as_s32_set().values());
+			break;
+
+		case INVALID:
+		default:
+			break;
+		}
+	}
 }
 
 } // namespace aurcor
