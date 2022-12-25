@@ -73,9 +73,9 @@ namespace bus_preset {
 }
 
 __attribute__((noinline))
-static void led_profile_result(AurcorShell &shell, LEDProfile::Result result = LEDProfile::Result::OK, const __FlashStringHelper *message = nullptr) {
+static void led_profile_result(AurcorShell &shell, Result result = Result::OK, const __FlashStringHelper *message = nullptr) {
 	switch (result) {
-	case LEDProfile::Result::OK:
+	case Result::OK:
 		if (message) {
 			shell.println(message);
 		} else {
@@ -83,23 +83,23 @@ static void led_profile_result(AurcorShell &shell, LEDProfile::Result result = L
 		}
 		break;
 
-	case LEDProfile::Result::FULL:
+	case Result::FULL:
 		shell.println(F("Profile full"));
 		break;
 
-	case LEDProfile::Result::OUT_OF_RANGE:
+	case Result::OUT_OF_RANGE:
 		shell.println(F("Index out of range"));
 		break;
 
-	case LEDProfile::Result::NOT_FOUND:
+	case Result::NOT_FOUND:
 		shell.println(F("Index not found"));
 		break;
 
-	case LEDProfile::Result::PARSE_ERROR:
+	case Result::PARSE_ERROR:
 		shell.println(F("File parse error"));
 		break;
 
-	case LEDProfile::Result::IO_ERROR:
+	case Result::IO_ERROR:
 		shell.println(F("File I/O error"));
 		break;
 	}
@@ -108,22 +108,24 @@ static void led_profile_result(AurcorShell &shell, LEDProfile::Result result = L
 __attribute__((noinline))
 static bool load_preset(Shell &shell, Preset &preset) {
 	switch (preset.load()) {
-	case Preset::Result::OK:
+	case Result::OK:
 		return true;
 
-	case Preset::Result::NOT_FOUND:
+	case Result::NOT_FOUND:
 		shell.printfln(F("Preset \"%s\" not found"), preset.name().c_str());
 		break;
 
-	case Preset::Result::FULL:
+	case Result::FULL:
 		shell.printfln(F("Too many config values in preset \"%s\""), preset.name().c_str());
 		break;
 
-	case Preset::Result::PARSE_ERROR:
+	case Result::PARSE_ERROR:
 		shell.printfln(F("Parse error loading preset \"%s\""), preset.name().c_str());
 		break;
 
-	case Preset::Result::IO_ERROR:
+	case Result::OUT_OF_RANGE:
+	case Result::IO_ERROR:
+	default:
 		shell.printfln(F("Error reading preset \"%s\""), preset.name().c_str());
 		break;
 	}
@@ -263,7 +265,7 @@ static std::vector<std::string> bus_profile_index_values_autocomplete(Shell &she
 		uint8_t r, g, b;
 		auto index = std::atol(current_arguments[0].c_str());
 
-		if (to_shell(shell).profile().get(index, r, g, b) == LEDProfile::OK) {
+		if (to_shell(shell).profile().get(index, r, g, b) == Result::OK) {
 			switch (current_arguments.size()) {
 			case 1:
 				return {std::to_string(r)};
@@ -440,7 +442,7 @@ static void list_presets(Shell &shell, const std::vector<std::string> &arguments
 	for (auto &preset_name : Preset::names()) {
 		auto preset = std::make_shared<Preset>(app, nullptr);
 
-		if (preset->name(preset_name) && preset->load() == Preset::Result::OK) {
+		if (preset->name(preset_name) && preset->load() == Result::OK) {
 			shell.printfln(F("%-48s %-48s"),
 				preset->name().c_str(), preset->description().c_str(),
 				preset->reverse() ? "reverse" : "normal");
@@ -527,17 +529,18 @@ static void mv(Shell &shell, const std::vector<std::string> &arguments) {
 		return;
 
 	switch (preset_from->rename(*preset_to)) {
-	case Preset::Result::OK:
+	case Result::OK:
 		app.renamed(preset_from_name, preset_to_name);
 		break;
 
-	case Preset::Result::NOT_FOUND:
+	case Result::NOT_FOUND:
 		shell.printfln(F("Preset \"%s\" not found"), preset_from_name.c_str());
 		break;
 
-	case Preset::Result::FULL:
-	case Preset::Result::PARSE_ERROR:
-	case Preset::Result::IO_ERROR:
+	case Result::FULL:
+	case Result::OUT_OF_RANGE:
+	case Result::PARSE_ERROR:
+	case Result::IO_ERROR:
 		shell.printfln(F("Error renaming preset"));
 		break;
 	}
@@ -555,17 +558,19 @@ static void rm(Shell &shell, const std::vector<std::string> &arguments) {
 	}
 
 	switch (preset->remove()) {
-	case Preset::Result::OK:
+	case Result::OK:
 		app.deleted(preset_name);
 		break;
 
-	case Preset::Result::NOT_FOUND:
+	case Result::NOT_FOUND:
 		shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
 		break;
 
-	case Preset::Result::FULL:
-	case Preset::Result::PARSE_ERROR:
-	case Preset::Result::IO_ERROR:
+	case Result::FULL:
+	case Result::OUT_OF_RANGE:
+	case Result::PARSE_ERROR:
+	case Result::IO_ERROR:
+	default:
 		shell.printfln(F("Error deleting preset"));
 		break;
 	}
@@ -978,7 +983,7 @@ static void save(Shell &shell, const std::vector<std::string> &arguments) {
 		return;
 	}
 
-	if (aurcor_shell.preset().save() == Preset::Result::OK) {
+	if (aurcor_shell.preset().save() == Result::OK) {
 		to_app(shell).refresh(aurcor_shell.preset().name());
 	} else {
 		shell.printfln(F("Failed to save preset"));

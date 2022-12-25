@@ -47,6 +47,7 @@ LED_PROFILES
 # include <vector>
 
 # include "led_profile.h"
+# include "util.h"
 #endif
 
 namespace aurcor {
@@ -64,13 +65,13 @@ public:
 	static bool lc_id(const std::string &name, enum led_profile_id &id);
 
 	LEDProfile& get(enum led_profile_id id);
-	LEDProfile::Result load(enum led_profile_id id);
-	LEDProfile::Result save(enum led_profile_id id);
+	Result load(enum led_profile_id id);
+	Result save(enum led_profile_id id);
 
 private:
 	static const std::array<const char *,NUM_LED_PROFILES> lc_names_;
 
-	LEDProfile::Result auto_load(enum led_profile_id id, bool reload);
+	Result auto_load(enum led_profile_id id, bool reload);
 
 	const char *bus_name_;
 	std::mutex mutex_;

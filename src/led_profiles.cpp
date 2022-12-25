@@ -78,25 +78,25 @@ LEDProfile& LEDProfiles::get(enum led_profile_id id) {
 	return profiles_[profile];
 }
 
-LEDProfile::Result LEDProfiles::load(enum led_profile_id id) {
+Result LEDProfiles::load(enum led_profile_id id) {
 	return auto_load(id, true);
 }
 
-LEDProfile::Result LEDProfiles::save(enum led_profile_id id) {
+Result LEDProfiles::save(enum led_profile_id id) {
 	size_t profile = (size_t)id;
 
 	auto_load(id, false);
 	return profiles_[profile].save(bus_name_, lc_names_[profile]);
 }
 
-LEDProfile::Result LEDProfiles::auto_load(enum led_profile_id id, bool reload) {
+Result LEDProfiles::auto_load(enum led_profile_id id, bool reload) {
 	size_t profile = (size_t)id;
 	std::unique_lock lock{mutex_};
 
 	if (!loaded_[profile]) {
 		loaded_[profile] = true;
 	} else if (!reload) {
-		return LEDProfile::Result::OK;
+		return Result::OK;
 	} else {
 		lock.unlock();
 	}

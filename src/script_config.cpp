@@ -41,11 +41,16 @@ extern "C" {
 
 #include "app/util.h"
 #include "aurcor/micropython.h"
+#include "aurcor/preset.h"
 #include "aurcor/util.h"
 
 namespace cbor = qindesign::cbor;
 
+static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "script-config";
+
 namespace aurcor {
+
+uuid::log::Logger ScriptConfig::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::DAEMON};
 
 inline ScriptConfig::Property::pointer_type ScriptConfig::Property::create(ScriptConfig::Type type, bool registered) {
 	switch (type) {
@@ -474,6 +479,9 @@ void ScriptConfig::populate_config(mp_obj_t dict) {
 		mp_map_elem_t *elem = mp_map_lookup(map, MP_OBJ_NEW_QSTR(qkey), MP_MAP_LOOKUP_ADD_IF_NOT_FOUND);
 		ScriptConfig::Property &property = *property_it->second;
 
+		if (!property.registered())
+			continue;
+
 		switch (property.type()) {
 		case BOOL:
 			if (property.as_bool().has_any()) {
@@ -519,6 +527,300 @@ void ScriptConfig::populate_config(mp_obj_t dict) {
 	micropython_nlr_end();
 }
 
+bool ScriptConfig::load_one_rgb(cbor::Reader &reader, const std::string &key, int32_t &value) {
+	if (!cbor::expectArrayLength(reader, 3)) {
+		if (VERBOSE)
+			logger_.trace(F("Parse error reading key \"%s\" array length"), key.c_str());
+		return false;
+	}
+
+	uint64_t r, g, b;
+
+	if (!cbor::expectUnsignedInt(reader, &r)
+			|| !cbor::expectUnsignedInt(reader, &g)
+			|| !cbor::expectUnsignedInt(reader, &b)) {
+		if (VERBOSE)
+			logger_.trace(F("Parse error reading key \"%s\" values"), key.c_str());
+		return false;
+	}
+
+	value = (int_to_u8(r) << 16) | (int_to_u8(g) << 8) | int_to_u8(b);
+	return true;
+}
+
+template <class T>
+Result ScriptConfig::load_container_uint(qindesign::cbor::Reader &reader,
+		const std::string &key, Property &property, T &values, size_t total_size) {
+	auto result = Result::OK;
+	uint64_t entries;
+	bool indefinite;
+
+	if (!cbor::expectArray(reader, &entries, &indefinite) || indefinite) {
+		if (VERBOSE)
+			logger_.trace(F("Parse error reading key \"%s\" array length"), key.c_str());
+		return Result::PARSE_ERROR;
+	}
+
+	while (entries-- > 0) {
+		int64_t value;
+
+		if (!cbor::expectInt(reader, &value)) {
+			if (VERBOSE)
+				logger_.trace(F("Parse error reading key \"%s\""), key.c_str());
+			return Result::PARSE_ERROR;
+		}
+
+		if (result == Result::OK) {
+			container::add(values, std::move(value));
+
+			if (total_size + property.size(true) > MAX_VALUES_SIZE)
+				result = Result::FULL;
+		}
+	}
+
+	return result;
+}
+
+template <class T>
+Result ScriptConfig::load_container_int(qindesign::cbor::Reader &reader,
+		const std::string &key, Property &property, T &values, size_t total_size) {
+	auto result = Result::OK;
+	uint64_t entries;
+	bool indefinite;
+
+	if (!cbor::expectArray(reader, &entries, &indefinite) || indefinite) {
+		if (VERBOSE)
+			logger_.trace(F("Parse error reading key \"%s\" array length"), key.c_str());
+		return Result::PARSE_ERROR;
+	}
+
+	while (entries-- > 0) {
+		uint64_t value;
+
+		if (!cbor::expectUnsignedInt(reader, &value)) {
+			if (VERBOSE)
+				logger_.trace(F("Parse error reading key \"%s\""), key.c_str());
+			return Result::PARSE_ERROR;
+		}
+
+		if (result == Result::OK) {
+			container::add(values, std::move(value));
+
+			if (total_size + property.size(true) > MAX_VALUES_SIZE)
+				result = Result::FULL;
+		}
+	}
+
+	return result;
+}
+
+template <class T>
+Result ScriptConfig::load_container_rgb(qindesign::cbor::Reader &reader,
+		const std::string &key, Property &property, T &values, size_t total_size) {
+	auto result = Result::OK;
+	uint64_t entries;
+	bool indefinite;
+
+	if (!cbor::expectArray(reader, &entries, &indefinite) || indefinite) {
+		if (VERBOSE)
+			logger_.trace(F("Parse error reading key \"%s\" array length"), key.c_str());
+		return Result::PARSE_ERROR;
+	}
+
+	while (entries-- > 0) {
+		int32_t value;
+
+		if (!load_one_rgb(reader, key, value))
+			return Result::PARSE_ERROR;
+
+		if (result == Result::OK) {
+			container::add(values, std::move(value));
+
+			if (total_size + property.size(true) > MAX_VALUES_SIZE)
+				result = Result::FULL;
+		}
+	}
+
+	return result;
+}
+
+Result ScriptConfig::load(cbor::Reader &reader) {
+	uint64_t entries;
+	bool indefinite;
+	Result result = Result::OK;
+
+	if (!cbor::expectMap(reader, &entries, &indefinite) || indefinite) {
+		logger_.trace(F("Config does not contain a definite length map"));
+		return Result::PARSE_ERROR;
+	}
+
+	for (auto it = properties_.begin(); it != properties_.end(); ) {
+		if (!Property::clear_value(*it->second)) {
+			it = properties_.erase(it);
+		} else {
+			++it;
+		}
+	}
+
+	size_t total_size = values_size();
+
+	while (entries-- > 0) {
+		std::string key;
+
+		if (!app::read_text(reader, key))
+			return Result::PARSE_ERROR;
+
+		auto pos = key.find_first_of('/');
+		if (pos == std::string::npos) {
+			if (VERBOSE)
+				logger_.trace(F("Invalid key/type \"%s\""), key.c_str());
+			return Result::PARSE_ERROR;
+		}
+
+		Type type = type_of(key.substr(pos + 1));
+		if (type == Type::INVALID && VERBOSE)
+			logger_.trace(F("Invalid key/type \"%s\""), key.c_str());
+		key = key.substr(0, pos);
+
+		if (result != Result::OK) {
+			// Skip value (full)
+			if (!reader.isWellFormed())
+				return Result::PARSE_ERROR;
+			continue;
+		}
+
+		auto emplace = properties_.emplace(key, std::move(ScriptConfig::Property::create(type, false)));
+		if (!emplace.second) {
+			if (emplace.first->second->type() != type) {
+				// Skip value (type mismatch)
+				if (!reader.isWellFormed())
+					return Result::PARSE_ERROR;
+				continue;
+			}
+
+			/* Existing properties have already had the value cleared */
+		} else {
+			total_size += entry_base_size(key);
+		}
+
+		auto property = *emplace.first->second;
+
+		if (total_size + property.size(true) > MAX_VALUES_SIZE) {
+			result = Result::FULL;
+			if (emplace.second)
+				properties_.erase(emplace.first);
+
+			// Skip value (full)
+			if (!reader.isWellFormed())
+				return Result::PARSE_ERROR;
+			continue;
+		}
+
+		switch (type) {
+		case Type::BOOL: {
+				bool value;
+
+				if (!cbor::expectBoolean(reader, &value)) {
+					if (VERBOSE)
+						logger_.trace(F("Parse error reading key \"%s\""), key.c_str());
+					return Result::PARSE_ERROR;
+				}
+
+				property.as_bool().set_value(value);
+				break;
+			}
+
+		case Type::S32: {
+				int64_t value;
+
+				if (!cbor::expectInt(reader, &value)) {
+					if (VERBOSE)
+						logger_.trace(F("Parse error reading key \"%s\""), key.c_str());
+					return Result::PARSE_ERROR;
+				}
+
+				property.as_s32().set_value(value);
+				break;
+			}
+
+		case Type::RGB: {
+				int32_t value;
+
+				if (!load_one_rgb(reader, key, value))
+					return Result::PARSE_ERROR;
+
+				property.as_s32().set_value(value);
+				break;
+			}
+
+		case Type::LIST_U16:
+			if (downgrade_result(result,
+					load_container_uint(reader, key, property,
+						property.as_u16_list().values(), total_size))
+					>= Result::PARSE_ERROR) {
+				return result;
+			}
+			break;
+
+		case Type::LIST_S32:
+			if (downgrade_result(result,
+					load_container_int(reader, key, property,
+						property.as_s32_list().values(), total_size))
+					>= Result::PARSE_ERROR) {
+				return result;
+			}
+			break;
+
+		case Type::LIST_RGB:
+			if (downgrade_result(result,
+					load_container_rgb(reader, key, property,
+						property.as_s32_list().values(), total_size))
+					>= Result::PARSE_ERROR) {
+				return result;
+			}
+			break;
+
+		case Type::SET_U16:
+			if (downgrade_result(result,
+					load_container_uint(reader, key, property,
+						property.as_u16_set().values(), total_size))
+					>= Result::PARSE_ERROR) {
+				return result;
+			}
+			break;
+
+		case Type::SET_S32:
+			if (downgrade_result(result,
+					load_container_int(reader, key, property,
+						property.as_s32_set().values(), total_size))
+					>= Result::PARSE_ERROR) {
+				return result;
+			}
+			break;
+
+		case Type::SET_RGB:
+			if (downgrade_result(result,
+					load_container_rgb(reader, key, property,
+						property.as_s32_set().values(), total_size))
+					>= Result::PARSE_ERROR) {
+				return result;
+			}
+			break;
+
+		case Type::INVALID:
+		default:
+			return Result::PARSE_ERROR;
+		}
+
+		if (result > Result::FULL)
+			return result;
+
+		total_size += property.size(true);
+	}
+
+	return result;
+}
+
 void ScriptConfig::write_key(cbor::Writer &writer, const std::string &key, const char *type) {
 	size_t type_length = strlen(type);
 	writer.beginText(key.length() + 1 + type_length);
@@ -527,7 +829,7 @@ void ScriptConfig::write_key(cbor::Writer &writer, const std::string &key, const
 	writer.writeBytes(reinterpret_cast<const uint8_t*>(type), type_length);
 }
 
-void ScriptConfig::save_one_rgb(qindesign::cbor::Writer &writer, uint32_t value) {
+void ScriptConfig::save_one_rgb(cbor::Writer &writer, uint32_t value) {
 	writer.beginArray(3);
 	writer.writeUnsignedInt((value >> 16) & 0xFF);
 	writer.writeUnsignedInt((value >>  8) & 0xFF);
@@ -535,7 +837,7 @@ void ScriptConfig::save_one_rgb(qindesign::cbor::Writer &writer, uint32_t value)
 }
 
 template <class T>
-void ScriptConfig::save_container_uint(qindesign::cbor::Writer &writer,
+void ScriptConfig::save_container_uint(cbor::Writer &writer,
 		const std::string &key, const char *type, T &values) {
 	if (!values.empty()) {
 		write_key(writer, key, type);
@@ -547,7 +849,7 @@ void ScriptConfig::save_container_uint(qindesign::cbor::Writer &writer,
 }
 
 template <class T>
-void ScriptConfig::save_container_int(qindesign::cbor::Writer &writer,
+void ScriptConfig::save_container_int(cbor::Writer &writer,
 		const std::string &key, const char *type, T &values) {
 	if (!values.empty()) {
 		write_key(writer, key, type);
@@ -559,7 +861,7 @@ void ScriptConfig::save_container_int(qindesign::cbor::Writer &writer,
 }
 
 template <class T>
-void ScriptConfig::save_container_rgb(qindesign::cbor::Writer &writer,
+void ScriptConfig::save_container_rgb(cbor::Writer &writer,
 		const std::string &key, const char *type, T &values) {
 	if (!values.empty()) {
 		write_key(writer, key, type);
@@ -570,7 +872,7 @@ void ScriptConfig::save_container_rgb(qindesign::cbor::Writer &writer,
 	}
 }
 
-void ScriptConfig::save(qindesign::cbor::Writer &writer) {
+void ScriptConfig::save(cbor::Writer &writer) {
 	size_t count = 0;
 
 	for (const auto &entry : properties_) {

@@ -38,6 +38,10 @@ extern "C" {
 
 #include "aurcor/util.h"
 
+#ifndef PSTR_ALIGN
+# define PSTR_ALIGN 4
+#endif
+
 namespace aurcor {
 
 class ScriptConfig {
@@ -302,24 +306,14 @@ public:
 	void register_config(mp_obj_t dict);
 	void populate_config(mp_obj_t dict);
 
-	bool load(qindesign::cbor::Reader &reader);
+	Result load(qindesign::cbor::Reader &reader);
 	void save(qindesign::cbor::Writer &writer);
-	void write_key(qindesign::cbor::Writer &writer, const std::string &key, const char *type);
-	void save_one_rgb(qindesign::cbor::Writer &writer, uint32_t value);
-	template <class T>
-	void save_container_uint(qindesign::cbor::Writer &writer,
-		const std::string &key, const char *type, T &values);
-	template <class T>
-	void save_container_int(qindesign::cbor::Writer &writer,
-		const std::string &key, const char *type, T &values);
-	template <class T>
-	void save_container_rgb(qindesign::cbor::Writer &writer,
-		const std::string &key, const char *type, T &values);
 
 private:
 	static size_t entry_base_size(const std::string &key);
 	static size_t entry_size(const std::string &key, const Property &value, bool values);
 	static bool allowed_key(const std::string &key);
+
 	static mp_int_t convert_rgb_value(mp_obj_t value_obj);
 	template <class T>
 	static void convert_container_values(mp_obj_t container_obj, mp_int_t (*convert_value)(mp_obj_t value_obj), T &property, size_t total_size);
@@ -327,6 +321,35 @@ private:
 	static mp_obj_t create_list(const std::vector<T> &container);
 	template <class T>
 	static mp_obj_t create_set(const std::set<T> &container, typename std::set<T>::const_iterator &container_it);
+
+	static bool load_one_rgb(qindesign::cbor::Reader &reader, const std::string &key, int32_t &value);
+	static void write_key(qindesign::cbor::Writer &writer, const std::string &key, const char *type);
+	static void save_one_rgb(qindesign::cbor::Writer &writer, uint32_t value);
+	template <class T>
+	static Result load_container_uint(qindesign::cbor::Reader &reader,
+		const std::string &key, Property &property, T &values, size_t total_size);
+	template <class T>
+	static Result load_container_int(qindesign::cbor::Reader &reader,
+		const std::string &key, Property &property, T &values, size_t total_size);
+	template <class T>
+	static Result load_container_rgb(qindesign::cbor::Reader &reader,
+		const std::string &key, Property &property, T &values, size_t total_size);
+	template <class T>
+	static void save_container_uint(qindesign::cbor::Writer &writer,
+		const std::string &key, const char *type, T &values);
+	template <class T>
+	static void save_container_int(qindesign::cbor::Writer &writer,
+		const std::string &key, const char *type, T &values);
+	template <class T>
+	static void save_container_rgb(qindesign::cbor::Writer &writer,
+		const std::string &key, const char *type, T &values);
+
+	static uuid::log::Logger logger_;
+#ifdef ENV_NATIVE
+	static constexpr bool VERBOSE = true;
+#else
+	static constexpr bool VERBOSE = false;
+#endif
 
 	size_t size(bool vaules) const;
 	inline size_t defaults_size() const { return size(false); }

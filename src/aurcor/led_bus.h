@@ -33,6 +33,7 @@
 #include "led_bus_config.h"
 #include "led_profile.h"
 #include "led_profiles.h"
+#include "util.h"
 
 namespace aurcor {
 
@@ -58,8 +59,8 @@ public:
 
 	inline LEDProfile& profile(enum led_profile_id id) { return profiles_.get(id); }
 	inline const LEDProfile& profile(enum led_profile_id id) const { return profiles_.get(id); }
-	inline LEDProfile::Result load_profile(enum led_profile_id id) { return profiles_.load(id); }
-	inline LEDProfile::Result save_profile(enum led_profile_id id) { return profiles_.save(id); }
+	inline Result load_profile(enum led_profile_id id) { return profiles_.load(id); }
+	inline Result save_profile(enum led_profile_id id) { return profiles_.save(id); }
 
 	inline uint64_t last_update_us() const { return last_update_us_; }
 	bool ready() const;

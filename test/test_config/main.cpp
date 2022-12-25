@@ -63,7 +63,7 @@ aurcor.register_config({
 	TEST_ASSERT_EQUAL_INT(0, mp.ret_);
 
 	TEST_ASSERT_TRUE(preset->name(std::string{"test_save"}));
-	TEST_ASSERT_EQUAL_INT(aurcor::Preset::Result::OK, preset->save());
+	TEST_ASSERT_EQUAL_INT(aurcor::Result::OK, preset->save());
 	// TODO check output
 }
 

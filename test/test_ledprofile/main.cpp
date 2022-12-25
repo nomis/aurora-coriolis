@@ -20,11 +20,12 @@
 
 #include "app/fs.h"
 #include "aurcor/led_profiles.h"
+#include "aurcor/util.h"
 
 #include "test_micropython.h"
 
-using aurcor::LEDProfile;
 using aurcor::LEDProfiles;
+using aurcor::Result;
 
 static void test_save() {
 	LEDProfiles profiles{"test_save"};
@@ -32,39 +33,39 @@ static void test_save() {
 
 	profile.clear();
 	TEST_ASSERT_EQUAL_INT(1, profile.indexes().size());
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.set(50, 101, 102, 103));
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.set(100, 151, 152, 153));
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.set(150, 201, 202, 203));
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.set(200, 251, 252, 253));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.set(50, 101, 102, 103));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.set(100, 151, 152, 153));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.set(150, 201, 202, 203));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.set(200, 251, 252, 253));
 	TEST_ASSERT_EQUAL_INT(5, profile.indexes().size());
 
 	uint8_t r, g, b;
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.get(0, r, g, b));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.get(0, r, g, b));
 	TEST_ASSERT_EQUAL_INT(8, r);
 	TEST_ASSERT_EQUAL_INT(8, g);
 	TEST_ASSERT_EQUAL_INT(8, b);
 
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.get(50, r, g, b));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.get(50, r, g, b));
 	TEST_ASSERT_EQUAL_INT(101, r);
 	TEST_ASSERT_EQUAL_INT(102, g);
 	TEST_ASSERT_EQUAL_INT(103, b);
 
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.get(100, r, g, b));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.get(100, r, g, b));
 	TEST_ASSERT_EQUAL_INT(151, r);
 	TEST_ASSERT_EQUAL_INT(152, g);
 	TEST_ASSERT_EQUAL_INT(153, b);
 
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.get(150, r, g, b));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.get(150, r, g, b));
 	TEST_ASSERT_EQUAL_INT(201, r);
 	TEST_ASSERT_EQUAL_INT(202, g);
 	TEST_ASSERT_EQUAL_INT(203, b);
 
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.get(200, r, g, b));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.get(200, r, g, b));
 	TEST_ASSERT_EQUAL_INT(251, r);
 	TEST_ASSERT_EQUAL_INT(252, g);
 	TEST_ASSERT_EQUAL_INT(253, b);
 
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profiles.save(LED_PROFILE_NORMAL));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profiles.save(LED_PROFILE_NORMAL));
 
 	auto file = app::FS.open("/profiles/test_save.normal.cbor");
 	TEST_ASSERT_TRUE(file);
@@ -158,27 +159,27 @@ static void test_load() {
 	TEST_ASSERT_EQUAL_INT(5, profile.indexes().size());
 
 	uint8_t r, g, b;
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.get(0, r, g, b));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.get(0, r, g, b));
 	TEST_ASSERT_EQUAL_INT(8, r);
 	TEST_ASSERT_EQUAL_INT(8, g);
 	TEST_ASSERT_EQUAL_INT(8, b);
 
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.get(50, r, g, b));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.get(50, r, g, b));
 	TEST_ASSERT_EQUAL_INT(101, r);
 	TEST_ASSERT_EQUAL_INT(102, g);
 	TEST_ASSERT_EQUAL_INT(103, b);
 
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.get(100, r, g, b));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.get(100, r, g, b));
 	TEST_ASSERT_EQUAL_INT(151, r);
 	TEST_ASSERT_EQUAL_INT(152, g);
 	TEST_ASSERT_EQUAL_INT(153, b);
 
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.get(150, r, g, b));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.get(150, r, g, b));
 	TEST_ASSERT_EQUAL_INT(201, r);
 	TEST_ASSERT_EQUAL_INT(202, g);
 	TEST_ASSERT_EQUAL_INT(203, b);
 
-	TEST_ASSERT_EQUAL_INT(LEDProfile::Result::OK, profile.get(200, r, g, b));
+	TEST_ASSERT_EQUAL_INT(Result::OK, profile.get(200, r, g, b));
 	TEST_ASSERT_EQUAL_INT(251, r);
 	TEST_ASSERT_EQUAL_INT(252, g);
 	TEST_ASSERT_EQUAL_INT(253, b);

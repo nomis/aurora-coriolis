@@ -42,6 +42,21 @@ extern "C" {
 
 namespace aurcor {
 
+// These are in priority order to allow combining errors
+enum Result : uint8_t {
+	OK = 0,
+	FULL,
+	NOT_FOUND,
+	OUT_OF_RANGE,
+	PARSE_ERROR,
+	IO_ERROR,
+};
+
+static inline Result downgrade_result(Result &current, Result result) {
+	current = std::max(current, result);
+	return result;
+}
+
 static inline uint64_t current_time_us() {
 #ifdef ENV_NATIVE
 	struct timespec ts;

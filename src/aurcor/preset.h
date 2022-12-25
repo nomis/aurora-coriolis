@@ -33,8 +33,9 @@ extern "C" {
 
 #include <uuid/log.h>
 
-#include "aurcor/app.h"
-#include "aurcor/script_config.h"
+#include "app.h"
+#include "script_config.h"
+#include "util.h"
 
 namespace aurcor {
 
@@ -45,15 +46,6 @@ class Preset: public std::enable_shared_from_this<Preset> {
 public:
 	static constexpr size_t MAX_NAME_LENGTH = 48;
 	static constexpr size_t MAX_DESCRIPTION_LENGTH = 48;
-
-	// These are in priority order to allow combining errors
-	enum Result : uint8_t {
-		OK = 0,
-		FULL,
-		NOT_FOUND,
-		PARSE_ERROR,
-		IO_ERROR,
-	};
 
 	Preset(App &app, std::shared_ptr<LEDBus> bus, std::string name = "");
 	~Preset() = default;

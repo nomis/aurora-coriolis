@@ -32,6 +32,7 @@
 #include <uuid/log.h>
 
 #include "constants.h"
+#include "util.h"
 
 namespace aurcor {
 
@@ -48,16 +49,6 @@ public:
 	static_assert(std::numeric_limits<index_t>::max() <= std::numeric_limits<unsigned int>::max(),
 		"Index type is too large to be stored in an unsigned int");
 	static constexpr unsigned int MAX_INDEX = std::numeric_limits<index_t>::max();
-
-	// These are in priority order to allow combining errors
-	enum Result : uint8_t {
-		OK = 0,
-		FULL,
-		NOT_FOUND,
-		OUT_OF_RANGE,
-		PARSE_ERROR,
-		IO_ERROR,
-	};
 
 	LEDProfile() = default;
 	~LEDProfile() = default;
@@ -140,11 +131,6 @@ private:
 	static bool valid_value(int64_t value) {
 		return value >= 0
 			&& value <= UINT8_MAX;
-	}
-
-	static Result downgrade_result(Result &current, Result result) {
-		current = std::max(current, result);
-		return result;
 	}
 
 	Result add(index_t index, const Ratio &ratio);

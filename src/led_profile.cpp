@@ -104,7 +104,7 @@ void LEDProfile::transform(uint8_t *data, size_t size) const {
 	}
 }
 
-LEDProfile::Result LEDProfile::add(index_t index, const Ratio &ratio) {
+Result LEDProfile::add(index_t index, const Ratio &ratio) {
 	if (index != 0 || ratio != DEFAULT_RATIO) {
 		size_t size = ratios_.size();
 
@@ -125,7 +125,7 @@ LEDProfile::Result LEDProfile::add(index_t index, const Ratio &ratio) {
  * supply if the profile is scaled to limit power use and there's an error
  * loading it.
  */
-LEDProfile::Result LEDProfile::add_default() {
+Result LEDProfile::add_default() {
 	if (!ratios_.empty()) {
 		auto it = ratios_.end();
 
@@ -144,7 +144,7 @@ LEDProfile::Result LEDProfile::add_default() {
 }
 
 
-LEDProfile::Result LEDProfile::remove(const std::map<index_t,Ratio>::iterator &it) {
+Result LEDProfile::remove(const std::map<index_t,Ratio>::iterator &it) {
 	if (it != ratios_.end()) {
 		ratios_.erase(it);
 		modified_ = true;
@@ -167,7 +167,7 @@ std::vector<unsigned int> LEDProfile::indexes() const {
 	return values;
 }
 
-LEDProfile::Result LEDProfile::get(unsigned int index, uint8_t &r, uint8_t &g, uint8_t &b) const {
+Result LEDProfile::get(unsigned int index, uint8_t &r, uint8_t &g, uint8_t &b) const {
 	if (!valid_index(index))
 		return Result::OUT_OF_RANGE;
 
@@ -181,7 +181,7 @@ LEDProfile::Result LEDProfile::get(unsigned int index, uint8_t &r, uint8_t &g, u
 	return Result::OK;
 }
 
-LEDProfile::Result LEDProfile::set(unsigned int index, int r, int g, int b) {
+Result LEDProfile::set(unsigned int index, int r, int g, int b) {
 	if (!valid_index(index))
 		return Result::OUT_OF_RANGE;
 
@@ -192,7 +192,7 @@ LEDProfile::Result LEDProfile::set(unsigned int index, int r, int g, int b) {
 	return add(index, ratio);
 }
 
-LEDProfile::Result LEDProfile::adjust(unsigned int index, int r, int g, int b) {
+Result LEDProfile::adjust(unsigned int index, int r, int g, int b) {
 	if (!valid_index(index))
 		return Result::OUT_OF_RANGE;
 
@@ -221,15 +221,15 @@ LEDProfile::Ratio LEDProfile::get(index_t index) const {
 	return ratio;
 }
 
-LEDProfile::Result LEDProfile::move(unsigned int src, unsigned int dst) {
+Result LEDProfile::move(unsigned int src, unsigned int dst) {
 	return copy(src, dst, true);
 }
 
-LEDProfile::Result LEDProfile::copy(unsigned int src, unsigned int dst) {
+Result LEDProfile::copy(unsigned int src, unsigned int dst) {
 	return copy(src, dst, false);
 }
 
-LEDProfile::Result LEDProfile::copy(unsigned int src, unsigned int dst, bool move) {
+Result LEDProfile::copy(unsigned int src, unsigned int dst, bool move) {
 	if (!valid_index(src) || !valid_index(dst))
 		return Result::OUT_OF_RANGE;
 
@@ -251,7 +251,7 @@ LEDProfile::Result LEDProfile::copy(unsigned int src, unsigned int dst, bool mov
 	return add((index_t)dst, dst_ratio);
 }
 
-LEDProfile::Result LEDProfile::remove(unsigned int index) {
+Result LEDProfile::remove(unsigned int index) {
 	if (!valid_index(index))
 		return Result::OUT_OF_RANGE;
 
@@ -327,7 +327,7 @@ std::string LEDProfile::make_filename(const char *bus_name, const char *profile_
 	return filename;
 }
 
-LEDProfile::Result LEDProfile::load(const char *bus_name, const char *profile_name,
+Result LEDProfile::load(const char *bus_name, const char *profile_name,
 		bool automatic) {
 	auto filename = make_filename(bus_name, profile_name);
 	std::unique_lock data_lock{data_mutex_};
@@ -369,7 +369,7 @@ LEDProfile::Result LEDProfile::load(const char *bus_name, const char *profile_na
 	}
 }
 
-LEDProfile::Result inline LEDProfile::load(cbor::Reader &reader) {
+Result inline LEDProfile::load(cbor::Reader &reader) {
 	Result result = Result::PARSE_ERROR;
 	uint64_t entries;
 	bool indefinite;
@@ -387,7 +387,7 @@ LEDProfile::Result inline LEDProfile::load(cbor::Reader &reader) {
 	return result;
 }
 
-LEDProfile::Result inline LEDProfile::load_ratio_configs(cbor::Reader &reader, uint64_t entries) {
+Result inline LEDProfile::load_ratio_configs(cbor::Reader &reader, uint64_t entries) {
 	Result result = OK;
 
 	while (entries-- > 0) {
@@ -398,7 +398,7 @@ LEDProfile::Result inline LEDProfile::load_ratio_configs(cbor::Reader &reader, u
 	return result;
 }
 
-LEDProfile::Result inline LEDProfile::load_ratio_config(cbor::Reader &reader) {
+Result inline LEDProfile::load_ratio_config(cbor::Reader &reader) {
 	Result result = OK;
 	index_t index;
 	Ratio ratio;
@@ -427,7 +427,7 @@ LEDProfile::Result inline LEDProfile::load_ratio_config(cbor::Reader &reader) {
 	return result;
 }
 
-LEDProfile::Result inline LEDProfile::get_ratio_config_index(cbor::Reader &reader, index_t &index) {
+Result inline LEDProfile::get_ratio_config_index(cbor::Reader &reader, index_t &index) {
 	int64_t value;
 
 	if (!cbor::expectInt(reader, &value)) {
@@ -447,7 +447,7 @@ LEDProfile::Result inline LEDProfile::get_ratio_config_index(cbor::Reader &reade
 	return Result::OK;
 }
 
-LEDProfile::Result inline LEDProfile::get_ratio_config_ratio(cbor::Reader &reader, Ratio &ratio) {
+Result inline LEDProfile::get_ratio_config_ratio(cbor::Reader &reader, Ratio &ratio) {
 	Result result = OK;
 
 	if (!cbor::expectValue(reader, cbor::DataType::kArray, 3)) {
@@ -466,7 +466,7 @@ LEDProfile::Result inline LEDProfile::get_ratio_config_ratio(cbor::Reader &reade
 	return Result::OK;
 }
 
-LEDProfile::Result inline LEDProfile::get_ratio_config_ratio_value(
+Result inline LEDProfile::get_ratio_config_ratio_value(
 		cbor::Reader &reader, uint8_t &ratio_value) {
 	int64_t value;
 
@@ -487,7 +487,7 @@ LEDProfile::Result inline LEDProfile::get_ratio_config_ratio_value(
 	return Result::OK;
 }
 
-LEDProfile::Result LEDProfile::save(const char *bus_name, const char *profile_name) {
+Result LEDProfile::save(const char *bus_name, const char *profile_name) {
 	auto filename = make_filename(bus_name, profile_name);
 	std::shared_lock data_lock{data_mutex_};
 

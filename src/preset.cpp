@@ -219,7 +219,7 @@ void Preset::reset() {
 	modified_ = false;
 }
 
-Preset::Result Preset::load() {
+Result Preset::load() {
 	auto filename = make_filename();
 	std::unique_lock data_lock{data_mutex_};
 
@@ -241,6 +241,7 @@ Preset::Result Preset::load() {
 			break;
 
 		case Result::NOT_FOUND:
+		case Result::OUT_OF_RANGE:
 		case Result::PARSE_ERROR:
 		case Result::IO_ERROR:
 			logger_.err(F("Preset file %s contains invalid data that has been ignored"), filename.c_str());
@@ -258,9 +259,10 @@ Preset::Result Preset::load() {
 	}
 }
 
-Preset::Result Preset::load(cbor::Reader &reader) {
+Result Preset::load(cbor::Reader &reader) {
 	uint64_t entries;
 	bool indefinite;
+	Result result = Result::OK;
 
 	if (!cbor::expectMap(reader, &entries, &indefinite) || indefinite) {
 		logger_.trace(F("File does not contain a definite length map"));
@@ -296,8 +298,18 @@ Preset::Result Preset::load(cbor::Reader &reader) {
 			if (!cbor::expectBoolean(reader, &reverse_))
 				return Result::PARSE_ERROR;
 		} else if (key == "config") {
-			if (!reader.isWellFormed())
-				return Result::PARSE_ERROR;
+			result = config_.load(reader);
+			switch (result) {
+			case Result::OK:
+			case Result::FULL:
+			case Result::NOT_FOUND:
+			case Result::OUT_OF_RANGE:
+				break;
+
+			case Result::PARSE_ERROR:
+			case Result::IO_ERROR:
+				return result;
+			}
 		} else if (!reader.isWellFormed()) {
 			return Result::PARSE_ERROR;
 		}
@@ -306,12 +318,13 @@ Preset::Result Preset::load(cbor::Reader &reader) {
 	if (script_ == old_script)
 		script_changed_ = false;
 
-	modified_ = false;
+	if (result == Result::OK)
+		modified_ = false;
 	config_changed_ = true;
-	return Result::OK;
+	return result;
 }
 
-Preset::Result Preset::save() {
+Result Preset::save() {
 	std::shared_lock data_lock{data_mutex_};
 	if (name_.empty())
 		return Result::NOT_FOUND;
@@ -357,7 +370,7 @@ void Preset::save(cbor::Writer &writer) {
 	config_.save(writer);
 }
 
-Preset::Result Preset::rename(const Preset &destination) {
+Result Preset::rename(const Preset &destination) {
 	std::unique_lock data_lock{data_mutex_};
 	std::shared_lock data_lock2{destination.data_mutex_};
 
@@ -385,7 +398,7 @@ Preset::Result Preset::rename(const Preset &destination) {
 	}
 }
 
-Preset::Result Preset::remove() {
+Result Preset::remove() {
 	std::shared_lock data_lock{data_mutex_};
 
 	if (name_.empty())

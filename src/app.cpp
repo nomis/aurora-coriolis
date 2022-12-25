@@ -90,7 +90,7 @@ void App::init() {
 			continue;
 		}
 
-		if (preset->load() != Preset::Result::OK) {
+		if (preset->load() != Result::OK) {
 			logger_.err(F("Default preset \"%s\" for bus \"%s\" unavailable"), preset_name.c_str(), bus->name());
 			continue;
 		}
