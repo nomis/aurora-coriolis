@@ -46,6 +46,15 @@ public:
 	static constexpr size_t MAX_NAME_LENGTH = 48;
 	static constexpr size_t MAX_DESCRIPTION_LENGTH = 48;
 
+	// These are in priority order to allow combining errors
+	enum Result : uint8_t {
+		OK = 0,
+		FULL,
+		NOT_FOUND,
+		PARSE_ERROR,
+		IO_ERROR,
+	};
+
 	Preset(App &app, std::shared_ptr<LEDBus> bus, std::string name = "");
 	~Preset() = default;
 
@@ -75,11 +84,11 @@ public:
 	bool modified() const { return modified_; }
 	void modified(bool modified) { modified_ = modified; }
 
-	bool load();
-	bool save();
+	Result load();
+	Result save();
 
-	bool rename(const Preset &destination);
-	bool remove();
+	Result rename(const Preset &destination);
+	Result remove();
 
 	void loop();
 
@@ -94,7 +103,7 @@ private:
 	bool restart() const;
 
 	void reset();
-	bool load(qindesign::cbor::Reader &reader);
+	Result load(qindesign::cbor::Reader &reader);
 	void save(qindesign::cbor::Writer &writer);
 
 	App &app_;

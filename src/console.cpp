@@ -106,6 +106,32 @@ static void led_profile_result(AurcorShell &shell, LEDProfile::Result result = L
 }
 
 __attribute__((noinline))
+static bool load_preset(Shell &shell, Preset &preset) {
+	switch (preset.load()) {
+	case Preset::Result::OK:
+		return true;
+
+	case Preset::Result::NOT_FOUND:
+		shell.printfln(F("Preset \"%s\" not found"), preset.name().c_str());
+		break;
+
+	case Preset::Result::FULL:
+		shell.printfln(F("Too many config values in preset \"%s\""), preset.name().c_str());
+		break;
+
+	case Preset::Result::PARSE_ERROR:
+		shell.printfln(F("Parse error loading preset \"%s\""), preset.name().c_str());
+		break;
+
+	case Preset::Result::IO_ERROR:
+		shell.printfln(F("Error reading preset \"%s\""), preset.name().c_str());
+		break;
+	}
+
+	return false;
+}
+
+__attribute__((noinline))
 static std::vector<std::string> bus_names_autocomplete(Shell &shell,
 		const std::vector<std::string> &current_arguments,
 		const std::string &next_argument) {
@@ -358,10 +384,8 @@ static void default_(Shell &shell, const std::vector<std::string> &arguments) {
 				return;
 			}
 
-			if (!preset->load()) {
-				shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
+			if (!load_preset(shell, *preset))
 				return;
-			}
 		}
 
 		bus->default_preset(preset_name);
@@ -416,7 +440,7 @@ static void list_presets(Shell &shell, const std::vector<std::string> &arguments
 	for (auto &preset_name : Preset::names()) {
 		auto preset = std::make_shared<Preset>(app, nullptr);
 
-		if (preset->name(preset_name) && preset->load()) {
+		if (preset->name(preset_name) && preset->load() == Preset::Result::OK) {
 			shell.printfln(F("%-48s %-48s"),
 				preset->name().c_str(), preset->description().c_str(),
 				preset->reverse() ? "reverse" : "normal");
@@ -502,12 +526,21 @@ static void mv(Shell &shell, const std::vector<std::string> &arguments) {
 	if (preset_from->name() == preset_to->name())
 		return;
 
-	if (!preset_from->rename(*preset_to)) {
-		shell.printfln(F("Preset \"%s\" not found"), preset_from_name.c_str());
-		return;
-	}
+	switch (preset_from->rename(*preset_to)) {
+	case Preset::Result::OK:
+		app.renamed(preset_from_name, preset_to_name);
+		break;
 
-	app.renamed(preset_from_name, preset_to_name);
+	case Preset::Result::NOT_FOUND:
+		shell.printfln(F("Preset \"%s\" not found"), preset_from_name.c_str());
+		break;
+
+	case Preset::Result::FULL:
+	case Preset::Result::PARSE_ERROR:
+	case Preset::Result::IO_ERROR:
+		shell.printfln(F("Error renaming preset"));
+		break;
+	}
 }
 
 /* <preset> */
@@ -521,12 +554,22 @@ static void rm(Shell &shell, const std::vector<std::string> &arguments) {
 		return;
 	}
 
-	if (!preset->remove()) {
+	switch (preset->remove()) {
+	case Preset::Result::OK:
+		app.deleted(preset_name);
+		break;
+
+	case Preset::Result::NOT_FOUND:
 		shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
-		return;
+		break;
+
+	case Preset::Result::FULL:
+	case Preset::Result::PARSE_ERROR:
+	case Preset::Result::IO_ERROR:
+		shell.printfln(F("Error deleting preset"));
+		break;
 	}
 
-	app.deleted(preset_name);
 }
 
 /* [bus] <script> */
@@ -585,17 +628,14 @@ static void start(Shell &shell, const std::vector<std::string> &arguments) {
 			return;
 		}
 
-		if (preset->load()) {
+		if (load_preset(shell, *preset)) {
 			app.start(bus, preset);
-		} else {
-			shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
-			return;
-		}
 
-		if (arguments.size() >= 3 && arguments[2] == "default") {
-			if (shell.has_any_flags(CommandFlags::ADMIN)) {
-				bus->default_preset(preset_name);
-				aurcor::console::bus::show_default_preset(shell, bus);
+			if (arguments.size() >= 3 && arguments[2] == "default") {
+				if (shell.has_any_flags(CommandFlags::ADMIN)) {
+					bus->default_preset(preset_name);
+					aurcor::console::bus::show_default_preset(shell, bus);
+				}
 			}
 		}
 	}
@@ -658,10 +698,8 @@ static void default_(Shell &shell, const std::vector<std::string> &arguments) {
 				return;
 			}
 
-			if (!preset->load()) {
-				shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
+			if (!load_preset(shell, *preset))
 				return;
-			}
 		}
 
 		bus->default_preset(preset_name);
@@ -685,10 +723,9 @@ static void edit(Shell &shell, const std::vector<std::string> &arguments) {
 			return;
 		}
 
-		if (preset->load()) {
+		if (load_preset(shell, *preset)) {
 			app.start(bus, preset);
 		} else {
-			shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
 			return;
 		}
 	}
@@ -763,17 +800,14 @@ static void start(Shell &shell, const std::vector<std::string> &arguments) {
 		return;
 	}
 
-	if (preset->load()) {
+	if (load_preset(shell, *preset)) {
 		app.start(bus, preset);
-	} else {
-		shell.printfln(F("Preset \"%s\" not found"), preset_name.c_str());
-		return;
-	}
 
-	if (arguments.size() >= 2 && arguments[1] == "default") {
-		if (shell.has_any_flags(CommandFlags::ADMIN)) {
-			bus->default_preset(preset_name);
-			show_default_preset(shell, bus);
+		if (arguments.size() >= 2 && arguments[1] == "default") {
+			if (shell.has_any_flags(CommandFlags::ADMIN)) {
+				bus->default_preset(preset_name);
+				show_default_preset(shell, bus);
+			}
 		}
 	}
 }
@@ -890,8 +924,8 @@ static void reload(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!aurcor_shell.preset_active())
 		return;
 
-	if (!aurcor_shell.preset().load())
-		shell.printfln(F("Failed to reload preset"));
+	if (load_preset(shell, aurcor_shell.preset()))
+		shell.printfln(F("Reloaded preset"));
 }
 
 /* <name> */
@@ -944,10 +978,11 @@ static void save(Shell &shell, const std::vector<std::string> &arguments) {
 		return;
 	}
 
-	if (!aurcor_shell.preset().save())
+	if (aurcor_shell.preset().save() == Preset::Result::OK) {
+		to_app(shell).refresh(aurcor_shell.preset().name());
+	} else {
 		shell.printfln(F("Failed to save preset"));
-
-	to_app(shell).refresh(aurcor_shell.preset().name());
+	}
 }
 
 /* <script> */

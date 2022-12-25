@@ -90,8 +90,8 @@ void App::init() {
 			continue;
 		}
 
-		if (!preset->load()) {
-			logger_.err(F("Default preset \"%s\" for bus \"%s\" not found"), preset_name.c_str(), bus->name());
+		if (preset->load() != Preset::Result::OK) {
+			logger_.err(F("Default preset \"%s\" for bus \"%s\" unavailable"), preset_name.c_str(), bus->name());
 			continue;
 		}
 

@@ -219,7 +219,7 @@ void Preset::reset() {
 	modified_ = false;
 }
 
-bool Preset::load() {
+Preset::Result Preset::load() {
 	auto filename = make_filename();
 	std::unique_lock data_lock{data_mutex_};
 
@@ -233,25 +233,38 @@ bool Preset::load() {
 		if (!cbor::expectValue(reader, cbor::DataType::kTag, cbor::kSelfDescribeTag))
 			file.seek(0);
 
-		if (!load(reader)) {
+		auto result = load(reader);
+
+		switch (result) {
+		case Result::FULL:
+			logger_.err(F("Preset file %s contains too many config values (truncated)"), filename.c_str());
+			break;
+
+		case Result::NOT_FOUND:
+		case Result::PARSE_ERROR:
+		case Result::IO_ERROR:
 			logger_.err(F("Preset file %s contains invalid data that has been ignored"), filename.c_str());
-			return false;
+			break;
+
+		case Result::OK:
+		default:
+			break;
 		}
 
-		return true;
+		return result;
 	} else {
 		logger_.err(F("Unable to open preset file %s for reading"), filename.c_str());
-		return false;
+		return Result::NOT_FOUND;
 	}
 }
 
-bool Preset::load(cbor::Reader &reader) {
+Preset::Result Preset::load(cbor::Reader &reader) {
 	uint64_t entries;
 	bool indefinite;
 
 	if (!cbor::expectMap(reader, &entries, &indefinite) || indefinite) {
 		logger_.trace(F("File does not contain a definite length map"));
-		return false;
+		return Result::PARSE_ERROR;
 	}
 
 	auto old_script = script_;
@@ -262,13 +275,13 @@ bool Preset::load(cbor::Reader &reader) {
 		std::string key;
 
 		if (!app::read_text(reader, key))
-			return false;
+			return Result::PARSE_ERROR;
 
 		if (key == "desc") {
 			std::string value;
 
 			if (!app::read_text(reader, value))
-				return false;
+				return Result::PARSE_ERROR;
 
 			if (description_constrained(value))
 				description_ = value;
@@ -276,17 +289,17 @@ bool Preset::load(cbor::Reader &reader) {
 			std::string value;
 
 			if (!app::read_text(reader, value))
-				return false;
+				return Result::PARSE_ERROR;
 
 			script_ = value;
 		} else if (key == "reverse") {
 			if (!cbor::expectBoolean(reader, &reverse_))
-				return false;
+				return Result::PARSE_ERROR;
 		} else if (key == "config") {
 			if (!reader.isWellFormed())
-				return false;
+				return Result::PARSE_ERROR;
 		} else if (!reader.isWellFormed()) {
-			return false;
+			return Result::PARSE_ERROR;
 		}
 	}
 
@@ -295,13 +308,13 @@ bool Preset::load(cbor::Reader &reader) {
 
 	modified_ = false;
 	config_changed_ = true;
-	return true;
+	return Result::OK;
 }
 
-bool Preset::save() {
+Preset::Result Preset::save() {
 	std::shared_lock data_lock{data_mutex_};
 	if (name_.empty())
-		return false;
+		return Result::NOT_FOUND;
 	auto filename = make_filename();
 
 	logger_.notice(F("Writing preset from bus %s to file %s"), bus_->name(), filename.c_str());
@@ -309,7 +322,7 @@ bool Preset::save() {
 	auto file = FS.open(filename.c_str(), "w", true);
 	if (!file) {
 		logger_.err(F("Unable to open preset file %s for writing"), filename.c_str());
-		return false;
+		return Result::IO_ERROR;
 	}
 
 	cbor::Writer writer{file};
@@ -321,10 +334,10 @@ bool Preset::save() {
 		logger_.err(F("Failed to write preset file %s: %u"), filename.c_str(), file.getWriteError());
 		file.close();
 		FS.remove(filename.c_str());
-		return false;
+		return Result::IO_ERROR;
 	} else {
 		modified_ = false;
-		return true;
+		return Result::OK;
 	}
 }
 
@@ -344,12 +357,12 @@ void Preset::save(cbor::Writer &writer) {
 	config_.save(writer);
 }
 
-bool Preset::rename(const Preset &destination) {
+Preset::Result Preset::rename(const Preset &destination) {
 	std::unique_lock data_lock{data_mutex_};
 	std::shared_lock data_lock2{destination.data_mutex_};
 
 	if (name_.empty() || destination.name_.empty())
-		return false;
+		return Result::NOT_FOUND;
 
 	auto filename_from = make_filename();
 	auto filename_to = destination.make_filename();
@@ -361,29 +374,35 @@ bool Preset::rename(const Preset &destination) {
 		}
 
 		logger_.notice(F("Renaming preset file from %s to %s"), filename_from.c_str(), filename_to.c_str());
-		FS.rename(filename_from.c_str(), filename_to.c_str());
-		name_ = destination.name_;
-		return true;
+		if (FS.rename(filename_from.c_str(), filename_to.c_str())) {
+			name_ = destination.name_;
+			return Result::OK;
+		} else {
+			return Result::IO_ERROR;
+		}
 	} else {
-		return false;
+		return Result::NOT_FOUND;
 	}
 }
 
-bool Preset::remove() {
+Preset::Result Preset::remove() {
 	std::shared_lock data_lock{data_mutex_};
 
 	if (name_.empty())
-		return false;
+		return Result::NOT_FOUND;
 
 	auto filename = make_filename();
 
 	if (FS.exists(filename.c_str())) {
 		logger_.notice(F("Deleting preset file %s"), filename.c_str());
-		FS.remove(filename.c_str());
-		modified_ = true;
-		return true;
+		if (FS.remove(filename.c_str())) {
+			modified_ = true;
+			return Result::OK;
+		} else {
+			return Result::IO_ERROR;
+		}
 	} else {
-		return false;
+		return Result::NOT_FOUND;
 	}
 }
 
