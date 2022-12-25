@@ -666,12 +666,12 @@ namespace bus {
 
 __attribute__((noinline))
 static void show_length(Shell &shell) {
-	shell.printfln(F("Length: %zu"), to_shell(shell).bus()->length());
+	shell.printfln(F("Length:         %zu"), to_shell(shell).bus()->length());
 };
 
 __attribute__((noinline))
 static void show_direction(Shell &shell) {
-	shell.printfln(F("Direction: %s"), to_shell(shell).bus()->reverse() ? "reverse" : "normal");
+	shell.printfln(F("Direction:      %s"), to_shell(shell).bus()->reverse() ? "reverse" : "normal");
 };
 
 __attribute__((noinline))
@@ -832,6 +832,12 @@ static void show(Shell &shell, const std::vector<std::string> &arguments) {
 	show_length(shell);
 	show_direction(shell);
 	show_default_preset(shell, to_shell(shell).bus());
+
+	auto preset = to_app(shell).edit(to_shell(shell).bus());
+
+	shell.printfln(F("Current preset: %s%s"),
+		preset ? preset->get()->name().c_str() : "<none>",
+		preset ? (preset->get()->modified() ? " (unsaved)" : "") : "");
 }
 
 } // namespace bus
@@ -911,6 +917,38 @@ static void save(Shell &shell, const std::vector<std::string> &arguments) {
 
 namespace bus_preset {
 
+__attribute__((noinline))
+static void show_name(Shell &shell) {
+	auto &aurcor_shell = to_shell(shell);
+	auto &preset = aurcor_shell.preset();
+
+	shell.printfln(F("Name:        %s"), preset.name().c_str());
+};
+
+__attribute__((noinline))
+static void show_description(Shell &shell) {
+	auto &aurcor_shell = to_shell(shell);
+	auto &preset = aurcor_shell.preset();
+
+	shell.printfln(F("Description: %s"), preset.description().c_str());
+};
+
+__attribute__((noinline))
+static void show_script(Shell &shell) {
+	auto &aurcor_shell = to_shell(shell);
+	auto &preset = aurcor_shell.preset();
+
+	shell.printfln(F("Script:      %s"), preset.script().c_str());
+};
+
+__attribute__((noinline))
+static void show_direction(Shell &shell) {
+	auto &aurcor_shell = to_shell(shell);
+	auto &preset = aurcor_shell.preset();
+
+	shell.printfln(F("Direction:   %s"), preset.reverse() ? "reverse" : "normal");
+};
+
 /* <description> */
 static void desc(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &description = arguments[0];
@@ -921,6 +959,8 @@ static void desc(Shell &shell, const std::vector<std::string> &arguments) {
 
 	if (!aurcor_shell.preset().description(description))
 		shell.printfln(F("Invalid description"));
+
+	show_description(shell);
 }
 
 static void reload(Shell &shell, const std::vector<std::string> &arguments) {
@@ -953,6 +993,8 @@ static void name(Shell &shell, const std::vector<std::string> &arguments) {
 
 	if (!aurcor_shell.preset().name(name))
 		shell.printfln(F("Invalid name"));
+
+	show_name(shell);
 }
 
 static void normal(Shell &shell, const std::vector<std::string> &arguments) {
@@ -962,6 +1004,7 @@ static void normal(Shell &shell, const std::vector<std::string> &arguments) {
 		return;
 
 	aurcor_shell.preset().reverse(false);
+	show_direction(shell);
 }
 
 static void reverse(Shell &shell, const std::vector<std::string> &arguments) {
@@ -971,6 +1014,7 @@ static void reverse(Shell &shell, const std::vector<std::string> &arguments) {
 		return;
 
 	aurcor_shell.preset().reverse(true);
+	show_direction(shell);
 }
 
 /* [name] */
@@ -1010,6 +1054,7 @@ static void script(Shell &shell, const std::vector<std::string> &arguments) {
 
 	if (MicroPythonFile::exists(script_name.c_str())) {
 		aurcor_shell.preset().script(script_name);
+		show_script(shell);
 	} else {
 		shell.printfln(F("Script \"%s\" not found"), script_name.c_str());
 	}
@@ -1021,12 +1066,10 @@ static void show(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!aurcor_shell.preset_active())
 		return;
 
-	auto &preset = aurcor_shell.preset();
-
-	shell.printfln(F("Name:        %s"), preset.name().c_str());
-	shell.printfln(F("Description: %s"), preset.description().c_str());
-	shell.printfln(F("Script:      %s"), preset.script().c_str());
-	shell.printfln(F("Direction:   %s"), preset.reverse() ? "reverse" : "normal");
+	show_name(shell);
+	show_description(shell);
+	show_script(shell);
+	show_direction(shell);
 }
 
 } // namespace bus_preset
@@ -1181,7 +1224,7 @@ std::string AurcorShell::context_text() {
 			text.append(LEDProfiles::lc_name(profile_));
 
 			if (profile().modified())
-				text.append("(unsaved)");
+				text.append(" (unsaved)");
 
 			return text;
 		}
@@ -1196,7 +1239,7 @@ std::string AurcorShell::context_text() {
 				text.append(preset_->get()->name().c_str());
 
 				if (preset_->get()->modified())
-					text.append("(unsaved)");
+					text.append(" (unsaved)");
 			} else {
 				text.append("<detached>");
 			}
