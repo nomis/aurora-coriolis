@@ -79,15 +79,18 @@ public:
 	public:
 		using pointer_type = std::unique_ptr<Property, Deleter>;
 
-		static pointer_type create(Type type);
+		static pointer_type create(Type type, bool registered);
 
 		/** Clear default and @return has_value() */
 		static bool clear_default(Property &property);
-		/** Clear value and @return has_default() */
+		/** Clear value and @return registered() */
 		static bool clear_value(Property &property);
 
 		inline Type type() const { return type_; }
 		inline void type(Type type) { type_ = type; }
+
+		inline bool registered() const { return registered_; }
+		inline void registered(bool registered) { registered_ = registered; }
 
 		size_t size(bool values) const;
 
@@ -106,7 +109,12 @@ public:
 		inline const SetS32Property& as_s32_set() const { return static_cast<const SetS32Property&>(*this); }
 
 	protected:
-		Property(Type type) { type_ = type; has_default_ = false; has_value_ = false; }
+		Property(Type type, bool registered) {
+			type_ = type;
+			registered_ = registered;
+			has_default_ = false;
+			has_value_ = false;
+		}
 
 		inline bool has_default() const { return has_default_; }
 		inline void default_set() { has_default_ = true; }
@@ -119,7 +127,8 @@ public:
 		inline bool has_any() const { return has_default() || has_value(); }
 
 	private:
-		Type type_ : 6;
+		Type type_ : 5;
+		bool registered_ : 1;
 		bool has_default_ : 1;
 		bool has_value_ : 1;
 	};
@@ -129,7 +138,7 @@ public:
 
 	class BoolProperty: public Property {
 	public:
-		BoolProperty() : Property(Type::BOOL) {}
+		BoolProperty(bool registered) : Property(Type::BOOL, registered) {}
 
 		inline bool get_default() const { return default_; }
 		inline void set_default(bool value) { default_ = default_; default_set(); }
@@ -156,7 +165,7 @@ public:
 
 	class S32Property: public Property {
 	public:
-		S32Property(bool rgb) : Property(rgb ? Type::RGB : Type::S32) {}
+		S32Property(bool rgb, bool registered) : Property(rgb ? Type::RGB : Type::S32, registered) {}
 
 		inline int32_t get_default() const { return default_; }
 		inline void set_default(int32_t value) { default_ = value; default_set(); }
@@ -183,7 +192,7 @@ public:
 
 	class ListU16Property: public Property {
 	public:
-		ListU16Property() : Property(Type::LIST_U16) {}
+		ListU16Property(bool registered) : Property(Type::LIST_U16, registered) {}
 
 		inline std::vector<uint16_t>& defaults() { return defaults_; }
 		inline const std::vector<uint16_t>& defaults() const { return defaults_; }
@@ -209,7 +218,7 @@ public:
 
 	class ListS32Property: public Property {
 	public:
-		ListS32Property(bool rgb) : Property(rgb ? Type::LIST_RGB : Type::LIST_S32) {}
+		ListS32Property(bool rgb, bool registered) : Property(rgb ? Type::LIST_RGB : Type::LIST_S32, registered) {}
 
 		inline std::vector<int32_t>& defaults() { return defaults_; }
 		inline const std::vector<int32_t>& defaults() const { return defaults_; }
@@ -235,7 +244,7 @@ public:
 
 	class SetU16Property: public Property {
 	public:
-		SetU16Property() : Property(Type::SET_U16) {}
+		SetU16Property(bool registered) : Property(Type::SET_U16, registered) {}
 
 		inline std::set<uint16_t>& defaults() { return defaults_; }
 		inline const std::set<uint16_t>& defaults() const { return defaults_; }
@@ -261,7 +270,7 @@ public:
 
 	class SetS32Property: public Property {
 	public:
-		SetS32Property(bool rgb) : Property(rgb ? Type::SET_RGB : Type::SET_S32) {}
+		SetS32Property(bool rgb, bool registered) : Property(rgb ? Type::SET_RGB : Type::SET_S32, registered) {}
 
 		inline std::set<int32_t>& defaults() { return defaults_; }
 		inline const std::set<int32_t>& defaults() const { return defaults_; }

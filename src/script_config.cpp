@@ -47,34 +47,34 @@ namespace cbor = qindesign::cbor;
 
 namespace aurcor {
 
-inline ScriptConfig::Property::pointer_type ScriptConfig::Property::create(ScriptConfig::Type type) {
+inline ScriptConfig::Property::pointer_type ScriptConfig::Property::create(ScriptConfig::Type type, bool registered) {
 	switch (type) {
 	case BOOL:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::BoolProperty()};
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::BoolProperty(registered)};
 
 	case S32:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::S32Property(false)};
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::S32Property(false, registered)};
 
 	case RGB:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::S32Property(true)};
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::S32Property(true, registered)};
 
 	case LIST_U16:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListU16Property()};
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListU16Property(registered)};
 
 	case LIST_S32:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListS32Property(false)};
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListS32Property(false, registered)};
 
 	case LIST_RGB:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListS32Property(true)};
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListS32Property(true, registered)};
 
 	case SET_U16:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetU16Property()};
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetU16Property(registered)};
 
 	case SET_S32:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetS32Property(false)};
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetS32Property(false, registered)};
 
 	case SET_RGB:
-		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetS32Property(true)};
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetS32Property(true, registered)};
 
 	case INVALID:
 	default:
@@ -195,30 +195,30 @@ bool ScriptConfig::Property::clear_value(Property &property) {
 	switch (property.type()) {
 	case BOOL:
 		property.as_bool().clear_value();
-		return property.as_bool().has_default();
+		return property.as_bool().registered();
 
 	case S32:
 	case RGB:
 		property.as_s32().clear_value();
-		return property.as_s32().has_default();
+		return property.as_s32().registered();
 
 	case LIST_U16:
 		property.as_s32_list().clear_value();
-		return property.as_s32_list().has_default();
+		return property.as_s32_list().registered();
 
 	case LIST_S32:
 	case LIST_RGB:
 		property.as_s32_list().clear_value();
-		return property.as_s32_list().has_default();
+		return property.as_s32_list().registered();
 
 	case SET_U16:
 		property.as_u16_set().clear_value();
-		return property.as_u16_set().has_default();
+		return property.as_u16_set().registered();
 
 	case SET_S32:
 	case SET_RGB:
 		property.as_s32_set().clear_value();
-		return property.as_s32_set().has_default();
+		return property.as_s32_set().registered();
 
 	case INVALID:
 	default:
@@ -349,7 +349,8 @@ void ScriptConfig::register_config(mp_obj_t dict) {
 		qstr qkey = qstr_from_strn(property_it->first.c_str(), property_it->first.length());
 		mp_map_elem_t *elem = mp_map_lookup(map, MP_OBJ_NEW_QSTR(qkey), MP_MAP_LOOKUP);
 
-		if (elem == NULL) {
+		if (elem == MP_OBJ_NULL) {
+			property_it->second->registered(false);
 			if (!Property::clear_default(*property_it->second)) {
 				property_it = properties_.erase(property_it);
 				continue;
@@ -389,9 +390,10 @@ void ScriptConfig::register_config(mp_obj_t dict) {
 			mp_raise_ValueError(MP_ERROR_TEXT("invalid config type"));
 
 		if (property_it != properties_.end()) {
+			property_it->second->registered(true);
 			total_size -= property_it->second->size(false);
 		} else {
-			property_it = properties_.emplace(key, std::move(ScriptConfig::Property::create(type))).first;
+			property_it = properties_.emplace(key, std::move(ScriptConfig::Property::create(type, true))).first;
 			total_size += entry_base_size(key);
 		}
 
