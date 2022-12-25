@@ -85,6 +85,7 @@ public:
 
 		static pointer_type create(Type type, bool registered);
 
+		static bool has_value(Property &property);
 		/** Clear default and @return has_value() */
 		static bool clear_default(Property &property);
 		/** Clear value and @return registered() */
@@ -305,6 +306,8 @@ public:
 
 	void register_config(mp_obj_t dict);
 	void populate_config(mp_obj_t dict);
+
+	bool clear();
 
 	Result load(qindesign::cbor::Reader &reader);
 	void save(qindesign::cbor::Writer &writer);

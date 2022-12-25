@@ -933,6 +933,16 @@ static void reload(Shell &shell, const std::vector<std::string> &arguments) {
 		shell.printfln(F("Reloaded preset"));
 }
 
+static void reset_config(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	aurcor_shell.preset().clear_config();
+	shell.printfln(F("Reset config to defaults"));
+}
+
 /* <name> */
 static void name(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &name = arguments[0];
@@ -1080,10 +1090,11 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 			bus_profile::set, bus_profile_index_values_autocomplete);
 	commands->add_command(context::bus_profile, admin, {F("save")}, bus_profile::save);
 
-	commands->add_command(context::bus_preset, admin, {F("reload")}, bus_preset::reload);
 	commands->add_command(context::bus_preset, admin, {F("desc")}, {F("<description>")}, bus_preset::desc, preset_current_description_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("name")}, {F("<name>")}, bus_preset::name, preset_current_name_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("normal")}, bus_preset::normal);
+	commands->add_command(context::bus_preset, admin, {F("reload")}, bus_preset::reload);
+	commands->add_command(context::bus_preset, admin, {F("reset"), F("config")}, bus_preset::reset_config);
 	commands->add_command(context::bus_preset, admin, {F("reverse")}, bus_preset::reverse);
 	commands->add_command(context::bus_preset, admin, {F("save")}, {F("[name]")}, bus_preset::save);
 	commands->add_command(context::bus_preset, admin, {F("script")}, {F("<script>")}, bus_preset::script, script_names_autocomplete);

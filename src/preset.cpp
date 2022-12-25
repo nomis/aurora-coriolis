@@ -182,6 +182,15 @@ bool Preset::populate_config(mp_obj_t dict) {
 	return ret;
 }
 
+void Preset::clear_config() {
+	std::unique_lock data_lock{data_mutex_};
+
+	if (config_.clear()) {
+		config_changed_ = true;
+		modified_ = true;
+	}
+}
+
 std::shared_ptr<std::shared_ptr<Preset>> Preset::edit() {
 	auto ref = editing_.lock();
 

@@ -67,6 +67,8 @@ public:
 	void register_config(mp_obj_t dict);
 	bool populate_config(mp_obj_t dict);
 
+	void clear_config();
+
 	/* Not protected by a mutex; assumes modifications only happen from one
 	 * thread. Making these thread-safe would require an extra mutex to avoid
 	 * blocking other readers when saving the preset.

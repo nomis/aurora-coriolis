@@ -161,6 +161,35 @@ size_t ScriptConfig::Property::size(bool values) const {
 	}
 }
 
+bool ScriptConfig::Property::has_value(Property &property) {
+	switch (property.type()) {
+	case BOOL:
+		return property.as_bool().has_value();
+
+	case S32:
+	case RGB:
+		return property.as_s32().has_value();
+
+	case LIST_U16:
+		return property.as_s32_list().has_value();
+
+	case LIST_S32:
+	case LIST_RGB:
+		return property.as_s32_list().has_value();
+
+	case SET_U16:
+		return property.as_u16_set().has_value();
+
+	case SET_S32:
+	case SET_RGB:
+		return property.as_s32_set().has_value();
+
+	case INVALID:
+	default:
+		return false;
+	}
+}
+
 bool ScriptConfig::Property::clear_default(Property &property) {
 	switch (property.type()) {
 	case BOOL:
@@ -527,6 +556,23 @@ void ScriptConfig::populate_config(mp_obj_t dict) {
 	micropython_nlr_end();
 }
 
+bool ScriptConfig::clear() {
+	bool changed = false;
+
+	for (auto it = properties_.begin(); it != properties_.end(); ) {
+		if (Property::has_value(*it->second))
+			changed = true;
+
+		if (!Property::clear_value(*it->second)) {
+			it = properties_.erase(it);
+		} else {
+			++it;
+		}
+	}
+
+	return changed;
+}
+
 bool ScriptConfig::load_one_rgb(cbor::Reader &reader, const std::string &key, int32_t &value) {
 	if (!cbor::expectArrayLength(reader, 3)) {
 		if (VERBOSE)
@@ -654,13 +700,7 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 		return Result::PARSE_ERROR;
 	}
 
-	for (auto it = properties_.begin(); it != properties_.end(); ) {
-		if (!Property::clear_value(*it->second)) {
-			it = properties_.erase(it);
-		} else {
-			++it;
-		}
-	}
+	clear();
 
 	size_t total_size = values_size();
 
