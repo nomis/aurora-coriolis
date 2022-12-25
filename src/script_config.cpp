@@ -680,7 +680,13 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 		Type type = type_of(key.substr(pos + 1));
 		if (type == Type::INVALID && VERBOSE)
 			logger_.trace(F("Invalid key/type \"%s\""), key.c_str());
+
 		key = key.substr(0, pos);
+		if (!allowed_key(key)) {
+			if (VERBOSE)
+				logger_.trace(F("Invalid key \"%s\""), key.c_str());
+			return Result::PARSE_ERROR;
+		}
 
 		if (result != Result::OK) {
 			// Skip value (full)
