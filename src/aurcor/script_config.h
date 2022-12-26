@@ -338,26 +338,18 @@ private:
 	template <class T>
 	static mp_obj_t create_set(const std::set<T> &container, typename std::set<T>::const_iterator &container_it);
 
-	static bool load_one_rgb(qindesign::cbor::Reader &reader, const std::string &key, int32_t &value);
 	static void write_key(qindesign::cbor::Writer &writer, const std::string &key, const char *type);
-	static void save_one_rgb(qindesign::cbor::Writer &writer, uint32_t value);
 	template <class T>
 	static Result load_container_uint(qindesign::cbor::Reader &reader,
 		const std::string &key, Property &property, T &values, size_t total_size);
 	template <class T>
 	static Result load_container_int(qindesign::cbor::Reader &reader,
-		const std::string &key, Property &property, T &values, size_t total_size);
-	template <class T>
-	static Result load_container_rgb(qindesign::cbor::Reader &reader,
-		const std::string &key, Property &property, T &values, size_t total_size);
+		const std::string &key, Property &property, T &values, int32_t mask, size_t total_size);
 	template <class T>
 	static void save_container_uint(qindesign::cbor::Writer &writer,
 		const std::string &key, const char *type, T &values);
 	template <class T>
 	static void save_container_int(qindesign::cbor::Writer &writer,
-		const std::string &key, const char *type, T &values);
-	template <class T>
-	static void save_container_rgb(qindesign::cbor::Writer &writer,
 		const std::string &key, const char *type, T &values);
 
 	static uuid::log::Logger logger_;

@@ -58,34 +58,34 @@ uuid::log::Logger ScriptConfig::logger_{FPSTR(__pstr__logger_name), uuid::log::F
 
 inline ScriptConfig::Property::pointer_type ScriptConfig::Property::create(ScriptConfig::Type type, bool registered) {
 	switch (type) {
-	case BOOL:
+	case Type::BOOL:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::BoolProperty(registered)};
 
-	case S32:
+	case Type::S32:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::S32Property(false, registered)};
 
-	case RGB:
+	case Type::RGB:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::S32Property(true, registered)};
 
-	case LIST_U16:
+	case Type::LIST_U16:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListU16Property(registered)};
 
-	case LIST_S32:
+	case Type::LIST_S32:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListS32Property(false, registered)};
 
-	case LIST_RGB:
+	case Type::LIST_RGB:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListS32Property(true, registered)};
 
-	case SET_U16:
+	case Type::SET_U16:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetU16Property(registered)};
 
-	case SET_S32:
+	case Type::SET_S32:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetS32Property(false, registered)};
 
-	case SET_RGB:
+	case Type::SET_RGB:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::SetS32Property(true, registered)};
 
-	case INVALID:
+	case Type::INVALID:
 	default:
 		return {nullptr};
 	}
@@ -93,43 +93,43 @@ inline ScriptConfig::Property::pointer_type ScriptConfig::Property::create(Scrip
 
 void ScriptConfig::Property::Deleter::operator()(Property *property) {
 	switch (property->type()) {
-	case BOOL:
+	case Type::BOOL:
 		delete static_cast<ScriptConfig::BoolProperty*>(property);
 		break;
 
-	case S32:
+	case Type::S32:
 		delete static_cast<ScriptConfig::S32Property*>(property);
 		break;
 
-	case RGB:
+	case Type::RGB:
 		delete static_cast<ScriptConfig::S32Property*>(property);
 		break;
 
-	case LIST_U16:
+	case Type::LIST_U16:
 		delete static_cast<ScriptConfig::ListU16Property*>(property);
 		break;
 
-	case LIST_S32:
+	case Type::LIST_S32:
 		delete static_cast<ScriptConfig::ListS32Property*>(property);
 		break;
 
-	case LIST_RGB:
+	case Type::LIST_RGB:
 		delete static_cast<ScriptConfig::ListS32Property*>(property);
 		break;
 
-	case SET_U16:
+	case Type::SET_U16:
 		delete static_cast<ScriptConfig::SetU16Property*>(property);
 		break;
 
-	case SET_S32:
+	case Type::SET_S32:
 		delete static_cast<ScriptConfig::SetS32Property*>(property);
 		break;
 
-	case SET_RGB:
+	case Type::SET_RGB:
 		delete static_cast<ScriptConfig::SetS32Property*>(property);
 		break;
 
-	case INVALID:
+	case Type::INVALID:
 	default:
 		delete property;
 		break;
@@ -138,28 +138,28 @@ void ScriptConfig::Property::Deleter::operator()(Property *property) {
 
 size_t ScriptConfig::Property::size(bool values) const {
 	switch (type()) {
-	case BOOL:
+	case Type::BOOL:
 		return as_bool().size(values);
 
-	case S32:
-	case RGB:
+	case Type::S32:
+	case Type::RGB:
 		return as_s32().size(values);
 
-	case LIST_U16:
+	case Type::LIST_U16:
 		return as_s32_list().size(values);
 
-	case LIST_S32:
-	case LIST_RGB:
+	case Type::LIST_S32:
+	case Type::LIST_RGB:
 		return as_s32_list().size(values);
 
-	case SET_U16:
+	case Type::SET_U16:
 		return as_u16_set().size(values);
 
-	case SET_S32:
-	case SET_RGB:
+	case Type::SET_S32:
+	case Type::SET_RGB:
 		return as_s32_set().size(values);
 
-	case INVALID:
+	case Type::INVALID:
 	default:
 		return 0;
 	}
@@ -167,28 +167,28 @@ size_t ScriptConfig::Property::size(bool values) const {
 
 bool ScriptConfig::Property::has_value(Property &property) {
 	switch (property.type()) {
-	case BOOL:
+	case Type::BOOL:
 		return property.as_bool().has_value();
 
-	case S32:
-	case RGB:
+	case Type::S32:
+	case Type::RGB:
 		return property.as_s32().has_value();
 
-	case LIST_U16:
+	case Type::LIST_U16:
 		return property.as_s32_list().has_value();
 
-	case LIST_S32:
-	case LIST_RGB:
+	case Type::LIST_S32:
+	case Type::LIST_RGB:
 		return property.as_s32_list().has_value();
 
-	case SET_U16:
+	case Type::SET_U16:
 		return property.as_u16_set().has_value();
 
-	case SET_S32:
-	case SET_RGB:
+	case Type::SET_S32:
+	case Type::SET_RGB:
 		return property.as_s32_set().has_value();
 
-	case INVALID:
+	case Type::INVALID:
 	default:
 		return false;
 	}
@@ -196,34 +196,34 @@ bool ScriptConfig::Property::has_value(Property &property) {
 
 bool ScriptConfig::Property::clear_default(Property &property) {
 	switch (property.type()) {
-	case BOOL:
+	case Type::BOOL:
 		property.as_bool().clear_default();
 		return property.as_bool().has_value();
 
-	case S32:
-	case RGB:
+	case Type::S32:
+	case Type::RGB:
 		property.as_s32().clear_default();
 		return property.as_s32().has_value();
 
-	case LIST_U16:
+	case Type::LIST_U16:
 		property.as_s32_list().clear_default();
 		return property.as_s32_list().has_value();
 
-	case LIST_S32:
-	case LIST_RGB:
+	case Type::LIST_S32:
+	case Type::LIST_RGB:
 		property.as_s32_list().clear_default();
 		return property.as_s32_list().has_value();
 
-	case SET_U16:
+	case Type::SET_U16:
 		property.as_u16_set().clear_default();
 		return property.as_u16_set().has_value();
 
-	case SET_S32:
-	case SET_RGB:
+	case Type::SET_S32:
+	case Type::SET_RGB:
 		property.as_s32_set().clear_default();
 		return property.as_s32_set().has_value();
 
-	case INVALID:
+	case Type::INVALID:
 	default:
 		return false;
 	}
@@ -231,34 +231,34 @@ bool ScriptConfig::Property::clear_default(Property &property) {
 
 bool ScriptConfig::Property::clear_value(Property &property) {
 	switch (property.type()) {
-	case BOOL:
+	case Type::BOOL:
 		property.as_bool().clear_value();
 		return property.as_bool().registered();
 
-	case S32:
-	case RGB:
+	case Type::S32:
+	case Type::RGB:
 		property.as_s32().clear_value();
 		return property.as_s32().registered();
 
-	case LIST_U16:
+	case Type::LIST_U16:
 		property.as_s32_list().clear_value();
 		return property.as_s32_list().registered();
 
-	case LIST_S32:
-	case LIST_RGB:
+	case Type::LIST_S32:
+	case Type::LIST_RGB:
 		property.as_s32_list().clear_value();
 		return property.as_s32_list().registered();
 
-	case SET_U16:
+	case Type::SET_U16:
 		property.as_u16_set().clear_value();
 		return property.as_u16_set().registered();
 
-	case SET_S32:
-	case SET_RGB:
+	case Type::SET_S32:
+	case Type::SET_RGB:
 		property.as_s32_set().clear_value();
 		return property.as_s32_set().registered();
 
-	case INVALID:
+	case Type::INVALID:
 	default:
 		return false;
 	}
@@ -445,43 +445,43 @@ void ScriptConfig::register_properties(mp_obj_t dict) {
 
 		if (default_value != mp_const_none) {
 			switch (type) {
-			case BOOL:
+			case Type::BOOL:
 				property.as_bool().set_default(mp_obj_is_true(default_value));
 				break;
 
-			case S32:
+			case Type::S32:
 				property.as_s32().set_default(mp_obj_get_int(default_value));
 				break;
 
-			case RGB:
+			case Type::RGB:
 				property.as_s32().set_default(convert_rgb_value(default_value));
 				break;
 
-			case LIST_U16:
+			case Type::LIST_U16:
 				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_u16_list(), total_size);
 				break;
 
-			case LIST_S32:
+			case Type::LIST_S32:
 				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_s32_list(), total_size);
 				break;
 
-			case LIST_RGB:
+			case Type::LIST_RGB:
 				convert_container_values(default_value, convert_rgb_value, property.as_s32_list(), total_size);
 				break;
 
-			case SET_U16:
+			case Type::SET_U16:
 				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_u16_set(), total_size);
 				break;
 
-			case SET_S32:
+			case Type::SET_S32:
 				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_s32_set(), total_size);
 				break;
 
-			case SET_RGB:
+			case Type::SET_RGB:
 				convert_container_values(default_value, convert_rgb_value, property.as_s32_set(), total_size);
 				break;
 
-			case INVALID:
+			case Type::INVALID:
 				break;
 			}
 		}
@@ -516,7 +516,7 @@ void ScriptConfig::populate_dict(mp_obj_t dict) {
 			continue;
 
 		switch (property.type()) {
-		case BOOL:
+		case Type::BOOL:
 			if (property.as_bool().has_any()) {
 				elem->value = mp_obj_new_bool(property.as_bool().get_any());
 			} else {
@@ -524,8 +524,8 @@ void ScriptConfig::populate_dict(mp_obj_t dict) {
 			}
 			break;
 
-		case S32:
-		case RGB:
+		case Type::S32:
+		case Type::RGB:
 			if (property.as_s32().has_any()) {
 				elem->value = MP_OBJ_NEW_SMALL_INT(property.as_s32().get_any());
 			} else {
@@ -533,25 +533,25 @@ void ScriptConfig::populate_dict(mp_obj_t dict) {
 			}
 			break;
 
-		case LIST_U16:
+		case Type::LIST_U16:
 			elem->value = create_list(property.as_u16_list().get_any());
 			break;
 
-		case LIST_S32:
-		case LIST_RGB:
+		case Type::LIST_S32:
+		case Type::LIST_RGB:
 			elem->value = create_list(property.as_s32_list().get_any());
 			break;
 
-		case SET_U16:
+		case Type::SET_U16:
 			elem->value = create_set(property.as_u16_set().get_any(), set_uint16_it);
 			break;
 
-		case SET_S32:
-		case SET_RGB:
+		case Type::SET_S32:
+		case Type::SET_RGB:
 			elem->value = create_set(property.as_s32_set().get_any(), set_int32_it);
 			break;
 
-		case INVALID:
+		case Type::INVALID:
 			break;
 		}
 	}
@@ -883,27 +883,6 @@ bool ScriptConfig::clear() {
 	return changed;
 }
 
-bool ScriptConfig::load_one_rgb(cbor::Reader &reader, const std::string &key, int32_t &value) {
-	if (!cbor::expectArrayLength(reader, 3)) {
-		if (VERBOSE)
-			logger_.trace(F("Parse error reading key \"%s\" array length"), key.c_str());
-		return false;
-	}
-
-	uint64_t r, g, b;
-
-	if (!cbor::expectUnsignedInt(reader, &r)
-			|| !cbor::expectUnsignedInt(reader, &g)
-			|| !cbor::expectUnsignedInt(reader, &b)) {
-		if (VERBOSE)
-			logger_.trace(F("Parse error reading key \"%s\" values"), key.c_str());
-		return false;
-	}
-
-	value = (int_to_u8(r) << 16) | (int_to_u8(g) << 8) | int_to_u8(b);
-	return true;
-}
-
 template <class T>
 Result ScriptConfig::load_container_uint(qindesign::cbor::Reader &reader,
 		const std::string &key, Property &property, T &values, size_t total_size) {
@@ -939,7 +918,8 @@ Result ScriptConfig::load_container_uint(qindesign::cbor::Reader &reader,
 
 template <class T>
 Result ScriptConfig::load_container_int(qindesign::cbor::Reader &reader,
-		const std::string &key, Property &property, T &values, size_t total_size) {
+		const std::string &key, Property &property, T &values, int32_t mask,
+		size_t total_size) {
 	auto result = Result::OK;
 	uint64_t entries;
 	bool indefinite;
@@ -960,36 +940,7 @@ Result ScriptConfig::load_container_int(qindesign::cbor::Reader &reader,
 		}
 
 		if (result == Result::OK) {
-			container::add(values, std::move(value));
-
-			if (total_size + property.size(true) > MAX_VALUES_SIZE)
-				result = Result::FULL;
-		}
-	}
-
-	return result;
-}
-
-template <class T>
-Result ScriptConfig::load_container_rgb(qindesign::cbor::Reader &reader,
-		const std::string &key, Property &property, T &values, size_t total_size) {
-	auto result = Result::OK;
-	uint64_t entries;
-	bool indefinite;
-
-	if (!cbor::expectArray(reader, &entries, &indefinite) || indefinite) {
-		if (VERBOSE)
-			logger_.trace(F("Parse error reading key \"%s\" array length"), key.c_str());
-		return Result::PARSE_ERROR;
-	}
-
-	while (entries-- > 0) {
-		int32_t value;
-
-		if (!load_one_rgb(reader, key, value))
-			return Result::PARSE_ERROR;
-
-		if (result == Result::OK) {
+			value &= mask;
 			container::add(values, std::move(value));
 
 			if (total_size + property.size(true) > MAX_VALUES_SIZE)
@@ -1031,8 +982,11 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 		}
 
 		Type type = type_of(key.substr(pos + 1));
-		if (type == Type::INVALID && VERBOSE)
-			logger_.trace(F("Invalid key/type \"%s\""), key.c_str());
+		if (type == Type::INVALID) {
+			if (VERBOSE)
+				logger_.trace(F("Invalid key/type \"%s\""), key.c_str());
+			return Result::PARSE_ERROR;
+		}
 
 		key = key.substr(0, pos);
 		if (!allowed_key(key)) {
@@ -1104,7 +1058,8 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 				break;
 			}
 
-		case Type::S32: {
+		case Type::S32:
+		case Type::RGB: {
 				int64_t value;
 
 				if (!cbor::expectInt(reader, &value)) {
@@ -1113,15 +1068,8 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 					return Result::PARSE_ERROR;
 				}
 
-				property.as_s32().set_value(value);
-				break;
-			}
-
-		case Type::RGB: {
-				int32_t value;
-
-				if (!load_one_rgb(reader, key, value))
-					return Result::PARSE_ERROR;
+				if (type == Type::RGB)
+					value &= 0xFFFFFF;
 
 				property.as_s32().set_value(value);
 				break;
@@ -1137,18 +1085,11 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 			break;
 
 		case Type::LIST_S32:
-			if (downgrade_result(result,
-					load_container_int(reader, key, property,
-						property.as_s32_list().values(), total_size))
-					>= Result::PARSE_ERROR) {
-				return result;
-			}
-			break;
-
 		case Type::LIST_RGB:
 			if (downgrade_result(result,
-					load_container_rgb(reader, key, property,
-						property.as_s32_list().values(), total_size))
+					load_container_int(reader, key, property,
+						property.as_s32_list().values(),
+						type == Type::LIST_RGB ? 0xFFFFFF : ~0, total_size))
 					>= Result::PARSE_ERROR) {
 				return result;
 			}
@@ -1164,18 +1105,11 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 			break;
 
 		case Type::SET_S32:
-			if (downgrade_result(result,
-					load_container_int(reader, key, property,
-						property.as_s32_set().values(), total_size))
-					>= Result::PARSE_ERROR) {
-				return result;
-			}
-			break;
-
 		case Type::SET_RGB:
 			if (downgrade_result(result,
-					load_container_rgb(reader, key, property,
-						property.as_s32_set().values(), total_size))
+					load_container_int(reader, key, property,
+						property.as_s32_set().values(),
+						type == Type::LIST_RGB ? 0xFFFFFF : ~0, total_size))
 					>= Result::PARSE_ERROR) {
 				return result;
 			}
@@ -1203,13 +1137,6 @@ void ScriptConfig::write_key(cbor::Writer &writer, const std::string &key, const
 	writer.writeBytes(reinterpret_cast<const uint8_t*>(type), type_length);
 }
 
-void ScriptConfig::save_one_rgb(cbor::Writer &writer, uint32_t value) {
-	writer.beginArray(3);
-	writer.writeUnsignedInt((value >> 16) & 0xFF);
-	writer.writeUnsignedInt((value >>  8) & 0xFF);
-	writer.writeUnsignedInt( value        & 0xFF);
-}
-
 template <class T>
 void ScriptConfig::save_container_uint(cbor::Writer &writer,
 		const std::string &key, const char *type, T &values) {
@@ -1234,18 +1161,6 @@ void ScriptConfig::save_container_int(cbor::Writer &writer,
 	}
 }
 
-template <class T>
-void ScriptConfig::save_container_rgb(cbor::Writer &writer,
-		const std::string &key, const char *type, T &values) {
-	if (!values.empty()) {
-		write_key(writer, key, type);
-		writer.beginArray(values.size());
-		for (auto &value : values) {
-			save_one_rgb(writer, value);
-		}
-	}
-}
-
 void ScriptConfig::save(cbor::Writer &writer) {
 	size_t count = 0;
 
@@ -1253,44 +1168,40 @@ void ScriptConfig::save(cbor::Writer &writer) {
 		auto &property = *entry.second;
 
 		switch (property.type()) {
-		case BOOL:
+		case Type::BOOL:
 			if (property.as_bool().has_value())
 				count++;
 			break;
 
-		case S32:
+		case Type::S32:
+		case Type::RGB:
 			if (property.as_s32().has_value())
 				count++;
 			break;
 
-		case RGB:
-			if (property.as_s32().has_value())
-				count++;
-			break;
-
-		case LIST_U16:
+		case Type::LIST_U16:
 			if (property.as_u16_list().has_value())
 				count++;
 			break;
 
-		case LIST_S32:
-		case LIST_RGB:
+		case Type::LIST_S32:
+		case Type::LIST_RGB:
 			if (property.as_s32_list().has_value())
 				count++;
 			break;
 
-		case SET_U16:
+		case Type::SET_U16:
 			if (property.as_u16_set().has_value())
 				count++;
 			break;
 
-		case SET_S32:
-		case SET_RGB:
+		case Type::SET_S32:
+		case Type::SET_RGB:
 			if (property.as_s32_set().has_value())
 				count++;
 			break;
 
-		case INVALID:
+		case Type::INVALID:
 		default:
 			break;
 		}
@@ -1303,52 +1214,44 @@ void ScriptConfig::save(cbor::Writer &writer) {
 		auto &property = *entry.second;
 
 		switch (property.type()) {
-		case BOOL:
+		case Type::BOOL:
 			if (property.as_bool().has_value()) {
 				write_key(writer, key, "bool");
 				writer.writeBoolean(property.as_bool().get_value());
 			}
 			break;
 
-		case S32:
+		case Type::S32:
+		case Type::RGB:
 			if (property.as_s32().has_value()) {
-				write_key(writer, key, "s32");
+				write_key(writer, key, property.type() == Type::RGB ? "rgb": "s32");
 				writer.writeInt(property.as_s32().get_value());
 			}
 			break;
 
-		case RGB:
-			if (property.as_s32().has_value()) {
-				write_key(writer, key, "rgb");
-				save_one_rgb(writer, property.as_s32().get_value());
-			}
-			break;
-
-		case LIST_U16:
+		case Type::LIST_U16:
 			save_container_uint(writer, key, "list_u16", property.as_u16_list().values());
 			break;
 
-		case LIST_S32:
-			save_container_int(writer, key, "list_s32", property.as_s32_list().values());
+		case Type::LIST_S32:
+		case Type::LIST_RGB:
+			save_container_int(writer, key,
+				property.type() == Type::LIST_RGB ? "list_rgb" : "list_s32",
+				property.as_s32_list().values());
 			break;
 
-		case LIST_RGB:
-			save_container_rgb(writer, key, "list_rgb", property.as_s32_list().values());
-			break;
-
-		case SET_U16:
+		case Type::SET_U16:
 			save_container_uint(writer, key, "set_u16", property.as_u16_set().values());
 			break;
 
-		case SET_S32:
-			save_container_int(writer, key, "set_s32", property.as_s32_set().values());
+		case Type::SET_S32:
+		case Type::SET_RGB:
+			save_container_int(writer, key,
+				property.type() == Type::SET_RGB ? "set_rgb" : "set_s32",
+				property.as_s32_set().values());
 			break;
 
-		case SET_RGB:
-			save_container_rgb(writer, key, "set_rgb", property.as_s32_set().values());
-			break;
-
-		case INVALID:
+		case Type::INVALID:
 		default:
 			break;
 		}
