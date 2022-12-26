@@ -47,13 +47,13 @@ aurcor.register_config({
 	"h": ("list_u16", None),
 	"i": ("list_s32", [1, 2, 3, -4, -5 ,-6]),
 	"j": ("list_s32", None),
-	"k": ("list_rgb", [(1, 2, 3), (4, 5, 6)]),
+	"k": ("list_rgb", [(1, 2, 3), (4, 5, 6), 0xFF9900]),
 	"l": ("list_rgb", None),
 	"m": ("set_u16", [1, 2, 3, 2, 1]),
 	"n": ("set_u16", None),
 	"o": ("set_s32", [1, 2, 3, 2, 1]),
 	"p": ("set_s32", None),
-	"q": ("set_rgb", [(1, 2, 3), (4, 5, 6), (1, 2, 3)]),
+	"q": ("set_rgb", [(1, 2, 3), (4, 5, 6), (1, 2, 3), 0xFF9900, 0x00FF00, 0xFF9900]),
 	"r": ("set_rgb", None),
 })
 	)python");
