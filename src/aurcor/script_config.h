@@ -309,6 +309,9 @@ public:
 	void populate_dict(mp_obj_t dict);
 
 	std::vector<std::string> keys() const;
+	Type key_type(const std::string &key) const;
+	Result set(const std::string &key, const std::string &value);
+	Result unset(const std::string &key);
 	bool print(uuid::console::Shell &shell, const std::string *filter_key) const;
 	bool clear();
 

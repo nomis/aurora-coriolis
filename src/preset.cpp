@@ -188,6 +188,27 @@ std::vector<std::string> Preset::config_keys() const {
 	return config_.keys();
 }
 
+ScriptConfig::Type Preset::config_key_type(const std::string &key) const {
+	std::shared_lock data_lock{data_mutex_};
+	return config_.key_type(key);
+}
+
+Result Preset::set_config(const std::string &key, const std::string &value) {
+	std::unique_lock data_lock{data_mutex_};
+	auto result = config_.set(key, value);
+	if (result == Result::OK)
+		config_changed_ = true;
+	return result;
+}
+
+Result Preset::unset_config(const std::string &key) {
+	std::unique_lock data_lock{data_mutex_};
+	auto result = config_.unset(key);
+	if (result == Result::OK)
+		config_changed_ = true;
+	return result;
+}
+
 bool Preset::print_config(Shell &shell, const std::string *filter_key) const {
 	std::shared_lock data_lock{data_mutex_};
 	return config_.print(shell, filter_key);

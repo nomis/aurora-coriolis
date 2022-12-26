@@ -69,6 +69,9 @@ public:
 	bool populate_config(mp_obj_t dict);
 
 	std::vector<std::string> config_keys() const;
+	ScriptConfig::Type config_key_type(const std::string &key) const;
+	Result set_config(const std::string &key, const std::string &value);
+	Result unset_config(const std::string &key);
 	bool print_config(uuid::console::Shell &shell, const std::string *filter_key = nullptr) const;
 	void clear_config();
 
@@ -116,10 +119,10 @@ private:
 	bool script_changed_{false};
 	bool reverse_{false};
 	ScriptConfig config_;
-	bool config_changed_{true};
 
 	std::weak_ptr<std::shared_ptr<Preset>> editing_;
 	bool modified_{false};
+	bool config_changed_{true};
 };
 
 } // namespace aurcor

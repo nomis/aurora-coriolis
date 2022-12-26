@@ -19,6 +19,7 @@
 #include "aurcor/script_config.h"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <mutex>
 #include <set>
@@ -580,6 +581,95 @@ std::vector<std::string> ScriptConfig::filtered_keys(const std::string *filter_k
 	return keys;
 }
 
+ScriptConfig::Type ScriptConfig::key_type(const std::string &key) const {
+	auto it = properties_.find(key);
+
+	if (it == properties_.end())
+		return Type::INVALID;
+
+	return it->second->type();
+}
+
+Result ScriptConfig::set(const std::string &key, const std::string &value) {
+	auto it = properties_.find(key);
+
+	if (it == properties_.end())
+		return Result::NOT_FOUND;
+
+	auto &property = *it->second;
+
+	switch (property.type()) {
+	case Type::BOOL:
+		if (value == "true" || value == "t" || value == "1") {
+			property.as_bool().set_value(true);
+		} else if (value == "false" || value == "f" || value == "0") {
+			property.as_bool().set_value(false);
+		} else if (value == "") {
+			if (!Property::clear_value(property))
+				properties_.erase(it);
+		} else {
+			return Result::OUT_OF_RANGE;
+		}
+		break;
+
+	case Type::S32:
+		if (value.empty()) {
+			if (!Property::clear_value(property))
+				properties_.erase(it);
+		} else {
+			char *end;
+			int32_t int_value = std::strtol(value.c_str(), &end, 0);
+
+			if (end[0] == '\0') {
+				property.as_s32().set_value(int_value);
+			} else {
+				return Result::OUT_OF_RANGE;
+			}
+		}
+		break;
+
+	case Type::RGB:
+		if (value.empty()) {
+			if (!Property::clear_value(property))
+				properties_.erase(it);
+		} else {
+			char *end;
+			uint32_t int_value = std::strtoul(value.c_str() + (value[0] == '#' ? 1 : 0), &end, 16);
+
+			if (end[0] == '\0') {
+				property.as_s32().set_value(int_value & 0xFFFFFF);
+			} else {
+				return Result::OUT_OF_RANGE;
+			}
+		}
+		break;
+
+	case Type::LIST_U16:
+	case Type::LIST_S32:
+	case Type::LIST_RGB:
+	case Type::SET_U16:
+	case Type::SET_S32:
+	case Type::SET_RGB:
+	case Type::INVALID:
+	default:
+		return Result::OUT_OF_RANGE;
+	}
+
+	return Result::OK;
+}
+
+Result ScriptConfig::unset(const std::string &key) {
+	auto it = properties_.find(key);
+
+	if (it == properties_.end())
+		return Result::NOT_FOUND;
+
+	if (!Property::clear_value(*it->second))
+		properties_.erase(it);
+
+	return Result::OK;
+}
+
 template <class T>
 void ScriptConfig::print_container_summary(const T &property,
 		std::vector<char> &default_str, std::vector<char> &value_str) {
@@ -927,8 +1017,11 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 	while (entries-- > 0) {
 		std::string key;
 
-		if (!app::read_text(reader, key))
+		if (!app::read_text(reader, key)) {
+			if (VERBOSE)
+				logger_.trace(F("Config map does not have a text key"));
 			return Result::PARSE_ERROR;
+		}
 
 		auto pos = key.find_first_of('/');
 		if (pos == std::string::npos) {
@@ -950,8 +1043,13 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 
 		if (result != Result::OK) {
 			// Skip value (full)
-			if (!reader.isWellFormed())
+			if (!reader.isWellFormed()) {
+				if (VERBOSE)
+					logger_.trace(F("Value for key \"%s\" is not well-formed"), key.c_str());
 				return Result::PARSE_ERROR;
+			} else if (VERBOSE) {
+				logger_.trace(F("Skip value for key \"%s\" (full)"), key.c_str());
+			}
 			continue;
 		}
 
@@ -959,8 +1057,13 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 		if (!emplace.second) {
 			if (emplace.first->second->type() != type) {
 				// Skip value (type mismatch)
-				if (!reader.isWellFormed())
+				if (!reader.isWellFormed()) {
+					if (VERBOSE)
+						logger_.trace(F("Value for key \"%s\" is not well-formed"), key.c_str());
 					return Result::PARSE_ERROR;
+				} else if (VERBOSE) {
+					logger_.trace(F("Skip value for key \"%s\" (type mismatch)"), key.c_str());
+				}
 				continue;
 			}
 
@@ -969,7 +1072,7 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 			total_size += entry_base_size(key);
 		}
 
-		auto property = *emplace.first->second;
+		auto &property = *emplace.first->second;
 
 		if (total_size + property.size(true) > MAX_VALUES_SIZE) {
 			result = Result::FULL;
@@ -977,8 +1080,13 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 				properties_.erase(emplace.first);
 
 			// Skip value (full)
-			if (!reader.isWellFormed())
+			if (!reader.isWellFormed()) {
+				if (VERBOSE)
+					logger_.trace(F("Value for key \"%s\" is not well-formed"), key.c_str());
 				return Result::PARSE_ERROR;
+			} else if (VERBOSE) {
+				logger_.trace(F("Skip value for key \"%s\" (full)"), key.c_str());
+			}
 			continue;
 		}
 

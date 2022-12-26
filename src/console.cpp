@@ -33,6 +33,7 @@
 #include "aurcor/micropython.h"
 #include "aurcor/led_profile.h"
 #include "aurcor/preset.h"
+#include "aurcor/script_config.h"
 #include "app/config.h"
 #include "app/console.h"
 
@@ -131,6 +132,31 @@ static bool load_preset(Shell &shell, Preset &preset) {
 	}
 
 	return false;
+}
+
+__attribute__((noinline))
+static void preset_config_result(AurcorShell &shell, const std::string &name,
+		const std::string &value, Result result = Result::OK) {
+	switch (result) {
+	case Result::OK:
+		shell.preset().print_config(shell, &name);
+		break;
+
+	case Result::FULL:
+		shell.println(F("Config full"));
+		break;
+
+	case Result::NOT_FOUND:
+		shell.printfln(F("Config property \"%s\" not found"), name.c_str());
+		break;
+
+	case Result::OUT_OF_RANGE:
+	case Result::PARSE_ERROR:
+	case Result::IO_ERROR:
+	default:
+		shell.printfln(F("Config value \"%s\" invalid"), value.c_str());
+		break;
+	}
 }
 
 __attribute__((noinline))
@@ -324,6 +350,42 @@ static std::vector<std::string> preset_config_property_name_autocomplete(Shell &
 	}
 
 	return {};
+}
+
+__attribute__((noinline))
+static std::vector<std::string> preset_config_property_name_value_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	if (current_arguments.size() == 0) {
+		return preset_config_property_name_autocomplete(shell, current_arguments, next_argument);
+	} else if (current_arguments.size() == 1) {
+		auto &aurcor_shell = to_shell(shell);
+
+		if (aurcor_shell.preset_active()) {
+			auto &key = current_arguments[0];
+			auto type = aurcor_shell.preset().config_key_type(key);
+
+			switch (type) {
+			case ScriptConfig::Type::BOOL:
+				return {"true", "false", "t", "f", "1", "0"};
+
+			case ScriptConfig::Type::S32:
+			case ScriptConfig::Type::RGB:
+			case ScriptConfig::Type::LIST_U16:
+			case ScriptConfig::Type::LIST_S32:
+			case ScriptConfig::Type::LIST_RGB:
+			case ScriptConfig::Type::SET_U16:
+			case ScriptConfig::Type::SET_S32:
+			case ScriptConfig::Type::SET_RGB:
+			case ScriptConfig::Type::INVALID:
+				break;
+			}
+		}
+
+		return {};
+	} else {
+		return {};
+	}
 }
 
 static std::shared_ptr<LEDBus> default_bus(Shell &shell) {
@@ -1075,6 +1137,29 @@ static void script(Shell &shell, const std::vector<std::string> &arguments) {
 	}
 }
 
+/* <config property> <value> */
+static void set(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &name = arguments[0];
+	auto &value = arguments[1];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	preset_config_result(aurcor_shell, name, value, aurcor_shell.preset().set_config(name, value));
+}
+
+/* <config property> */
+static void unset(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &name = arguments[0];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	preset_config_result(aurcor_shell, name, "", aurcor_shell.preset().unset_config(name));
+}
+
 /* [config property] */
 static void show(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &aurcor_shell = to_shell(shell);
@@ -1166,7 +1251,9 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_preset, admin, {F("reverse")}, bus_preset::reverse);
 	commands->add_command(context::bus_preset, admin, {F("save")}, {F("[name]")}, bus_preset::save);
 	commands->add_command(context::bus_preset, admin, {F("script")}, {F("<script>")}, bus_preset::script, script_names_autocomplete);
+	commands->add_command(context::bus_preset, admin, {F("set")}, {F("<config property>"), F("<value>")}, bus_preset::set, preset_config_property_name_value_autocomplete);
 	commands->add_command(context::bus_preset, user, {F("show")}, {F("[config property]")}, bus_preset::show, preset_config_property_name_autocomplete);
+	commands->add_command(context::bus_preset, admin, {F("unset")}, {F("<config property>")}, bus_preset::unset, preset_config_property_name_autocomplete);
 }
 
 AurcorShell::AurcorShell(app::App &app, Stream &stream, unsigned int context, unsigned int flags)
