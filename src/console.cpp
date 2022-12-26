@@ -288,7 +288,7 @@ static std::vector<std::string> preset_current_name_autocomplete(Shell &shell,
 		const std::string &next_argument) {
 	auto &aurcor_shell = to_shell(shell);
 
-	if (!aurcor_shell.preset_active()) {
+	if (aurcor_shell.preset_active()) {
 		auto name = aurcor_shell.preset().name(true);
 
 		if (!name.empty())
@@ -304,8 +304,23 @@ static std::vector<std::string> preset_current_description_autocomplete(Shell &s
 		const std::string &next_argument) {
 	auto &aurcor_shell = to_shell(shell);
 
-	if (!aurcor_shell.preset_active()) {
+	if (aurcor_shell.preset_active()) {
 		return {aurcor_shell.preset().description()};
+	}
+
+	return {};
+}
+
+__attribute__((noinline))
+static std::vector<std::string> preset_config_property_name_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	auto &aurcor_shell = to_shell(shell);
+
+	if (aurcor_shell.preset_active()) {
+		auto keys = aurcor_shell.preset().config_keys();
+		std::sort(keys.begin(), keys.end());
+		return keys;
 	}
 
 	return {};
@@ -1060,16 +1075,26 @@ static void script(Shell &shell, const std::vector<std::string> &arguments) {
 	}
 }
 
+/* [config property] */
 static void show(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &aurcor_shell = to_shell(shell);
 
 	if (!aurcor_shell.preset_active())
 		return;
 
-	show_name(shell);
-	show_description(shell);
-	show_script(shell);
-	show_direction(shell);
+	if (arguments.empty()) {
+		show_name(shell);
+		show_description(shell);
+		show_script(shell);
+		show_direction(shell);
+		shell.println();
+		aurcor_shell.preset().print_config(shell);
+	} else {
+		auto &property_name = arguments[0];
+		if (!aurcor_shell.preset().print_config(shell, &property_name)) {
+			shell.printfln(F("Config property \"%s\" not found"), property_name.c_str());
+		}
+	}
 }
 
 } // namespace bus_preset
@@ -1141,7 +1166,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_preset, admin, {F("reverse")}, bus_preset::reverse);
 	commands->add_command(context::bus_preset, admin, {F("save")}, {F("[name]")}, bus_preset::save);
 	commands->add_command(context::bus_preset, admin, {F("script")}, {F("<script>")}, bus_preset::script, script_names_autocomplete);
-	commands->add_command(context::bus_preset, user, {F("show")}, bus_preset::show);
+	commands->add_command(context::bus_preset, user, {F("show")}, {F("[config property]")}, bus_preset::show, preset_config_property_name_autocomplete);
 }
 
 AurcorShell::AurcorShell(app::App &app, Stream &stream, unsigned int context, unsigned int flags)

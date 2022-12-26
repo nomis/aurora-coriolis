@@ -34,6 +34,7 @@ extern "C" {
 #include <CBOR_parsing.h>
 #include <CBOR_streams.h>
 
+#include <uuid/console.h>
 #include <uuid/log.h>
 
 #include "aurcor/util.h"
@@ -304,9 +305,11 @@ public:
 	ScriptConfig() = default;
 	~ScriptConfig() = default;
 
-	void register_config(mp_obj_t dict);
-	void populate_config(mp_obj_t dict);
+	void register_properties(mp_obj_t dict);
+	void populate_dict(mp_obj_t dict);
 
+	std::vector<std::string> keys() const;
+	bool print(uuid::console::Shell &shell, const std::string *filter_key) const;
 	bool clear();
 
 	Result load(qindesign::cbor::Reader &reader);
@@ -316,6 +319,13 @@ private:
 	static size_t entry_base_size(const std::string &key);
 	static size_t entry_size(const std::string &key, const Property &value, bool values);
 	static bool allowed_key(const std::string &key);
+
+	template <class T>
+	static void print_container_summary(const T &property,
+			std::vector<char> &default_str, std::vector<char> &value_str);
+	template <class T>
+	static void print_container_full(uuid::console::Shell &shell, const std::string &key,
+		const T &property, const char *type, const char *fmt);
 
 	static mp_int_t convert_rgb_value(mp_obj_t value_obj);
 	template <class T>
@@ -353,6 +363,8 @@ private:
 #else
 	static constexpr bool VERBOSE = false;
 #endif
+
+	std::vector<std::string> filtered_keys(const std::string *filter_key, size_t &max_key_length) const;
 
 	size_t size(bool vaules) const;
 	inline size_t defaults_size() const { return size(false); }

@@ -31,6 +31,7 @@ extern "C" {
 #include <CBOR_parsing.h>
 #include <CBOR_streams.h>
 
+#include <uuid/console.h>
 #include <uuid/log.h>
 
 #include "app.h"
@@ -67,6 +68,8 @@ public:
 	void register_config(mp_obj_t dict);
 	bool populate_config(mp_obj_t dict);
 
+	std::vector<std::string> config_keys() const;
+	bool print_config(uuid::console::Shell &shell, const std::string *filter_key = nullptr) const;
 	void clear_config();
 
 	/* Not protected by a mutex; assumes modifications only happen from one

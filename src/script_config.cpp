@@ -18,6 +18,7 @@
 
 #include "aurcor/script_config.h"
 
+#include <cstdio>
 #include <cstring>
 #include <mutex>
 #include <set>
@@ -37,6 +38,7 @@ extern "C" {
 #include <CBOR_parsing.h>
 #include <CBOR_streams.h>
 
+#include <uuid/console.h>
 #include <uuid/log.h>
 
 #include "app/util.h"
@@ -45,6 +47,7 @@ extern "C" {
 #include "aurcor/util.h"
 
 namespace cbor = qindesign::cbor;
+using uuid::console::Shell;
 
 static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "script-config";
 
@@ -361,7 +364,7 @@ mp_obj_t ScriptConfig::create_set(const std::set<T> &container, typename std::se
 	return set;
 }
 
-void ScriptConfig::register_config(mp_obj_t dict) {
+void ScriptConfig::register_properties(mp_obj_t dict) {
 	micropython_nlr_begin();
 
 	std::string key;
@@ -489,7 +492,7 @@ void ScriptConfig::register_config(mp_obj_t dict) {
 	micropython_nlr_end();
 }
 
-void ScriptConfig::populate_config(mp_obj_t dict) {
+void ScriptConfig::populate_dict(mp_obj_t dict) {
 	micropython_nlr_begin();
 
 	auto property_it = properties_.end();
@@ -554,6 +557,223 @@ void ScriptConfig::populate_config(mp_obj_t dict) {
 
 	micropython_nlr_finally();
 	micropython_nlr_end();
+}
+
+std::vector<std::string> ScriptConfig::keys() const {
+	size_t max_key_length = 0;
+	return filtered_keys(nullptr, max_key_length);
+}
+
+std::vector<std::string> ScriptConfig::filtered_keys(const std::string *filter_key, size_t &max_key_length) const {
+	std::vector<std::string> keys;
+
+	for (auto &entry : properties_) {
+		auto &key = entry.first;
+
+		if (filter_key && key != *filter_key)
+			continue;
+
+		max_key_length = std::max(max_key_length, key.length());
+		keys.push_back(key);
+	}
+
+	return keys;
+}
+
+template <class T>
+void ScriptConfig::print_container_summary(const T &property,
+		std::vector<char> &default_str, std::vector<char> &value_str) {
+	if (property.has_default())
+		std::snprintf(default_str.data(), default_str.size(), "%zu value%s",
+			property.defaults().size(), property.defaults().size() == 1 ? "" : "s");
+
+	if (property.has_value())
+		std::snprintf(value_str.data(), value_str.size(), "%zu value%s",
+			property.values().size(), property.values().size() == 1 ? "" : "s");
+}
+
+template <class T>
+void ScriptConfig::print_container_full(Shell &shell, const std::string &key,
+	const T &property, const char *type, const char *fmt) {
+	shell.printfln(F("Name: %s"), key.c_str());
+	shell.printfln(F("Type: %s"), type);
+
+	if (property.has_default()) {
+		bool first = true;
+
+		shell.print(F("Defaults: "));
+		for (auto &value : property.defaults()) {
+			if (!first)
+				shell.print(F(", "));
+			shell.printf(fmt, value);
+			first = false;
+		}
+		shell.println();
+	} else {
+		shell.println(F("Defaults: <none>"));
+	}
+
+	if (property.has_value()) {
+		bool first = true;
+
+		shell.print(F("Values: "));
+		for (auto &value : property.values()) {
+			if (!first)
+				shell.print(F(", "));
+			shell.printf(fmt, value);
+			first = false;
+		}
+		shell.println();
+	} else {
+		shell.println(F("Values: <unset>"));
+	}
+}
+
+bool ScriptConfig::print(Shell &shell, const std::string *filter_key) const {
+	static const char *print_header1 = " %s Type  Default     Value";
+	static const char *print_header2 = " %s ----- ----------- -----------";
+	static const char *print_row = "%c%-*s %-5s %11s %11s";
+	size_t max_key_length = 4;
+	std::vector<std::string> keys = filtered_keys(filter_key, max_key_length);
+	bool print_header = !filter_key;
+
+	if (filter_key) {
+		auto it = properties_.find(*filter_key);
+
+		if (it != properties_.end()) {
+			switch (it->second->type()) {
+			case Type::BOOL:
+			case Type::S32:
+			case Type::RGB:
+				print_header = true;
+				break;
+
+			case Type::LIST_U16:
+			case Type::LIST_S32:
+			case Type::LIST_RGB:
+			case Type::SET_U16:
+			case Type::SET_S32:
+			case Type::SET_RGB:
+			case Type::INVALID:
+				break;
+			}
+		} else {
+			return false;
+		}
+	}
+
+	if (print_header) {
+		std::string keys_header1 = "Name";
+		std::string keys_header2 = "----";
+
+		if (keys_header1.length() < max_key_length)
+			keys_header1.append(max_key_length - keys_header1.length(), ' ');
+		while (keys_header2.length() < max_key_length)
+			keys_header2.append(max_key_length - keys_header2.length(), '-');
+
+		shell.printfln(print_header1, keys_header1.c_str());
+		shell.printfln(print_header2, keys_header2.c_str());
+	}
+
+	std::sort(keys.begin(), keys.end());
+
+	for (auto &key : keys) {
+		auto &property = *properties_.at(key);
+		const char *type = nullptr;
+		std::vector<char> default_str(12);
+		std::vector<char> value_str(12);
+
+		switch (property.type()) {
+		case Type::BOOL: {
+				auto prop = property.as_bool();
+
+				type = "bool";
+
+				if (prop.has_default())
+					std::strncpy(default_str.data(), prop.get_default() ? "true" : "false", default_str.size());
+
+				if (prop.has_value())
+					std::strncpy(value_str.data(), prop.get_value() ? "true" : "false", value_str.size());
+
+				break;
+			}
+
+		case Type::S32:
+		case Type::RGB: {
+				auto prop = property.as_s32();
+
+				type = property.type() == Type::RGB ? "rgb" : "s32";
+
+				if (prop.has_default())
+					std::snprintf(default_str.data(), default_str.size(),
+						property.type() == Type::RGB ? "#%06X" : "%11d", prop.get_default());
+
+				if (prop.has_value())
+					std::snprintf(value_str.data(), value_str.size(),
+						property.type() == Type::RGB ? "#%06X" : "%11d", prop.get_value());
+				break;
+			}
+
+		case Type::LIST_U16:
+			type = "[u16]";
+			if (filter_key) {
+				print_container_full(shell, key, property.as_u16_list(), type, "%u");
+				continue;
+			} else {
+				print_container_summary(property.as_u16_list(), default_str, value_str);
+			}
+			break;
+
+		case Type::LIST_S32:
+		case Type::LIST_RGB:
+			type = property.type() == Type::LIST_RGB ? "[rgb]": "[s32]";
+			if (filter_key) {
+				print_container_full(shell, key, property.as_s32_list(), type,
+					property.type() == Type::LIST_RGB ? "#%06X" : "%d");
+				continue;
+			} else {
+				print_container_summary(property.as_s32_list(), default_str, value_str);
+			}
+			break;
+
+		case Type::SET_U16:
+			type = "{u16}";
+			if (filter_key) {
+				print_container_full(shell, key, property.as_u16_set(), type, "%u");
+				continue;
+			} else {
+				print_container_summary(property.as_u16_set(), default_str, value_str);
+			}
+			break;
+
+		case Type::SET_S32:
+		case Type::SET_RGB:
+			type = property.type() == Type::SET_RGB ? "{rgb}": "{s32}";
+			if (filter_key) {
+				print_container_full(shell, key, property.as_s32_set(), type,
+					property.type() == Type::SET_RGB ? "#%06X" : "%d");
+				continue;
+			} else {
+				print_container_summary(property.as_s32_set(), default_str, value_str);
+			}
+			break;
+
+		case Type::INVALID:
+		default:
+			continue;
+		}
+
+		if (default_str.data()[0] == '\0')
+			std::strncpy(default_str.data(), "<none>", default_str.size());
+
+		if (value_str.data()[0] == '\0')
+			std::strncpy(value_str.data(), "<unset>", value_str.size());
+
+		shell.printfln(print_row, property.registered() ? ' ' : '!', max_key_length,
+			key.data(), type, default_str.data(), value_str.data());
+	}
+
+	return true;
 }
 
 bool ScriptConfig::clear() {

@@ -42,10 +42,6 @@ using uuid::log::Level;
 
 static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "led-profile";
 
-static const char *print_header1 =	"LEDs         Red Green Blue";
-static const char *print_header2 = "------------ --- ----- ----";
-static const char *print_row     = "%5u..%-5u" " %3u  %3u  %3u";
-
 static const char *directory_name = "/profiles";
 
 namespace aurcor {
@@ -53,6 +49,9 @@ namespace aurcor {
 uuid::log::Logger LEDProfile::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::DAEMON};
 
 void LEDProfile::print(uuid::console::Shell &shell, size_t limit) const {
+	static const char *print_header1 = "LEDs         Red Green Blue";
+	static const char *print_header2 = "------------ --- ----- ----";
+	static const char *print_row     = "%5u..%-5u" " %3u  %3u  %3u";
 	std::shared_lock data_lock{data_mutex_};
 	index_t begin = 0;
 	index_t index = 0;

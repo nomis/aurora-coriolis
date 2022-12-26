@@ -40,6 +40,7 @@
 
 namespace cbor = qindesign::cbor;
 using app::FS;
+using uuid::console::Shell;
 
 static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "preset";
 
@@ -154,7 +155,7 @@ void Preset::register_config(mp_obj_t dict) {
 
 	micropython_nlr_try();
 
-	config_.register_config(dict);
+	config_.register_properties(dict);
 	config_changed_ = true;
 
 	micropython_nlr_finally();
@@ -171,7 +172,7 @@ bool Preset::populate_config(mp_obj_t dict) {
 	micropython_nlr_try();
 
 	if (config_changed_) {
-		config_.populate_config(dict);
+		config_.populate_dict(dict);
 		config_changed_ = false;
 		ret = true;
 	}
@@ -180,6 +181,16 @@ bool Preset::populate_config(mp_obj_t dict) {
 	micropython_nlr_end();
 
 	return ret;
+}
+
+std::vector<std::string> Preset::config_keys() const {
+	std::shared_lock data_lock{data_mutex_};
+	return config_.keys();
+}
+
+bool Preset::print_config(Shell &shell, const std::string *filter_key) const {
+	std::shared_lock data_lock{data_mutex_};
+	return config_.print(shell, filter_key);
 }
 
 void Preset::clear_config() {
