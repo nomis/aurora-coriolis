@@ -193,6 +193,22 @@ ScriptConfig::Type Preset::config_key_type(const std::string &key) const {
 	return config_.key_type(key);
 }
 
+Result Preset::add_config(const std::string &key, const std::string &value) {
+	std::unique_lock data_lock{data_mutex_};
+	auto result = config_.container_value(key, value, true);
+	if (result == Result::OK)
+		config_changed_ = true;
+	return result;
+}
+
+Result Preset::del_config(const std::string &key, const std::string &value) {
+	std::unique_lock data_lock{data_mutex_};
+	auto result = config_.container_value(key, value, false);
+	if (result == Result::OK)
+		config_changed_ = true;
+	return result;
+}
+
 Result Preset::set_config(const std::string &key, const std::string &value) {
 	std::unique_lock data_lock{data_mutex_};
 	auto result = config_.set(key, value);

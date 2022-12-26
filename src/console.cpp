@@ -136,7 +136,8 @@ static bool load_preset(Shell &shell, Preset &preset) {
 
 __attribute__((noinline))
 static void preset_config_result(AurcorShell &shell, const std::string &name,
-		const std::string &value, Result result = Result::OK) {
+		const std::string &value, Result result = Result::OK,
+		bool container_value = false) {
 	switch (result) {
 	case Result::OK:
 		shell.preset().print_config(shell, &name);
@@ -147,14 +148,18 @@ static void preset_config_result(AurcorShell &shell, const std::string &name,
 		break;
 
 	case Result::NOT_FOUND:
-		shell.printfln(F("Config property \"%s\" not found"), name.c_str());
+		if (container_value) {
+			shell.printfln(F("Config property \"%s\" not found"), name.c_str());
+		} else {
+			shell.printfln(F("Config property \"%s\" or value \"%s\" not found"), name.c_str(), value.c_str());
+		}
 		break;
 
 	case Result::OUT_OF_RANGE:
 	case Result::PARSE_ERROR:
 	case Result::IO_ERROR:
 	default:
-		shell.printfln(F("Config value \"%s\" invalid"), value.c_str());
+		shell.printfln(F("Config value \"%s\" invalid for property \"%s\""), value.c_str(), name.c_str());
 		break;
 	}
 }
@@ -350,6 +355,17 @@ static std::vector<std::string> preset_config_property_name_autocomplete(Shell &
 	}
 
 	return {};
+}
+
+__attribute__((noinline))
+static std::vector<std::string> preset_config_property_name_only_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	if (current_arguments.size() == 0) {
+		return preset_config_property_name_autocomplete(shell, current_arguments, next_argument);
+	} else {
+		return {};
+	}
 }
 
 __attribute__((noinline))
@@ -1026,6 +1042,30 @@ static void show_direction(Shell &shell) {
 	shell.printfln(F("Direction:   %s"), preset.reverse() ? "reverse" : "normal");
 };
 
+/* <config property> <value> */
+static void add(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &name = arguments[0];
+	auto &value = arguments[1];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	preset_config_result(aurcor_shell, name, value, aurcor_shell.preset().add_config(name, value));
+}
+
+/* <config property> <value> */
+static void del(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &name = arguments[0];
+	auto &value = arguments[1];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	preset_config_result(aurcor_shell, name, value, aurcor_shell.preset().del_config(name, value), true);
+}
+
 /* <description> */
 static void desc(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &description = arguments[0];
@@ -1243,6 +1283,8 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 			bus_profile::set, bus_profile_index_values_autocomplete);
 	commands->add_command(context::bus_profile, admin, {F("save")}, bus_profile::save);
 
+	commands->add_command(context::bus_preset, admin, {F("add")}, {F("<config property>"), F("<value>")}, bus_preset::add, preset_config_property_name_only_autocomplete);
+	commands->add_command(context::bus_preset, admin, {F("del")}, {F("<config property>"), F("<value>")}, bus_preset::del, preset_config_property_name_only_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("desc")}, {F("<description>")}, bus_preset::desc, preset_current_description_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("name")}, {F("<name>")}, bus_preset::name, preset_current_name_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("normal")}, bus_preset::normal);

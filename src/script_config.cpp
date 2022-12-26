@@ -590,6 +590,124 @@ ScriptConfig::Type ScriptConfig::key_type(const std::string &key) const {
 	return it->second->type();
 }
 
+bool ScriptConfig::parse_u16(const std::string &text, uint16_t &value) {
+	char *end;
+	long long ll_value = std::strtoll(text.c_str(), &end, 0);
+
+	if (ll_value < std::numeric_limits<typeof(value)>::min()
+			|| ll_value > std::numeric_limits<typeof(value)>::max())
+		return false;
+
+	value = ll_value;
+	return end[0] == '\0';
+}
+
+bool ScriptConfig::parse_s32(const std::string &text, int32_t &value) {
+	char *end;
+	long long ll_value = std::strtoll(text.c_str(), &end, 0);
+
+	if (ll_value < std::numeric_limits<typeof(value)>::min()
+			|| ll_value > std::numeric_limits<typeof(value)>::max())
+		return false;
+
+	value = ll_value;
+	return end[0] == '\0';
+}
+
+bool ScriptConfig::parse_rgb(const std::string &text, int32_t &value) {
+	char *end;
+	long long ll_value = std::strtoll(text.c_str() + (text[0] == '#' ? 1 : 0), &end, 16);
+
+	if (ll_value < std::numeric_limits<typeof(value)>::min()
+			|| ll_value > std::numeric_limits<typeof(value)>::max())
+		return false;
+
+	if (ll_value & ~0xFFFFFF)
+		return false;
+
+	value = ll_value;
+	return end[0] == '\0';
+}
+
+template <class T, class V>
+Result ScriptConfig::container_value(T &container, V value, bool add) {
+	if (add) {
+		container::add(container, std::move(value));
+	} else {
+		auto it = container::find_first(container, value);
+
+		if (it == container.end())
+			return Result::NOT_FOUND;
+
+		container.erase(it);
+	}
+
+	return Result::OK;
+}
+
+Result ScriptConfig::container_value(const std::string &key, const std::string &value, bool add) {
+	auto it = properties_.find(key);
+
+	if (it == properties_.end())
+		return Result::NOT_FOUND;
+
+	if (values_size() > MAX_VALUES_SIZE)
+		return Result::FULL;
+
+	auto &property = *it->second;
+
+	switch (property.type()) {
+	case Type::LIST_U16: {
+			uint16_t int_value;
+
+			if (!parse_u16(value, int_value))
+				return Result::OUT_OF_RANGE;
+
+			return container_value(property.as_u16_list().values(), int_value, add);
+		}
+
+	case Type::LIST_S32:
+	case Type::LIST_RGB: {
+			int32_t int_value;
+
+			if (property.type() == Type::LIST_RGB
+					? !parse_rgb(value, int_value)
+					: !parse_s32(value, int_value))
+				return Result::OUT_OF_RANGE;
+
+			return container_value(property.as_s32_list().values(), int_value, add);
+		}
+
+	case Type::SET_U16: {
+			uint16_t int_value;
+
+			if (!parse_u16(value, int_value))
+				return Result::OUT_OF_RANGE;
+
+			return container_value(property.as_u16_set().values(), int_value, add);
+		}
+
+	case Type::SET_S32:
+	case Type::SET_RGB: {
+			int32_t int_value;
+
+			if (property.type() == Type::SET_RGB
+					? !parse_rgb(value, int_value)
+					: !parse_s32(value, int_value))
+				return Result::OUT_OF_RANGE;
+
+			return container_value(property.as_s32_set().values(), int_value, add);
+		}
+
+	case Type::BOOL:
+	case Type::S32:
+	case Type::RGB:
+	case Type::INVALID:
+	default:
+		return Result::OUT_OF_RANGE;
+	}
+}
+
 Result ScriptConfig::set(const std::string &key, const std::string &value) {
 	auto it = properties_.find(key);
 
@@ -617,10 +735,9 @@ Result ScriptConfig::set(const std::string &key, const std::string &value) {
 			if (!Property::clear_value(property))
 				properties_.erase(it);
 		} else {
-			char *end;
-			int32_t int_value = std::strtol(value.c_str(), &end, 0);
+			int32_t int_value;
 
-			if (end[0] == '\0') {
+			if (parse_s32(value, int_value)) {
 				property.as_s32().set_value(int_value);
 			} else {
 				return Result::OUT_OF_RANGE;
@@ -633,11 +750,10 @@ Result ScriptConfig::set(const std::string &key, const std::string &value) {
 			if (!Property::clear_value(property))
 				properties_.erase(it);
 		} else {
-			char *end;
-			uint32_t int_value = std::strtoul(value.c_str() + (value[0] == '#' ? 1 : 0), &end, 16);
+			int32_t int_value;
 
-			if (end[0] == '\0') {
-				property.as_s32().set_value(int_value & 0xFFFFFF);
+			if (parse_rgb(value, int_value)) {
+				property.as_s32().set_value(int_value);
 			} else {
 				return Result::OUT_OF_RANGE;
 			}
@@ -897,9 +1013,9 @@ Result ScriptConfig::load_container_uint(qindesign::cbor::Reader &reader,
 	}
 
 	while (entries-- > 0) {
-		int64_t value;
+		uint64_t value;
 
-		if (!cbor::expectInt(reader, &value)) {
+		if (!cbor::expectUnsignedInt(reader, &value)) {
 			if (VERBOSE)
 				logger_.trace(F("Parse error reading key \"%s\""), key.c_str());
 			return Result::PARSE_ERROR;
@@ -931,9 +1047,9 @@ Result ScriptConfig::load_container_int(qindesign::cbor::Reader &reader,
 	}
 
 	while (entries-- > 0) {
-		uint64_t value;
+		int64_t value;
 
-		if (!cbor::expectUnsignedInt(reader, &value)) {
+		if (!cbor::expectInt(reader, &value)) {
 			if (VERBOSE)
 				logger_.trace(F("Parse error reading key \"%s\""), key.c_str());
 			return Result::PARSE_ERROR;

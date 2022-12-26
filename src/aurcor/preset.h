@@ -70,6 +70,8 @@ public:
 
 	std::vector<std::string> config_keys() const;
 	ScriptConfig::Type config_key_type(const std::string &key) const;
+	Result add_config(const std::string &key, const std::string &value);
+	Result del_config(const std::string &key, const std::string &value);
 	Result set_config(const std::string &key, const std::string &value);
 	Result unset_config(const std::string &key);
 	bool print_config(uuid::console::Shell &shell, const std::string *filter_key = nullptr) const;

@@ -107,6 +107,16 @@ static inline void add(std::vector<T> &container, const V &&value) {
 	container.push_back(value);
 }
 
+template <class T, class V>
+static inline auto find_first(std::set<T> &container, const V &value) {
+	return container.find(value);
+}
+
+template <class T, class V>
+static inline auto find_first(std::vector<T> &container, const V &value) {
+	return std::find(container.begin(), container.end(), value);
+}
+
 } // namespace
 
 } // namespace aurcor

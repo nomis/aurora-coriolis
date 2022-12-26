@@ -310,6 +310,7 @@ public:
 
 	std::vector<std::string> keys() const;
 	Type key_type(const std::string &key) const;
+	Result container_value(const std::string &key, const std::string &value, bool add);
 	Result set(const std::string &key, const std::string &value);
 	Result unset(const std::string &key);
 	bool print(uuid::console::Shell &shell, const std::string *filter_key) const;
@@ -329,6 +330,13 @@ private:
 	template <class T>
 	static void print_container_full(uuid::console::Shell &shell, const std::string &key,
 		const T &property, const char *type, const char *fmt);
+
+	static bool parse_u16(const std::string &text, uint16_t &value);
+	static bool parse_s32(const std::string &text, int32_t &value);
+	static bool parse_rgb(const std::string &text, int32_t &value);
+
+	template <class T, class V>
+	static Result container_value(T &container, V value, bool add);
 
 	static mp_int_t convert_rgb_value(mp_obj_t value_obj);
 	template <class T>
