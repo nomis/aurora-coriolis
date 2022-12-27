@@ -41,12 +41,15 @@ public:
 	void enter_bus_profile_context(std::shared_ptr<LEDBus> bus, enum led_profile_id profile);
 	void enter_bus_preset_context(std::shared_ptr<std::shared_ptr<Preset>> preset);
 	void enter_bus_preset_context(std::shared_ptr<LEDBus> bus, std::shared_ptr<std::shared_ptr<Preset>> preset);
+	void enter_bus_preset_cfglist_context(const std::string &name);
+	void enter_bus_preset_cfgset_context(const std::string &name);
 	bool exit_context() override;
 
 	inline std::shared_ptr<LEDBus>& bus() { return bus_; }
 	inline LEDProfile& profile() { return bus_->profile(profile_); }
 	inline enum led_profile_id profile_id() { return profile_; }
 	inline Preset& preset() { return **preset_; }
+	inline std::string& preset_cfg_name() { return preset_cfg_name_; }
 
 	void set_command(Shell &shell) override;
 	bool preset_active(bool exit = true);
@@ -61,6 +64,7 @@ private:
 	std::shared_ptr<LEDBus> bus_;
 	enum led_profile_id profile_{LED_PROFILE_NORMAL};
 	std::shared_ptr<std::shared_ptr<Preset>> preset_;
+	std::string preset_cfg_name_;
 };
 
 } // namespace aurcor

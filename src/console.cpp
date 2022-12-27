@@ -73,6 +73,10 @@ namespace bus_preset {
 	static void show(Shell &shell, const std::vector<std::string> &arguments);
 }
 
+namespace bus_preset_cfgcontainer {
+	static void show(Shell &shell, const std::vector<std::string> &arguments);
+}
+
 __attribute__((noinline))
 static void led_profile_result(AurcorShell &shell, Result result = Result::OK, const __FlashStringHelper *message = nullptr) {
 	switch (result) {
@@ -136,11 +140,16 @@ static bool load_preset(Shell &shell, Preset &preset) {
 
 __attribute__((noinline))
 static void preset_config_result(AurcorShell &shell, const std::string &name,
-		const std::string &value, Result result = Result::OK,
-		bool container_value = false) {
+		const std::string &value, const std::string &position, Result result = Result::OK,
+		bool container_value = false, bool ok_container_context = false,
+		bool container_position = false) {
 	switch (result) {
 	case Result::OK:
-		shell.preset().print_config(shell, &name);
+		if (ok_container_context) {
+			bus_preset_cfgcontainer::show(shell, {});
+		} else {
+			shell.preset().print_config(shell, &name);
+		}
 		break;
 
 	case Result::FULL:
@@ -148,14 +157,27 @@ static void preset_config_result(AurcorShell &shell, const std::string &name,
 		break;
 
 	case Result::NOT_FOUND:
-		if (container_value) {
-			shell.printfln(F("Config property \"%s\" not found"), name.c_str());
-		} else {
+		if (container_position) {
+			shell.printfln(F("Config property \"%s\" or position \"%s\" not found"), name.c_str(), position.c_str());
+		} else if (container_value) {
 			shell.printfln(F("Config property \"%s\" or value \"%s\" not found"), name.c_str(), value.c_str());
+		} else {
+			shell.printfln(F("Config property \"%s\" not found"), name.c_str());
 		}
 		break;
 
 	case Result::OUT_OF_RANGE:
+		if (container_position) {
+			if (container_value) {
+				shell.printfln(F("Config position \"%s\" or value \"%s\" invalid for property \"%s\""), position.c_str(), value.c_str());
+			} else {
+				shell.printfln(F("Config position \"%s\" invalid for property \"%s\""), position.c_str());
+			}
+		} else {
+			shell.printfln(F("Config value \"%s\" invalid for property \"%s\""), value.c_str(), name.c_str());
+		}
+		break;
+
 	case Result::PARSE_ERROR:
 	case Result::IO_ERROR:
 	default:
@@ -434,27 +456,24 @@ static std::vector<std::string> preset_config_property_container_name_autocomple
 }
 
 __attribute__((noinline))
+static std::vector<std::string> preset_config_property_container_value_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	auto &aurcor_shell = to_shell(shell);
+
+	if (aurcor_shell.preset_active()) {
+		return aurcor_shell.preset().config_container_values(aurcor_shell.preset_cfg_name());
+	}
+
+	return {};
+}
+
+__attribute__((noinline))
 static std::vector<std::string> preset_config_property_container_name_value_autocomplete(Shell &shell,
 		const std::vector<std::string> &current_arguments,
 		const std::string &next_argument) {
-	if (current_arguments.empty()) {
-		auto &aurcor_shell = to_shell(shell);
-
-		if (aurcor_shell.preset_active()) {
-			ScriptConfig::types_bitset types;
-			types[ScriptConfig::Type::LIST_U16] = true;
-			types[ScriptConfig::Type::LIST_S32] = true;
-			types[ScriptConfig::Type::LIST_RGB] = true;
-			types[ScriptConfig::Type::SET_U16] = true;
-			types[ScriptConfig::Type::SET_S32] = true;
-			types[ScriptConfig::Type::SET_RGB] = true;
-
-			auto keys = aurcor_shell.preset().config_keys(types);
-			std::sort(keys.begin(), keys.end());
-			return keys;
-		}
-
-		return {};
+	if (current_arguments.size() == 0) {
+		return preset_config_property_container_name_autocomplete(shell, current_arguments, next_argument);
 	} else if (current_arguments.size() == 1) {
 		auto &aurcor_shell = to_shell(shell);
 
@@ -1116,7 +1135,7 @@ static void add(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!aurcor_shell.preset_active())
 		return;
 
-	preset_config_result(aurcor_shell, name, value, aurcor_shell.preset().add_config(name, value));
+	preset_config_result(aurcor_shell, name, value, "", aurcor_shell.preset().add_config(name, value));
 }
 
 /* <config property> <value> */
@@ -1128,7 +1147,7 @@ static void del(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!aurcor_shell.preset_active())
 		return;
 
-	preset_config_result(aurcor_shell, name, value, aurcor_shell.preset().del_config(name, value), true);
+	preset_config_result(aurcor_shell, name, value, "", aurcor_shell.preset().del_config(name, value), true);
 }
 
 /* <description> */
@@ -1143,6 +1162,43 @@ static void desc(Shell &shell, const std::vector<std::string> &arguments) {
 		shell.printfln(F("Invalid description"));
 
 	show_description(shell);
+}
+
+/* <config property> */
+static void edit(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &name = arguments[0];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	auto result = aurcor_shell.preset().config_key_type(name);
+
+	switch (result) {
+	case ScriptConfig::Type::LIST_U16:
+	case ScriptConfig::Type::LIST_S32:
+	case ScriptConfig::Type::LIST_RGB:
+		aurcor_shell.enter_bus_preset_cfglist_context(name);
+		bus_preset_cfgcontainer::show(shell, {});
+		break;
+
+	case ScriptConfig::Type::SET_U16:
+	case ScriptConfig::Type::SET_S32:
+	case ScriptConfig::Type::SET_RGB:
+		aurcor_shell.enter_bus_preset_cfgset_context(name);
+		bus_preset_cfgcontainer::show(shell, {});
+		break;
+
+	case ScriptConfig::Type::BOOL:
+	case ScriptConfig::Type::S32:
+	case ScriptConfig::Type::RGB:
+		shell.printfln(F("Config property \"%s\" is not a list or a set"), name.c_str());
+		break;
+
+	case ScriptConfig::Type::INVALID:
+		shell.printfln(F("Config property \"%s\" not found"), name.c_str());
+		break;
+	}
 }
 
 static void reload(Shell &shell, const std::vector<std::string> &arguments) {
@@ -1251,7 +1307,7 @@ static void set(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!aurcor_shell.preset_active())
 		return;
 
-	preset_config_result(aurcor_shell, name, value, aurcor_shell.preset().set_config(name, value));
+	preset_config_result(aurcor_shell, name, value, "", aurcor_shell.preset().set_config(name, value));
 }
 
 /* <config property> */
@@ -1262,7 +1318,7 @@ static void unset(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!aurcor_shell.preset_active())
 		return;
 
-	preset_config_result(aurcor_shell, name, "", aurcor_shell.preset().unset_config(name));
+	preset_config_result(aurcor_shell, name, "", "", aurcor_shell.preset().unset_config(name));
 }
 
 /* [config property] */
@@ -1289,12 +1345,84 @@ static void show(Shell &shell, const std::vector<std::string> &arguments) {
 
 } // namespace bus_preset
 
+namespace bus_preset_cfgcontainer {
+
+/* <value> */
+static void add(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &value = arguments[0];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	auto &name = aurcor_shell.preset_cfg_name();
+	preset_config_result(aurcor_shell, name, value, "", aurcor_shell.preset().add_config(name, value), false, true);
+}
+
+static void clear(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	auto &name = aurcor_shell.preset_cfg_name();
+	aurcor_shell.preset().unset_config(name);
+	bus_preset_cfgcontainer::show(shell, {});
+}
+
+static void show(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	auto &property_name = aurcor_shell.preset_cfg_name();
+	auto values = aurcor_shell.preset().config_container_values(property_name);
+
+	if (values.empty()) {
+		shell.println(F("No values"));
+	} else {
+		size_t index_len = std::to_string(values.size() - 1).length();
+		size_t value_len = 1;
+		size_t i = 0;
+
+		for (auto &value : values) {
+			value_len = std::max(value_len, value.length());
+		}
+
+		for (auto &value : values) {
+			shell.printfln(F("%*zu: %*s"), index_len, i, value_len, value.c_str());
+			i++;
+		}
+	}
+}
+
+} // namespace bus_preset_cfgcontainer
+
+namespace bus_preset_cfgset {
+
+/* <value> */
+static void del(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &value = arguments[0];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	auto &name = aurcor_shell.preset_cfg_name();
+	preset_config_result(aurcor_shell, name, value, "", aurcor_shell.preset().del_config(name, value), true, true);
+}
+
+} // namespace bus_preset_cfgset
+
 namespace context {
 
 static constexpr auto main = ShellContext::MAIN;
 static constexpr auto bus = ShellContext::BUS;
 static constexpr auto bus_profile = ShellContext::BUS_PROFILE;
 static constexpr auto bus_preset = ShellContext::BUS_PRESET;
+static constexpr auto bus_preset_cfglist = ShellContext::BUS_PRESET_CFGLIST;
+static constexpr auto bus_preset_cfgset = ShellContext::BUS_PRESET_CFGSET;
 
 } // namespace context
 
@@ -1351,6 +1479,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_preset, admin, {F("add")}, {F("<config property>"), F("<value>")}, bus_preset::add, preset_config_property_container_name_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("del")}, {F("<config property>"), F("<value>")}, bus_preset::del, preset_config_property_container_name_value_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("desc")}, {F("<description>")}, bus_preset::desc, preset_current_description_autocomplete);
+	commands->add_command(context::bus_preset, admin, {F("edit")}, {F("<config property>")}, bus_preset::edit, preset_config_property_container_name_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("name")}, {F("<name>")}, bus_preset::name, preset_current_name_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("normal")}, bus_preset::normal);
 	commands->add_command(context::bus_preset, admin, {F("reload")}, bus_preset::reload);
@@ -1361,6 +1490,21 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_preset, admin, {F("set")}, {F("<config property>"), F("<value>")}, bus_preset::set, preset_config_property_primitive_name_value_autocomplete);
 	commands->add_command(context::bus_preset, user, {F("show")}, {F("[config property]")}, bus_preset::show, preset_config_property_name_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("unset")}, {F("<config property>")}, bus_preset::unset, preset_config_property_name_autocomplete);
+
+	//commands->add_command(context::bus_preset_cfglist, admin, {F("after")}, {F("<position>"), F("<value>")}, bus_preset_cfglist::after);
+	commands->add_command(context::bus_preset_cfglist, admin, {F("append")}, {F("<value>")}, bus_preset_cfgcontainer::add);
+	//commands->add_command(context::bus_preset_cfglist, admin, {F("before")}, {F("<position>"), F("<value>")}, bus_preset_cfglist::before);
+	commands->add_command(context::bus_preset_cfglist, admin, {F("clear")}, bus_preset_cfgcontainer::clear);
+	//commands->add_command(context::bus_preset_cfglist, admin, {F("cp")}, {F("<position>"), F("<position>")}, bus_preset_cfglist::cp);
+	//commands->add_command(context::bus_preset_cfglist, admin, {F("mv")}, {F("<position>"), F("<position>")}, bus_preset_cfglist::mv);
+	//commands->add_command(context::bus_preset_cfglist, admin, {F("prepend")}, {F("<value>")}, bus_preset_cfglist::prepend);
+	//commands->add_command(context::bus_preset_cfglist, admin, {F("rm")}, {F("<position>")}, bus_preset_cfglist::rm);
+	commands->add_command(context::bus_preset_cfglist, user, {F("show")}, bus_preset_cfgcontainer::show);
+
+	commands->add_command(context::bus_preset_cfgset, admin, {F("add")}, {F("<value>")}, bus_preset_cfgcontainer::add);
+	commands->add_command(context::bus_preset_cfgset, admin, {F("clear")}, bus_preset_cfgcontainer::clear);
+	commands->add_command(context::bus_preset_cfgset, admin, {F("del")}, {F("<value>")}, bus_preset_cfgset::del, preset_config_property_container_value_autocomplete);
+	commands->add_command(context::bus_preset_cfgset, user, {F("show")}, bus_preset_cfgcontainer::show);
 }
 
 AurcorShell::AurcorShell(app::App &app, Stream &stream, unsigned int context, unsigned int flags)
@@ -1405,6 +1549,20 @@ void AurcorShell::enter_bus_preset_context(std::shared_ptr<LEDBus> bus, std::sha
 	}
 }
 
+void AurcorShell::enter_bus_preset_cfglist_context(const std::string &name) {
+	if (context() == ShellContext::BUS_PRESET) {
+		enter_context(ShellContext::BUS_PRESET_CFGLIST);
+		preset_cfg_name_ = name;
+	}
+}
+
+void AurcorShell::enter_bus_preset_cfgset_context(const std::string &name) {
+	if (context() == ShellContext::BUS_PRESET) {
+		enter_context(ShellContext::BUS_PRESET_CFGSET);
+		preset_cfg_name_ = name;
+	}
+}
+
 bool AurcorShell::exit_context() {
 	auto prev_context = context();
 	bool ret = AppShell::exit_context();
@@ -1414,6 +1572,11 @@ bool AurcorShell::exit_context() {
 	}
 	if (prev_context == ShellContext::BUS_PRESET || new_context == ShellContext::MAIN) {
 		preset_.reset();
+	}
+	if (prev_context == ShellContext::BUS_PRESET_CFGLIST
+			|| prev_context == ShellContext::BUS_PRESET_CFGSET
+			|| new_context == ShellContext::MAIN) {
+		preset_cfg_name_ = "";
 	}
 	return ret;
 }
@@ -1459,6 +1622,29 @@ std::string AurcorShell::context_text() {
 
 				if (preset_->get()->modified())
 					text.append(" (unsaved)");
+			} else {
+				text.append("<detached>");
+			}
+
+			return text;
+		}
+
+	case ShellContext::BUS_PRESET_CFGLIST:
+	case ShellContext::BUS_PRESET_CFGSET: {
+			std::string text{"/bus/"};
+
+			text.append(bus_->name());
+
+			text.append("/preset/");
+			if (preset_active(false)) {
+				text.append(preset_->get()->name().c_str());
+			} else {
+				text.append("<detached>");
+			}
+
+			text.append("/config/");
+			if (preset_active(false)) {
+				text.append(preset_cfg_name_);
 			} else {
 				text.append("<detached>");
 			}
