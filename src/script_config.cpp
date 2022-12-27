@@ -18,6 +18,7 @@
 
 #include "aurcor/script_config.h"
 
+#include <bitset>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -560,9 +561,18 @@ void ScriptConfig::populate_dict(mp_obj_t dict) {
 	micropython_nlr_end();
 }
 
-std::vector<std::string> ScriptConfig::keys() const {
-	size_t max_key_length = 0;
-	return filtered_keys(nullptr, max_key_length);
+std::vector<std::string> ScriptConfig::keys(types_bitset types) const {
+	std::vector<std::string> keys;
+
+	for (auto &entry : properties_) {
+		auto &key = entry.first;
+		auto &property = *entry.second;
+
+		if (types[property.type()])
+			keys.push_back(key);
+	}
+
+	return keys;
 }
 
 std::vector<std::string> ScriptConfig::filtered_keys(const std::string *filter_key, size_t &max_key_length) const {
@@ -588,6 +598,58 @@ ScriptConfig::Type ScriptConfig::key_type(const std::string &key) const {
 		return Type::INVALID;
 
 	return it->second->type();
+}
+
+template <class T>
+void ScriptConfig::container_values(const T &property, const char *fmt, std::vector<std::string> &values) {
+	for (auto &value : property.values()) {
+		std::vector<char> text(12);
+		std::snprintf(text.data(), text.size(), fmt, value);
+		values.emplace_back(text.data());
+	}
+}
+
+std::vector<std::string> ScriptConfig::container_values(const std::string &key) const {
+	std::vector<std::string> values;
+	auto it = properties_.find(key);
+
+	if (it != properties_.end()) {
+		auto &property = *it->second;
+
+		switch (property.type()) {
+		case Type::LIST_U16:
+			container_values(property.as_u16_list(), "%u", values);
+			break;
+
+		case Type::LIST_S32:
+			container_values(property.as_s32_list(), "%d", values);
+			break;
+
+		case Type::LIST_RGB:
+			container_values(property.as_s32_list(), "#%06X", values);
+			break;
+
+		case Type::SET_U16:
+			container_values(property.as_u16_set(), "%u", values);
+			break;
+
+		case Type::SET_S32:
+			container_values(property.as_s32_set(), "%d", values);
+			break;
+
+		case Type::SET_RGB:
+			container_values(property.as_s32_set(), "#%06X", values);
+			break;
+
+		case Type::BOOL:
+		case Type::S32:
+		case Type::RGB:
+		case Type::INVALID:
+			break;
+		}
+	}
+
+	return values;
 }
 
 bool ScriptConfig::parse_u16(const std::string &text, uint16_t &value) {

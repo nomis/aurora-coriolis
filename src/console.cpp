@@ -358,22 +358,24 @@ static std::vector<std::string> preset_config_property_name_autocomplete(Shell &
 }
 
 __attribute__((noinline))
-static std::vector<std::string> preset_config_property_name_only_autocomplete(Shell &shell,
+static std::vector<std::string> preset_config_property_primitive_name_value_autocomplete(Shell &shell,
 		const std::vector<std::string> &current_arguments,
 		const std::string &next_argument) {
 	if (current_arguments.size() == 0) {
-		return preset_config_property_name_autocomplete(shell, current_arguments, next_argument);
-	} else {
-		return {};
-	}
-}
+		auto &aurcor_shell = to_shell(shell);
 
-__attribute__((noinline))
-static std::vector<std::string> preset_config_property_name_value_autocomplete(Shell &shell,
-		const std::vector<std::string> &current_arguments,
-		const std::string &next_argument) {
-	if (current_arguments.size() == 0) {
-		return preset_config_property_name_autocomplete(shell, current_arguments, next_argument);
+		if (aurcor_shell.preset_active()) {
+			ScriptConfig::types_bitset types;
+			types[ScriptConfig::Type::BOOL] = true;
+			types[ScriptConfig::Type::S32] = true;
+			types[ScriptConfig::Type::RGB] = true;
+
+			auto keys = aurcor_shell.preset().config_keys(types);
+			std::sort(keys.begin(), keys.end());
+			return keys;
+		}
+
+		return {};
 	} else if (current_arguments.size() == 1) {
 		auto &aurcor_shell = to_shell(shell);
 
@@ -396,6 +398,69 @@ static std::vector<std::string> preset_config_property_name_value_autocomplete(S
 			case ScriptConfig::Type::INVALID:
 				break;
 			}
+		}
+
+		return {};
+	} else {
+		return {};
+	}
+}
+
+__attribute__((noinline))
+static std::vector<std::string> preset_config_property_container_name_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	if (current_arguments.size() == 0) {
+		auto &aurcor_shell = to_shell(shell);
+
+		if (aurcor_shell.preset_active()) {
+			ScriptConfig::types_bitset types;
+			types[ScriptConfig::Type::LIST_U16] = true;
+			types[ScriptConfig::Type::LIST_S32] = true;
+			types[ScriptConfig::Type::LIST_RGB] = true;
+			types[ScriptConfig::Type::SET_U16] = true;
+			types[ScriptConfig::Type::SET_S32] = true;
+			types[ScriptConfig::Type::SET_RGB] = true;
+
+			auto keys = aurcor_shell.preset().config_keys(types);
+			std::sort(keys.begin(), keys.end());
+			return keys;
+		}
+
+		return {};
+	} else {
+		return {};
+	}
+}
+
+__attribute__((noinline))
+static std::vector<std::string> preset_config_property_container_name_value_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	if (current_arguments.empty()) {
+		auto &aurcor_shell = to_shell(shell);
+
+		if (aurcor_shell.preset_active()) {
+			ScriptConfig::types_bitset types;
+			types[ScriptConfig::Type::LIST_U16] = true;
+			types[ScriptConfig::Type::LIST_S32] = true;
+			types[ScriptConfig::Type::LIST_RGB] = true;
+			types[ScriptConfig::Type::SET_U16] = true;
+			types[ScriptConfig::Type::SET_S32] = true;
+			types[ScriptConfig::Type::SET_RGB] = true;
+
+			auto keys = aurcor_shell.preset().config_keys(types);
+			std::sort(keys.begin(), keys.end());
+			return keys;
+		}
+
+		return {};
+	} else if (current_arguments.size() == 1) {
+		auto &aurcor_shell = to_shell(shell);
+
+		if (aurcor_shell.preset_active()) {
+			auto &key = current_arguments[0];
+			return aurcor_shell.preset().config_container_values(key);
 		}
 
 		return {};
@@ -1283,8 +1348,8 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 			bus_profile::set, bus_profile_index_values_autocomplete);
 	commands->add_command(context::bus_profile, admin, {F("save")}, bus_profile::save);
 
-	commands->add_command(context::bus_preset, admin, {F("add")}, {F("<config property>"), F("<value>")}, bus_preset::add, preset_config_property_name_only_autocomplete);
-	commands->add_command(context::bus_preset, admin, {F("del")}, {F("<config property>"), F("<value>")}, bus_preset::del, preset_config_property_name_only_autocomplete);
+	commands->add_command(context::bus_preset, admin, {F("add")}, {F("<config property>"), F("<value>")}, bus_preset::add, preset_config_property_container_name_autocomplete);
+	commands->add_command(context::bus_preset, admin, {F("del")}, {F("<config property>"), F("<value>")}, bus_preset::del, preset_config_property_container_name_value_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("desc")}, {F("<description>")}, bus_preset::desc, preset_current_description_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("name")}, {F("<name>")}, bus_preset::name, preset_current_name_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("normal")}, bus_preset::normal);
@@ -1293,7 +1358,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_preset, admin, {F("reverse")}, bus_preset::reverse);
 	commands->add_command(context::bus_preset, admin, {F("save")}, {F("[name]")}, bus_preset::save);
 	commands->add_command(context::bus_preset, admin, {F("script")}, {F("<script>")}, bus_preset::script, script_names_autocomplete);
-	commands->add_command(context::bus_preset, admin, {F("set")}, {F("<config property>"), F("<value>")}, bus_preset::set, preset_config_property_name_value_autocomplete);
+	commands->add_command(context::bus_preset, admin, {F("set")}, {F("<config property>"), F("<value>")}, bus_preset::set, preset_config_property_primitive_name_value_autocomplete);
 	commands->add_command(context::bus_preset, user, {F("show")}, {F("[config property]")}, bus_preset::show, preset_config_property_name_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("unset")}, {F("<config property>")}, bus_preset::unset, preset_config_property_name_autocomplete);
 }

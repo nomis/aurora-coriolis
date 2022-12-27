@@ -18,6 +18,7 @@
 
 #include "aurcor/preset.h"
 
+#include <bitset>
 #include <mutex>
 #include <shared_mutex>
 #include <string>
@@ -183,14 +184,19 @@ bool Preset::populate_config(mp_obj_t dict) {
 	return ret;
 }
 
-std::vector<std::string> Preset::config_keys() const {
+std::vector<std::string> Preset::config_keys(std::bitset<ScriptConfig::Type::INVALID> types) const {
 	std::shared_lock data_lock{data_mutex_};
-	return config_.keys();
+	return config_.keys(types);
 }
 
 ScriptConfig::Type Preset::config_key_type(const std::string &key) const {
 	std::shared_lock data_lock{data_mutex_};
 	return config_.key_type(key);
+}
+
+std::vector<std::string> Preset::config_container_values(const std::string &key) const {
+	std::shared_lock data_lock{data_mutex_};
+	return config_.container_values(key);
 }
 
 Result Preset::add_config(const std::string &key, const std::string &value) {

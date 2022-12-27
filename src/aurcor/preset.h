@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <bitset>
+#include <limits>
 #include <memory>
 #include <shared_mutex>
 #include <string>
@@ -68,8 +70,9 @@ public:
 	void register_config(mp_obj_t dict);
 	bool populate_config(mp_obj_t dict);
 
-	std::vector<std::string> config_keys() const;
+	std::vector<std::string> config_keys(std::bitset<ScriptConfig::Type::INVALID> types = std::numeric_limits<unsigned long>::max()) const;
 	ScriptConfig::Type config_key_type(const std::string &key) const;
+	std::vector<std::string> config_container_values(const std::string &key) const;
 	Result add_config(const std::string &key, const std::string &value);
 	Result del_config(const std::string &key, const std::string &value);
 	Result set_config(const std::string &key, const std::string &value);

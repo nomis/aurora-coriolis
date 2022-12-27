@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <bitset>
 #include <functional>
 #include <memory>
 #include <set>
@@ -66,6 +67,8 @@ public:
 
 		INVALID,
 	};
+
+	using types_bitset = std::bitset<Type::INVALID>;
 
 	class BoolProperty;
 	class S32Property;
@@ -308,8 +311,9 @@ public:
 	void register_properties(mp_obj_t dict);
 	void populate_dict(mp_obj_t dict);
 
-	std::vector<std::string> keys() const;
+	std::vector<std::string> keys(types_bitset types) const;
 	Type key_type(const std::string &key) const;
+	std::vector<std::string> container_values(const std::string &key) const;
 	Result container_value(const std::string &key, const std::string &value, bool add);
 	Result set(const std::string &key, const std::string &value);
 	Result unset(const std::string &key);
@@ -330,6 +334,9 @@ private:
 	template <class T>
 	static void print_container_full(uuid::console::Shell &shell, const std::string &key,
 		const T &property, const char *type, const char *fmt);
+
+	template <class T>
+	static void container_values(const T &property, const char *fmt, std::vector<std::string> &values);
 
 	static bool parse_u16(const std::string &text, uint16_t &value);
 	static bool parse_s32(const std::string &text, int32_t &value);
