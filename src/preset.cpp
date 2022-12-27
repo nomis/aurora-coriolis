@@ -269,6 +269,21 @@ void Preset::clear_config() {
 	}
 }
 
+size_t Preset::config_keys_size() const {
+	std::shared_lock data_lock{data_mutex_};
+	return config_.keys_size();
+}
+
+size_t Preset::config_defaults_size() const {
+	std::shared_lock data_lock{data_mutex_};
+	return config_.defaults_size();
+}
+
+size_t Preset::config_values_size() const {
+	std::shared_lock data_lock{data_mutex_};
+	return config_.values_size();
+}
+
 std::shared_ptr<std::shared_ptr<Preset>> Preset::edit() {
 	auto ref = editing_.lock();
 

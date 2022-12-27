@@ -328,10 +328,15 @@ public:
 	bool print(uuid::console::Shell &shell, const std::string *filter_key) const;
 	bool clear();
 
+	size_t keys_size() const;
+	inline size_t defaults_size() const { return size(false); }
+	inline size_t values_size() const { return size(true); }
+
 	Result load(qindesign::cbor::Reader &reader);
 	void save(qindesign::cbor::Writer &writer);
 
 private:
+	static size_t entry_key_size(const std::string &key);
 	static size_t entry_base_size(const std::string &key);
 	static size_t entry_size(const std::string &key, const Property &value, bool values);
 	static bool allowed_key(const std::string &key);
@@ -385,8 +390,6 @@ private:
 	std::vector<std::string> filtered_keys(const std::string *filter_key, size_t &max_key_length) const;
 
 	size_t size(bool vaules) const;
-	inline size_t defaults_size() const { return size(false); }
-	inline size_t values_size() const { return size(true); }
 
 	std::unordered_map<std::string,Property::pointer_type> properties_;
 };

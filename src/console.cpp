@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -1323,16 +1324,34 @@ static void show(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!aurcor_shell.preset_active())
 		return;
 
+	auto &preset = aurcor_shell.preset();
+
 	if (arguments.empty()) {
 		show_name(shell);
 		show_description(shell);
 		show_script(shell);
 		show_direction(shell);
+
+		auto keys_size = preset.config_keys_size();
+		auto defaults_size = preset.config_defaults_size();
+		auto values_size = preset.config_values_size();
+
+		shell.printfln(F("Config size:"));
+		shell.printfln(F("             %3zu%%   (keys)   %4zu/%4zu"),
+			keys_size * 100U / std::max(ScriptConfig::MAX_DEFAULTS_SIZE, ScriptConfig::MAX_VALUES_SIZE),
+			keys_size, std::max(ScriptConfig::MAX_DEFAULTS_SIZE, ScriptConfig::MAX_VALUES_SIZE));
+		shell.printfln(F("             %3zu%% (defaults) %4zu/%4zu"),
+			defaults_size * 100U / ScriptConfig::MAX_DEFAULTS_SIZE,
+			defaults_size, ScriptConfig::MAX_DEFAULTS_SIZE);
+		shell.printfln(F("             %3zu%%  (values)  %4zu/%4zu"),
+			values_size * 100U / ScriptConfig::MAX_VALUES_SIZE,
+			values_size, ScriptConfig::MAX_VALUES_SIZE);
 		shell.println();
-		aurcor_shell.preset().print_config(shell);
+		preset.print_config(shell);
 	} else {
 		auto &property_name = arguments[0];
-		if (!aurcor_shell.preset().print_config(shell, &property_name)) {
+
+		if (!preset.print_config(shell, &property_name)) {
 			shell.printfln(F("Config property \"%s\" not found"), property_name.c_str());
 		}
 	}

@@ -83,6 +83,10 @@ public:
 	bool print_config(uuid::console::Shell &shell, const std::string *filter_key = nullptr) const;
 	void clear_config();
 
+	size_t config_keys_size() const;
+	size_t config_defaults_size() const;
+	size_t config_values_size() const;
+
 	/* Not protected by a mutex; assumes modifications only happen from one
 	 * thread. Making these thread-safe would require an extra mutex to avoid
 	 * blocking other readers when saving the preset.

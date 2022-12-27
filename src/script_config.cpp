@@ -290,14 +290,28 @@ ScriptConfig::Type ScriptConfig::type_of(const std::string &type) {
 	}
 }
 
-inline size_t ScriptConfig::entry_base_size(const std::string &key) {
+inline size_t ScriptConfig::entry_key_size(const std::string &key) {
 	return rounded_sizeof<typeof(key)>()
-			+ key.length() + 1
+			+ key.length() + 1;
+}
+
+inline size_t ScriptConfig::entry_base_size(const std::string &key) {
+	return entry_key_size(key)
 			+ rounded_sizeof<ScriptConfig::Property::pointer_type>();
 }
 
 inline size_t ScriptConfig::entry_size(const std::string &key, const ScriptConfig::Property &value, bool values) {
 	return entry_base_size(key) + value.size(values);
+}
+
+size_t ScriptConfig::keys_size() const {
+	size_t total = 0;
+
+	for (auto &entry : properties_) {
+		total += entry_key_size(entry.first);
+	}
+
+	return total;
 }
 
 size_t ScriptConfig::size(bool values) const {
@@ -336,10 +350,10 @@ void ScriptConfig::convert_container_values(mp_obj_t container_obj, mp_int_t (*c
 	auto &container = property.defaults();
 
     while ((value_obj = mp_iternext(iterable)) != MP_OBJ_STOP_ITERATION) {
-		container::add(container, convert_value(value_obj));
-
-		if (total_size + property.size(false) > MAX_DEFAULTS_SIZE)
+		if (total_size + property.size(false) >= MAX_DEFAULTS_SIZE)
 			mp_raise_ValueError(MP_ERROR_TEXT("maximum config size exceeded"));
+
+		container::add(container, convert_value(value_obj));
 	}
 }
 
@@ -442,7 +456,7 @@ void ScriptConfig::register_properties(mp_obj_t dict) {
 
 		/* Existing properties have already had the default cleared */
 
-		if (total_size + property.size(false) > MAX_DEFAULTS_SIZE)
+		if (total_size + property.size(false) >= MAX_DEFAULTS_SIZE)
 			mp_raise_ValueError(MP_ERROR_TEXT("maximum config size exceeded"));
 
 		if (default_value != mp_const_none) {
@@ -792,7 +806,7 @@ Result ScriptConfig::modify(const std::string &key, const std::string &value,
 	if (it == properties_.end())
 		return Result::NOT_FOUND;
 
-	if (values_size() > MAX_VALUES_SIZE) {
+	if (values_size() >= MAX_VALUES_SIZE) {
 		switch (op) {
 		case ContainerOp::ADD:
 		case ContainerOp::COPY_POSITION:
@@ -1173,10 +1187,10 @@ Result ScriptConfig::load_container_uint(qindesign::cbor::Reader &reader,
 		}
 
 		if (result == Result::OK) {
-			container::add(values, std::move(value));
-
-			if (total_size + property.size(true) > MAX_VALUES_SIZE)
+			if (total_size + property.size(true) >= MAX_VALUES_SIZE)
 				result = Result::FULL;
+
+			container::add(values, std::move(value));
 		}
 	}
 
@@ -1207,11 +1221,11 @@ Result ScriptConfig::load_container_int(qindesign::cbor::Reader &reader,
 		}
 
 		if (result == Result::OK) {
+			if (total_size + property.size(true) >= MAX_VALUES_SIZE)
+				result = Result::FULL;
+
 			value &= mask;
 			container::add(values, std::move(value));
-
-			if (total_size + property.size(true) > MAX_VALUES_SIZE)
-				result = Result::FULL;
 		}
 	}
 
@@ -1295,7 +1309,7 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 
 		auto &property = *emplace.first->second;
 
-		if (total_size + property.size(true) > MAX_VALUES_SIZE) {
+		if (total_size + property.size(true) >= MAX_VALUES_SIZE) {
 			result = Result::FULL;
 			if (emplace.second)
 				properties_.erase(emplace.first);
