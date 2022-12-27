@@ -303,6 +303,14 @@ public:
 		std::set<int32_t> values_;
 	};
 
+	enum class ContainerOp {
+		ADD,
+		DEL_VALUE,
+		DEL_POSITION,
+		MOVE_POSITION,
+		COPY_POSITION,
+	};
+
 	static Type type_of(const std::string &type);
 
 	ScriptConfig() = default;
@@ -314,7 +322,7 @@ public:
 	std::vector<std::string> keys(types_bitset types) const;
 	Type key_type(const std::string &key) const;
 	std::vector<std::string> container_values(const std::string &key) const;
-	Result container_value(const std::string &key, const std::string &value, bool add);
+	Result modify(const std::string &key, const std::string &value, ContainerOp op, size_t index1 = 0, size_t index2 = 0);
 	Result set(const std::string &key, const std::string &value);
 	Result unset(const std::string &key);
 	bool print(uuid::console::Shell &shell, const std::string *filter_key) const;
@@ -338,12 +346,12 @@ private:
 	template <class T>
 	static void container_values(const T &property, const char *fmt, std::vector<std::string> &values);
 
-	static bool parse_u16(const std::string &text, uint16_t &value);
-	static bool parse_s32(const std::string &text, int32_t &value);
-	static bool parse_rgb(const std::string &text, int32_t &value);
+	static bool parse_u16(ContainerOp op, const std::string &text, uint16_t &value);
+	static bool parse_s32(ContainerOp op, const std::string &text, int32_t &value);
+	static bool parse_rgb(ContainerOp op, const std::string &text, int32_t &value);
 
 	template <class T, class V>
-	static Result container_value(T &container, V value, bool add);
+	static Result modify_container(T &container, V value, ContainerOp op, size_t index1, size_t index2);
 
 	static mp_int_t convert_rgb_value(mp_obj_t value_obj);
 	template <class T>

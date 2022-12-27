@@ -73,8 +73,11 @@ public:
 	std::vector<std::string> config_keys(std::bitset<ScriptConfig::Type::INVALID> types = std::numeric_limits<unsigned long>::max()) const;
 	ScriptConfig::Type config_key_type(const std::string &key) const;
 	std::vector<std::string> config_container_values(const std::string &key) const;
-	Result add_config(const std::string &key, const std::string &value);
+	Result add_config(const std::string &key, const std::string &value, size_t before = std::numeric_limits<size_t>::max());
+	Result move_config(const std::string &key, size_t from_position, size_t to_position);
+	Result copy_config(const std::string &key, size_t from_position, size_t to_position);
 	Result del_config(const std::string &key, const std::string &value);
+	Result del_config(const std::string &key, size_t index);
 	Result set_config(const std::string &key, const std::string &value);
 	Result unset_config(const std::string &key);
 	bool print_config(uuid::console::Shell &shell, const std::string *filter_key = nullptr) const;

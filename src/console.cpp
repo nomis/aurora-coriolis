@@ -23,6 +23,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 #include <uuid/console.h>
@@ -167,17 +168,6 @@ static void preset_config_result(AurcorShell &shell, const std::string &name,
 		break;
 
 	case Result::OUT_OF_RANGE:
-		if (container_position) {
-			if (container_value) {
-				shell.printfln(F("Config position \"%s\" or value \"%s\" invalid for property \"%s\""), position.c_str(), value.c_str());
-			} else {
-				shell.printfln(F("Config position \"%s\" invalid for property \"%s\""), position.c_str());
-			}
-		} else {
-			shell.printfln(F("Config value \"%s\" invalid for property \"%s\""), value.c_str(), name.c_str());
-		}
-		break;
-
 	case Result::PARSE_ERROR:
 	case Result::IO_ERROR:
 	default:
@@ -1135,7 +1125,8 @@ static void add(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!aurcor_shell.preset_active())
 		return;
 
-	preset_config_result(aurcor_shell, name, value, "", aurcor_shell.preset().add_config(name, value));
+	preset_config_result(aurcor_shell, name, value, "",
+		aurcor_shell.preset().add_config(name, value));
 }
 
 /* <config property> <value> */
@@ -1147,7 +1138,9 @@ static void del(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!aurcor_shell.preset_active())
 		return;
 
-	preset_config_result(aurcor_shell, name, value, "", aurcor_shell.preset().del_config(name, value), true);
+	preset_config_result(aurcor_shell, name, value, "",
+		aurcor_shell.preset().del_config(name, value),
+		true);
 }
 
 /* <description> */
@@ -1307,7 +1300,8 @@ static void set(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!aurcor_shell.preset_active())
 		return;
 
-	preset_config_result(aurcor_shell, name, value, "", aurcor_shell.preset().set_config(name, value));
+	preset_config_result(aurcor_shell, name, value, "",
+		aurcor_shell.preset().set_config(name, value));
 }
 
 /* <config property> */
@@ -1318,7 +1312,8 @@ static void unset(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!aurcor_shell.preset_active())
 		return;
 
-	preset_config_result(aurcor_shell, name, "", "", aurcor_shell.preset().unset_config(name));
+	preset_config_result(aurcor_shell, name, "", "",
+		aurcor_shell.preset().unset_config(name));
 }
 
 /* [config property] */
@@ -1356,7 +1351,9 @@ static void add(Shell &shell, const std::vector<std::string> &arguments) {
 		return;
 
 	auto &name = aurcor_shell.preset_cfg_name();
-	preset_config_result(aurcor_shell, name, value, "", aurcor_shell.preset().add_config(name, value), false, true);
+	preset_config_result(aurcor_shell, name, value, "",
+		aurcor_shell.preset().add_config(name, value),
+		false, true);
 }
 
 static void clear(Shell &shell, const std::vector<std::string> &arguments) {
@@ -1366,8 +1363,9 @@ static void clear(Shell &shell, const std::vector<std::string> &arguments) {
 		return;
 
 	auto &name = aurcor_shell.preset_cfg_name();
-	aurcor_shell.preset().unset_config(name);
-	bus_preset_cfgcontainer::show(shell, {});
+	preset_config_result(aurcor_shell, name, "", "",
+		aurcor_shell.preset().unset_config(name),
+		false, true);
 }
 
 static void show(Shell &shell, const std::vector<std::string> &arguments) {
@@ -1399,6 +1397,154 @@ static void show(Shell &shell, const std::vector<std::string> &arguments) {
 
 } // namespace bus_preset_cfgcontainer
 
+namespace bus_preset_cfglist {
+
+static bool parse_position(Shell &shell, const std::string &text, size_t &value) {
+	char *end;
+	long long ll_value = std::strtoll(text.c_str(), &end, 0);
+	bool ret;
+
+	if (std::is_same<typeof(ll_value), typeof(value)>::value
+			&& (ll_value < std::numeric_limits<typeof(value)>::min()
+				|| ll_value > std::numeric_limits<typeof(value)>::max())) {
+		ret = false;
+	} else {
+		value = ll_value;
+		ret = end[0] == '\0';
+	}
+
+	if (!ret)
+		shell.printfln(F("Position \"%s\" invalid"), text.c_str());
+
+	return ret;
+}
+
+/* <position> <value> */
+static void after(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &position = arguments[0];
+	auto &value = arguments[1];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	size_t int_position;
+
+	if (!parse_position(shell, position, int_position))
+		return;
+
+	if (int_position != std::numeric_limits<typeof(int_position)>::max())
+		int_position++;
+
+	auto &name = aurcor_shell.preset_cfg_name();
+	preset_config_result(aurcor_shell, name, value, "",
+		aurcor_shell.preset().add_config(name, value, int_position),
+		false, true);
+}
+
+/* <position> <value> */
+static void before(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &position = arguments[0];
+	auto &value = arguments[1];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	size_t int_position;
+
+	if (!parse_position(shell, position, int_position))
+		return;
+
+	auto &name = aurcor_shell.preset_cfg_name();
+	preset_config_result(aurcor_shell, name, value, "",
+		aurcor_shell.preset().add_config(name, value, int_position),
+		false, true);
+}
+
+/* <position> <position> */
+static void cp(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &from_position = arguments[0];
+	auto &to_position = arguments[1];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	size_t int_from_position;
+	size_t int_to_position;
+
+	if (!parse_position(shell, from_position, int_from_position))
+		return;
+
+	if (!parse_position(shell, to_position, int_to_position))
+		return;
+
+	auto &name = aurcor_shell.preset_cfg_name();
+	preset_config_result(aurcor_shell, name, "", from_position,
+		aurcor_shell.preset().copy_config(name, int_from_position, int_to_position),
+		false, true, true);
+}
+
+/* <position> <position> */
+static void mv(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &from_position = arguments[0];
+	auto &to_position = arguments[1];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	size_t int_from_position;
+	size_t int_to_position;
+
+	if (!parse_position(shell, from_position, int_from_position))
+		return;
+
+	if (!parse_position(shell, to_position, int_to_position))
+		return;
+
+	auto &name = aurcor_shell.preset_cfg_name();
+	preset_config_result(aurcor_shell, name, "", from_position,
+		aurcor_shell.preset().move_config(name, int_from_position, int_to_position),
+		false, true, true);
+}
+
+/* <value> */
+static void prepend(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &value = arguments[0];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	auto &name = aurcor_shell.preset_cfg_name();
+	preset_config_result(aurcor_shell, name, value, "",
+		aurcor_shell.preset().add_config(name, value, 0),
+		false, true);
+}
+
+/* <position> */
+static void rm(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &position = arguments[0];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	size_t int_position;
+
+	if (!parse_position(shell, position, int_position))
+		return;
+
+	auto &name = aurcor_shell.preset_cfg_name();
+	preset_config_result(aurcor_shell, name, "", position,
+		aurcor_shell.preset().del_config(name, int_position),
+		false, true);
+}
+
+} // namespace bus_preset_cfglist
+
 namespace bus_preset_cfgset {
 
 /* <value> */
@@ -1410,7 +1556,9 @@ static void del(Shell &shell, const std::vector<std::string> &arguments) {
 		return;
 
 	auto &name = aurcor_shell.preset_cfg_name();
-	preset_config_result(aurcor_shell, name, value, "", aurcor_shell.preset().del_config(name, value), true, true);
+	preset_config_result(aurcor_shell, name, value, "",
+		aurcor_shell.preset().del_config(name, value),
+		true, true);
 }
 
 } // namespace bus_preset_cfgset
@@ -1491,14 +1639,14 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_preset, user, {F("show")}, {F("[config property]")}, bus_preset::show, preset_config_property_name_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("unset")}, {F("<config property>")}, bus_preset::unset, preset_config_property_name_autocomplete);
 
-	//commands->add_command(context::bus_preset_cfglist, admin, {F("after")}, {F("<position>"), F("<value>")}, bus_preset_cfglist::after);
+	commands->add_command(context::bus_preset_cfglist, admin, {F("after")}, {F("<position>"), F("<value>")}, bus_preset_cfglist::after);
 	commands->add_command(context::bus_preset_cfglist, admin, {F("append")}, {F("<value>")}, bus_preset_cfgcontainer::add);
-	//commands->add_command(context::bus_preset_cfglist, admin, {F("before")}, {F("<position>"), F("<value>")}, bus_preset_cfglist::before);
+	commands->add_command(context::bus_preset_cfglist, admin, {F("before")}, {F("<position>"), F("<value>")}, bus_preset_cfglist::before);
 	commands->add_command(context::bus_preset_cfglist, admin, {F("clear")}, bus_preset_cfgcontainer::clear);
-	//commands->add_command(context::bus_preset_cfglist, admin, {F("cp")}, {F("<position>"), F("<position>")}, bus_preset_cfglist::cp);
-	//commands->add_command(context::bus_preset_cfglist, admin, {F("mv")}, {F("<position>"), F("<position>")}, bus_preset_cfglist::mv);
-	//commands->add_command(context::bus_preset_cfglist, admin, {F("prepend")}, {F("<value>")}, bus_preset_cfglist::prepend);
-	//commands->add_command(context::bus_preset_cfglist, admin, {F("rm")}, {F("<position>")}, bus_preset_cfglist::rm);
+	commands->add_command(context::bus_preset_cfglist, admin, {F("cp")}, {F("<position>"), F("<position>")}, bus_preset_cfglist::cp);
+	commands->add_command(context::bus_preset_cfglist, admin, {F("mv")}, {F("<position>"), F("<position>")}, bus_preset_cfglist::mv);
+	commands->add_command(context::bus_preset_cfglist, admin, {F("prepend")}, {F("<value>")}, bus_preset_cfglist::prepend);
+	commands->add_command(context::bus_preset_cfglist, admin, {F("rm")}, {F("<position>")}, bus_preset_cfglist::rm);
 	commands->add_command(context::bus_preset_cfglist, user, {F("show")}, bus_preset_cfgcontainer::show);
 
 	commands->add_command(context::bus_preset_cfgset, admin, {F("add")}, {F("<value>")}, bus_preset_cfgcontainer::add);

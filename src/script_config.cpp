@@ -22,6 +22,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <iterator>
 #include <mutex>
 #include <set>
 #include <shared_mutex>
@@ -652,11 +653,24 @@ std::vector<std::string> ScriptConfig::container_values(const std::string &key) 
 	return values;
 }
 
-bool ScriptConfig::parse_u16(const std::string &text, uint16_t &value) {
+bool ScriptConfig::parse_u16(ContainerOp op, const std::string &text, uint16_t &value) {
+	switch (op) {
+	case ContainerOp::ADD:
+	case ContainerOp::DEL_VALUE:
+		break;
+
+	case ContainerOp::DEL_POSITION:
+	case ContainerOp::MOVE_POSITION:
+	case ContainerOp::COPY_POSITION:
+	default:
+		return true;
+	}
+
 	char *end;
 	long long ll_value = std::strtoll(text.c_str(), &end, 0);
 
-	if (ll_value < std::numeric_limits<typeof(value)>::min()
+	if (text.empty()
+			|| ll_value < std::numeric_limits<typeof(value)>::min()
 			|| ll_value > std::numeric_limits<typeof(value)>::max())
 		return false;
 
@@ -664,11 +678,24 @@ bool ScriptConfig::parse_u16(const std::string &text, uint16_t &value) {
 	return end[0] == '\0';
 }
 
-bool ScriptConfig::parse_s32(const std::string &text, int32_t &value) {
+bool ScriptConfig::parse_s32(ContainerOp op, const std::string &text, int32_t &value) {
+	switch (op) {
+	case ContainerOp::ADD:
+	case ContainerOp::DEL_VALUE:
+		break;
+
+	case ContainerOp::DEL_POSITION:
+	case ContainerOp::MOVE_POSITION:
+	case ContainerOp::COPY_POSITION:
+	default:
+		return true;
+	}
+
 	char *end;
 	long long ll_value = std::strtoll(text.c_str(), &end, 0);
 
-	if (ll_value < std::numeric_limits<typeof(value)>::min()
+	if (text.empty()
+			|| ll_value < std::numeric_limits<typeof(value)>::min()
 			|| ll_value > std::numeric_limits<typeof(value)>::max())
 		return false;
 
@@ -676,11 +703,24 @@ bool ScriptConfig::parse_s32(const std::string &text, int32_t &value) {
 	return end[0] == '\0';
 }
 
-bool ScriptConfig::parse_rgb(const std::string &text, int32_t &value) {
+bool ScriptConfig::parse_rgb(ContainerOp op, const std::string &text, int32_t &value) {
+	switch (op) {
+	case ContainerOp::ADD:
+	case ContainerOp::DEL_VALUE:
+		break;
+
+	case ContainerOp::DEL_POSITION:
+	case ContainerOp::MOVE_POSITION:
+	case ContainerOp::COPY_POSITION:
+	default:
+		return true;
+	}
+
 	char *end;
 	long long ll_value = std::strtoll(text.c_str() + (text[0] == '#' ? 1 : 0), &end, 16);
 
-	if (ll_value < std::numeric_limits<typeof(value)>::min()
+	if (text.empty()
+			|| ll_value < std::numeric_limits<typeof(value)>::min()
 			|| ll_value > std::numeric_limits<typeof(value)>::max())
 		return false;
 
@@ -692,29 +732,78 @@ bool ScriptConfig::parse_rgb(const std::string &text, int32_t &value) {
 }
 
 template <class T, class V>
-Result ScriptConfig::container_value(T &container, V value, bool add) {
-	if (add) {
-		container::add(container, std::move(value));
-	} else {
-		auto it = container::find_first(container, value);
+Result ScriptConfig::modify_container(T &container, V value, ContainerOp op, size_t index1, size_t index2) {
+	switch (op) {
+	case ContainerOp::ADD:
+		container::add(container, std::move(value), index1);
+		break;
 
-		if (it == container.end())
+	case ContainerOp::DEL_VALUE: {
+			auto it = container::find_first(container, value);
+
+			if (it == container.end())
+				return Result::NOT_FOUND;
+
+			container.erase(it);
+			break;
+		}
+
+	case ContainerOp::DEL_POSITION:
+		if (index1 < container.size()) {
+			container.erase(std::next(container.begin(), index1));
+		} else {
 			return Result::NOT_FOUND;
+		}
+		break;
 
-		container.erase(it);
+	case ContainerOp::MOVE_POSITION:
+		if (index1 < container.size()) {
+			value = *std::next(container.begin(), index1);
+			if (index2 > index1 && index2 != std::numeric_limits<typeof(index2)>::max())
+				index2++;
+
+			container::add(container, std::move(value), index2);
+
+			if (index2 <= index1)
+				index1++;
+			container.erase(std::next(container.begin(), index1));
+		} else {
+			return Result::NOT_FOUND;
+		}
+		break;
+
+	case ContainerOp::COPY_POSITION:
+		if (index1 < container.size()) {
+			value = *std::next(container.begin(), index1);
+			container::add(container, std::move(value), index2);
+		} else {
+			return Result::NOT_FOUND;
+		}
+		break;
 	}
 
 	return Result::OK;
 }
 
-Result ScriptConfig::container_value(const std::string &key, const std::string &value, bool add) {
+Result ScriptConfig::modify(const std::string &key, const std::string &value,
+		ContainerOp op, size_t index1, size_t index2) {
 	auto it = properties_.find(key);
 
 	if (it == properties_.end())
 		return Result::NOT_FOUND;
 
-	if (values_size() > MAX_VALUES_SIZE)
-		return Result::FULL;
+	if (values_size() > MAX_VALUES_SIZE) {
+		switch (op) {
+		case ContainerOp::ADD:
+		case ContainerOp::COPY_POSITION:
+			return Result::FULL;
+
+		case ContainerOp::DEL_VALUE:
+		case ContainerOp::DEL_POSITION:
+		case ContainerOp::MOVE_POSITION:
+			break;
+		}
+	}
 
 	auto &property = *it->second;
 
@@ -722,10 +811,10 @@ Result ScriptConfig::container_value(const std::string &key, const std::string &
 	case Type::LIST_U16: {
 			uint16_t int_value;
 
-			if (!parse_u16(value, int_value))
+			if (!parse_u16(op, value, int_value))
 				return Result::OUT_OF_RANGE;
 
-			return container_value(property.as_u16_list().values(), int_value, add);
+			return modify_container(property.as_u16_list().values(), int_value, op, index1, index2);
 		}
 
 	case Type::LIST_S32:
@@ -733,20 +822,20 @@ Result ScriptConfig::container_value(const std::string &key, const std::string &
 			int32_t int_value;
 
 			if (property.type() == Type::LIST_RGB
-					? !parse_rgb(value, int_value)
-					: !parse_s32(value, int_value))
+					? !parse_rgb(op, value, int_value)
+					: !parse_s32(op, value, int_value))
 				return Result::OUT_OF_RANGE;
 
-			return container_value(property.as_s32_list().values(), int_value, add);
+			return modify_container(property.as_s32_list().values(), int_value, op, index1, index2);
 		}
 
 	case Type::SET_U16: {
 			uint16_t int_value;
 
-			if (!parse_u16(value, int_value))
+			if (!parse_u16(op, value, int_value))
 				return Result::OUT_OF_RANGE;
 
-			return container_value(property.as_u16_set().values(), int_value, add);
+			return modify_container(property.as_u16_set().values(), int_value, op, index1, index2);
 		}
 
 	case Type::SET_S32:
@@ -754,11 +843,11 @@ Result ScriptConfig::container_value(const std::string &key, const std::string &
 			int32_t int_value;
 
 			if (property.type() == Type::SET_RGB
-					? !parse_rgb(value, int_value)
-					: !parse_s32(value, int_value))
+					? !parse_rgb(op, value, int_value)
+					: !parse_s32(op, value, int_value))
 				return Result::OUT_OF_RANGE;
 
-			return container_value(property.as_s32_set().values(), int_value, add);
+			return modify_container(property.as_s32_set().values(), int_value, op, index1, index2);
 		}
 
 	case Type::BOOL:
@@ -799,7 +888,7 @@ Result ScriptConfig::set(const std::string &key, const std::string &value) {
 		} else {
 			int32_t int_value;
 
-			if (parse_s32(value, int_value)) {
+			if (parse_s32(ContainerOp::ADD, value, int_value)) {
 				property.as_s32().set_value(int_value);
 			} else {
 				return Result::OUT_OF_RANGE;
@@ -814,7 +903,7 @@ Result ScriptConfig::set(const std::string &key, const std::string &value) {
 		} else {
 			int32_t int_value;
 
-			if (parse_rgb(value, int_value)) {
+			if (parse_rgb(ContainerOp::ADD, value, int_value)) {
 				property.as_s32().set_value(int_value);
 			} else {
 				return Result::OUT_OF_RANGE;

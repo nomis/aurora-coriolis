@@ -199,9 +199,25 @@ std::vector<std::string> Preset::config_container_values(const std::string &key)
 	return config_.container_values(key);
 }
 
-Result Preset::add_config(const std::string &key, const std::string &value) {
+Result Preset::add_config(const std::string &key, const std::string &value, size_t before) {
 	std::unique_lock data_lock{data_mutex_};
-	auto result = config_.container_value(key, value, true);
+	auto result = config_.modify(key, value, ScriptConfig::ContainerOp::ADD, before);
+	if (result == Result::OK)
+		config_changed_ = true;
+	return result;
+}
+
+Result Preset::move_config(const std::string &key, size_t from_position, size_t to_position) {
+	std::unique_lock data_lock{data_mutex_};
+	auto result = config_.modify(key, "", ScriptConfig::ContainerOp::MOVE_POSITION, from_position, to_position);
+	if (result == Result::OK)
+		config_changed_ = true;
+	return result;
+}
+
+Result Preset::copy_config(const std::string &key, size_t from_position, size_t to_position) {
+	std::unique_lock data_lock{data_mutex_};
+	auto result = config_.modify(key, "", ScriptConfig::ContainerOp::COPY_POSITION, from_position, to_position);
 	if (result == Result::OK)
 		config_changed_ = true;
 	return result;
@@ -209,7 +225,15 @@ Result Preset::add_config(const std::string &key, const std::string &value) {
 
 Result Preset::del_config(const std::string &key, const std::string &value) {
 	std::unique_lock data_lock{data_mutex_};
-	auto result = config_.container_value(key, value, false);
+	auto result = config_.modify(key, value, ScriptConfig::ContainerOp::DEL_VALUE);
+	if (result == Result::OK)
+		config_changed_ = true;
+	return result;
+}
+
+Result Preset::del_config(const std::string &key, size_t index) {
+	std::unique_lock data_lock{data_mutex_};
+	auto result = config_.modify(key, "", ScriptConfig::ContainerOp::DEL_POSITION, index);
 	if (result == Result::OK)
 		config_changed_ = true;
 	return result;

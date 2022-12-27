@@ -24,6 +24,8 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <iterator>
+#include <limits>
 #include <set>
 #include <string>
 #include <vector>
@@ -98,13 +100,17 @@ static constexpr size_t rounded_sizeof() {
 namespace container {
 
 template <class T, class V>
-static inline void add(std::set<T> &container, const V &&value) {
+static inline void add(std::set<T> &container, const V &&value, size_t before = std::numeric_limits<size_t>::max()) {
 	container.insert(value);
 }
 
 template <class T, class V>
-static inline void add(std::vector<T> &container, const V &&value) {
-	container.push_back(value);
+static inline void add(std::vector<T> &container, const V &&value, size_t before = std::numeric_limits<size_t>::max()) {
+	if (before < container.size()) {
+		container.insert(std::next(container.begin(), before), value);
+	} else {
+		container.push_back(value);
+	}
 }
 
 template <class T, class V>
