@@ -327,6 +327,7 @@ public:
 	Result unset(const std::string &key);
 	bool print(uuid::console::Shell &shell, const std::string *filter_key) const;
 	bool clear();
+	bool cleanup();
 
 	size_t keys_size() const;
 	inline size_t defaults_size() const { return size(false); }

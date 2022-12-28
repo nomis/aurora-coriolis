@@ -1164,6 +1164,21 @@ bool ScriptConfig::clear() {
 	return changed;
 }
 
+bool ScriptConfig::cleanup() {
+	bool changed = false;
+
+	for (auto it = properties_.begin(); it != properties_.end(); ) {
+		if (!it->second->registered()
+				&& !Property::clear_value(*it->second)) {
+			it = properties_.erase(it);
+		} else {
+			++it;
+		}
+	}
+
+	return changed;
+}
+
 template <class T>
 Result ScriptConfig::load_container_uint(qindesign::cbor::Reader &reader,
 		const std::string &key, Property &property, T &values, size_t total_size) {

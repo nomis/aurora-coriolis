@@ -1130,6 +1130,16 @@ static void add(Shell &shell, const std::vector<std::string> &arguments) {
 		aurcor_shell.preset().add_config(name, value));
 }
 
+static void cleanup_config(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	aurcor_shell.preset().cleanup_config();
+	shell.printfln(F("Removed unregistered config properties"));
+}
+
 /* <config property> <value> */
 static void del(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &name = arguments[0];
@@ -1644,6 +1654,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_profile, admin, {F("save")}, bus_profile::save);
 
 	commands->add_command(context::bus_preset, admin, {F("add")}, {F("<config property>"), F("<value>")}, bus_preset::add, preset_config_property_container_name_autocomplete);
+	commands->add_command(context::bus_preset, admin, {F("cleanup"), F("config")}, bus_preset::cleanup_config);
 	commands->add_command(context::bus_preset, admin, {F("del")}, {F("<config property>"), F("<value>")}, bus_preset::del, preset_config_property_container_name_value_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("desc")}, {F("<description>")}, bus_preset::desc, preset_current_description_autocomplete);
 	commands->add_command(context::bus_preset, admin, {F("edit")}, {F("<config property>")}, bus_preset::edit, preset_config_property_container_name_autocomplete);
