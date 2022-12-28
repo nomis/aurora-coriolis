@@ -1,6 +1,8 @@
 /.pio/
 /pio_local.ini
 /*.sublime-*
-/data/
-/coverage/
 /.fs/
+/buses/
+/coverage/
+/data/
+/profiles/
