@@ -19,6 +19,7 @@
 #pragma once
 
 #ifdef ENV_NATIVE
+# include <curl/curl.h>
 #else
 # include <Arduino.h>
 # include <esp_http_client.h>
@@ -26,6 +27,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <uuid/log.h>
 
@@ -34,7 +36,6 @@ namespace aurcor {
 class WebClient {
 public:
 	WebClient() = default;
-	~WebClient();
 
 	static void init();
 
@@ -43,11 +44,29 @@ public:
 	bool done();
 
 private:
+#ifdef ENV_NATIVE
+	class CurlDeleter {
+	public:
+		void operator()(CURL *curl) { curl_easy_cleanup(curl); }
+	};
+#else
+	class HandleDeleter {
+	public:
+		void operator()(esp_http_client_handle_t handle) {
+			esp_http_client_cleanup(handle);
+		}
+	};
+#endif
+
+	static size_t curl_append(char *ptr, size_t size, size_t nmemb, void *userdata);
+
 	static uuid::log::Logger logger_;
 
 #ifdef ENV_NATIVE
+	std::unique_ptr<CURL,CurlDeleter> curl_;
+	std::vector<char> data_;
 #else
-	esp_http_client_handle_t handle_{nullptr};
+	std::unique_ptr<struct esp_http_client,HandleDeleter> handle_;
 #endif
 };
 
