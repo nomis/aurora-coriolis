@@ -35,6 +35,7 @@
 #include "aurcor/micropython.h"
 #include "aurcor/preset.h"
 #include "aurcor/uart_led_bus.h"
+#include "aurcor/web_client.h"
 
 namespace aurcor {
 
@@ -102,6 +103,7 @@ void App::init() {
 
 void App::start() {
 	app::App::start();
+	WebClient::init();
 }
 
 void App::loop() {

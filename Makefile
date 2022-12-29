@@ -28,7 +28,7 @@ uploadfs: fs
 data:
 	mkdir -p data
 
-fs: data/certs.ar \
+fs: \
 	$(patsubst %.py,data/%.mpy,$(wildcard scripts/*.py)) \
 	$(patsubst %.json,data/%.cbor,$(wildcard buses/*.json)) \
 	$(patsubst %.yaml,data/%.cbor,$(wildcard buses/*.yaml)) \
@@ -39,9 +39,6 @@ fs: data/certs.ar \
 
 cleanfs:
 	rm -rf data
-
-data/certs.ar: certs/isrg-root-x1.der certs/isrg-root-x2.der | data
-	ar q $@ $^
 
 micropython/mpy-cross/mpy-cross:
 	+$(MAKE) -C micropython/mpy-cross
