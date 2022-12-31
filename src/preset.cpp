@@ -45,8 +45,6 @@ using uuid::console::Shell;
 
 static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "preset";
 
-static const char *directory_name = "/presets";
-
 namespace aurcor {
 
 uuid::log::Logger Preset::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::DAEMON};
@@ -57,7 +55,7 @@ Preset::Preset(App &app, std::shared_ptr<LEDBus> bus, std::string name)
 }
 
 std::vector<std::string> Preset::names() {
-	return list_filenames(directory_name, ".cbor");
+	return list_filenames(DIRECTORY_NAME, FILENAME_EXT);
 }
 
 std::string Preset::name(bool allow_unnamed) const {
@@ -307,10 +305,10 @@ std::shared_ptr<std::shared_ptr<Preset>> Preset::edit() {
 std::string Preset::make_filename() const {
 	std::string filename;
 
-	filename.append(directory_name);
+	filename.append(DIRECTORY_NAME);
 	filename.append("/");
 	filename.append(name_);
-	filename.append(".cbor");
+	filename.append(FILENAME_EXT);
 
 	return filename;
 }
@@ -333,6 +331,7 @@ void Preset::reset() {
 Result Preset::load() {
 	auto filename = make_filename();
 	std::unique_lock data_lock{data_mutex_};
+	std::shared_lock file_lock{App::file_mutex()};
 
 	if (bus_)
 		logger_.info(F("Reading preset from file %s to bus %s"), filename.c_str(), bus_->name());
@@ -440,6 +439,7 @@ Result Preset::save() {
 	if (name_.empty())
 		return Result::NOT_FOUND;
 	auto filename = make_filename();
+	std::unique_lock file_lock{App::file_mutex()};
 
 	logger_.notice(F("Writing preset from bus %s to file %s"), bus_->name(), filename.c_str());
 
@@ -576,6 +576,14 @@ bool Preset::restart() const {
 		return true;
 
 	return uuid::get_uptime_ms() - stop_time_ms_ >= RESTART_TIME_MS;
+}
+
+void Preset::restart_script() {
+	if (running_ && mp_->running())
+		mp_->stop();
+
+	stop_time_ms_ = 0;
+	running_ = false;
 }
 
 } // namespace aurcor

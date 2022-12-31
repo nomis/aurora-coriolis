@@ -28,6 +28,7 @@
 #include <csetjmp>
 #include <cstring>
 #include <memory>
+#include <shared_mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -54,6 +55,7 @@ extern "C" {
 #include "app/fs.h"
 #include "app/gcc.h"
 #include "app/util.h"
+#include "aurcor/app.h"
 #include "aurcor/io_buffer.h"
 #include "aurcor/led_bus.h"
 #include "aurcor/modaurcor.h"
@@ -72,8 +74,6 @@ using aurcor::micropython::PlatformPrint;
 using uuid::console::Shell;
 
 static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "mpy";
-
-static const char *directory_name = "/scripts";
 
 namespace aurcor {
 
@@ -301,7 +301,7 @@ void MicroPython::cleanup() {
 }
 
 std::string MicroPython::script_filename(const char *path) {
-	std::string filename = directory_name;
+	std::string filename = DIRECTORY_NAME;
 
 	filename.append(1, '/');
 	filename.append(app::normalise_filename(path));
@@ -507,16 +507,17 @@ MicroPythonFile::~MicroPythonFile() {
 }
 
 std::vector<std::string> MicroPythonFile::scripts() {
-	return list_filenames(directory_name, ".mpy");
+	return list_filenames(DIRECTORY_NAME, FILENAME_EXT);
 }
 
 bool MicroPythonFile::exists(const char *name) {
+	std::shared_lock file_lock{App::file_mutex()};
 	return !!app::FS.open(script_filename(filename_ext(name).c_str()).c_str());
 }
 
 std::string MicroPythonFile::filename_ext(const char *name) {
 	std::string filename{name};
-	filename.append(".mpy");
+	filename.append(FILENAME_EXT);
 	return filename;
 }
 
@@ -613,6 +614,7 @@ extern "C" ::mp_lexer_t *mp_lexer_new_from_file(const char *filename) {
 }
 
 extern "C" ::mp_import_stat_t mp_import_stat(const char *path) {
+	std::shared_lock file_lock{aurcor::App::file_mutex()};
 	auto file = app::FS.open(aurcor::MicroPython::script_filename(path).c_str());
 	return !file ? MP_IMPORT_STAT_NO_EXIST
 		: (file.isDirectory() ? MP_IMPORT_STAT_DIR : MP_IMPORT_STAT_FILE);

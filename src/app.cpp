@@ -30,6 +30,7 @@
 #include <uuid/common.h>
 
 #include "app/gcc.h"
+#include "aurcor/download.h"
 #include "aurcor/constants.h"
 #include "aurcor/led_bus.h"
 #include "aurcor/micropython.h"
@@ -38,6 +39,8 @@
 #include "aurcor/web_client.h"
 
 namespace aurcor {
+
+std::shared_mutex App::file_mutex_;
 
 App::App() {
 
@@ -61,10 +64,10 @@ void App::init() {
 	add(std::make_shared<NullLEDBus>("null0"));
 	add(std::make_shared<NullLEDBus>("null1"));
 #else
+	add(std::make_shared<NullLEDBus>("led0"));
+	add(std::make_shared<NullLEDBus>("led1"));
 	add(std::make_shared<NullLEDBus>("null0"));
 	add(std::make_shared<NullLEDBus>("null1"));
-	add(std::make_shared<NullLEDBus>("null2"));
-	add(std::make_shared<NullLEDBus>("null3"));
 #endif
 
 	MicroPython::setup(buses_.size());
@@ -104,10 +107,13 @@ void App::init() {
 void App::start() {
 	app::App::start();
 	WebClient::init();
+	Download::init();
 }
 
 void App::loop() {
 	app::App::loop();
+
+	refresh_files();
 
 	for (auto &preset : presets_)
 		preset.second->loop();
@@ -187,9 +193,13 @@ std::shared_ptr<std::shared_ptr<Preset>> App::edit(const std::shared_ptr<LEDBus>
 }
 
 void App::refresh(const std::string &preset_name) {
+	refresh_presets({preset_name});
+}
+
+void App::refresh_presets(const std::unordered_set<std::string> &preset_names) {
 	for (auto &bus_preset : presets_) {
 		auto &preset = *bus_preset.second;
-		if (preset.name() == preset_name
+		if (preset_names.find(preset.name()) != preset_names.end()
 				&& !preset.editing()
 				&& !preset.modified()) {
 			auto &bus = *bus_preset.first;
@@ -233,6 +243,97 @@ void App::stop(const std::shared_ptr<LEDBus> &bus) {
 			preset.name().c_str(), bus->type(), bus->name());
 		presets_.erase(it);
 	}
+}
+
+void App::restart_script(const std::shared_ptr<LEDBus> &bus) {
+	auto it = presets_.find(bus);
+
+	if (it != presets_.end()) {
+		auto &preset = *it->second;
+
+		logger_.trace(F("Restart script \"%s\" for \"%s\" on %s[%s]"),
+			preset.script().c_str(), preset.name().c_str(),
+			bus->type(), bus->name());
+		preset.restart_script();
+	}
+}
+
+bool App::download(const std::string &url) {
+	if (download_.lock())
+		return false;
+
+	download_ = std::make_shared<Download>(*this, url)->start();
+	return true;
+}
+
+void App::refresh_files(const std::unordered_set<std::string> &buses,
+		const std::unordered_set<std::string> &presets,
+		const std::unordered_set<std::pair<std::string,enum led_profile_id>,BusLEDProfileHash> &profiles,
+		const std::unordered_set<std::string> &scripts) {
+	std::lock_guard lock{refresh_mutex_};
+
+	refresh_buses_ = buses;
+	refresh_presets_ = presets;
+	refresh_profiles_ = profiles;
+	refresh_scripts_ = scripts;
+
+	refresh_ = !refresh_buses_.empty()
+		|| !refresh_presets_.empty()
+		|| !refresh_profiles_.empty()
+		|| !refresh_scripts_.empty();
+}
+
+void App::refresh_files() {
+	std::lock_guard lock{refresh_mutex_};
+
+	if (!refresh_)
+		return;
+
+	for (auto &bus_name : refresh_buses_) {
+		auto it = buses_.find(bus_name);
+
+		if (it != buses_.end()) {
+			auto &bus = *it->second;
+
+			logger_.trace(F("Reload config on %s[%s]"), bus.type(), bus.name());
+			bus.reload_config();
+		}
+	}
+
+	for (auto &entry : refresh_profiles_) {
+		auto it = buses_.find(entry.first);
+
+		if (it != buses_.end()) {
+			auto &bus = *it->second;
+
+			if (bus.profile_loaded(entry.second)
+					&& !bus.profile(entry.second).modified()) {
+				logger_.trace(F("Reload profile \"%s\" on %s[%s]"),
+					LEDProfiles::lc_name(entry.second), bus.type(), bus.name());
+				bus.load_profile(entry.second);
+			}
+		}
+	}
+
+	for (auto &bus_preset : presets_) {
+		auto &bus = *bus_preset.first;
+		auto &preset = *bus_preset.second;
+
+		if (refresh_presets_.find(preset.name()) == refresh_presets_.end()
+				&& refresh_scripts_.find(preset.script()) != refresh_scripts_.end()) {
+			logger_.trace(F("Restart script \"%s\" for \"%s\" on %s[%s]"),
+				preset.script().c_str(), preset.name().c_str(),
+				bus.type(), bus.name());
+			preset.restart_script();
+		}
+	}
+
+	refresh_presets(refresh_presets_);
+
+	refresh_buses_ = {};
+	refresh_presets_ = {};
+	refresh_profiles_ = {};
+	refresh_scripts_ = {};
 }
 
 } // namespace aurcor

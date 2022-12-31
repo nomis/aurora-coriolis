@@ -56,10 +56,12 @@ public:
 	inline void reverse(bool value) { config_.reverse(value); }
 	inline std::string default_preset() const { return config_.default_preset(); }
 	inline void default_preset(std::string value) { config_.default_preset(value); }
+	inline void reload_config() { config_.reload(); }
 
 	inline LEDProfile& profile(enum led_profile_id id) { return profiles_.get(id); }
 	inline const LEDProfile& profile(enum led_profile_id id) const { return profiles_.get(id); }
 	inline Result load_profile(enum led_profile_id id) { return profiles_.load(id); }
+	inline bool profile_loaded(enum led_profile_id id) { return profiles_.loaded(id); }
 	inline Result save_profile(enum led_profile_id id) { return profiles_.save(id); }
 
 	inline uint64_t last_update_us() const { return last_update_us_; }

@@ -25,6 +25,7 @@
 #include <string>
 #include <thread>
 #include <type_traits>
+#include <unordered_set>
 #include <vector>
 
 #include <uuid/console.h>
@@ -36,6 +37,7 @@
 #include "aurcor/led_profile.h"
 #include "aurcor/preset.h"
 #include "aurcor/script_config.h"
+#include "aurcor/web_client.h"
 #include "app/config.h"
 #include "app/console.h"
 
@@ -563,6 +565,32 @@ static void default_(Shell &shell, const std::vector<std::string> &arguments) {
 	}
 }
 
+/* [url] */
+static void download(Shell &shell, const std::vector<std::string> &arguments) {
+	Config config;
+	std::string url = config.download_url();
+
+	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
+		url = arguments[0];
+
+		if (url.empty()) {
+			shell.println("Empty URL");
+			return;
+		}
+	} else {
+		if (url.empty()) {
+			shell.println("No download URL configured");
+			return;
+		}
+	}
+
+	if (to_app(shell).download(url)) {
+		shell.println("Download started");
+	} else {
+		shell.println("Download already running");
+	}
+}
+
 /* [bus] */
 static void edit(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &app = to_app(shell);
@@ -767,23 +795,41 @@ static void run(Shell &shell, const std::vector<std::string> &arguments) {
 static void set_default_bus(Shell &shell, const std::vector<std::string> &arguments) {
 	Config config;
 
-	if (arguments.empty()) {
-		config.default_bus("");
-	} else {
+	if (!arguments.empty()) {
 		auto &bus_name = arguments[0];
-		auto &app = to_app(shell);
-		auto bus = app.bus(bus_name);
 
-		if (bus) {
-			config.default_bus(bus_name);
+		if (bus_name.empty()) {
+			config.default_bus("");
 		} else {
-			shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
-			return;
+			auto &app = to_app(shell);
+			auto bus = app.bus(bus_name);
+
+			if (bus) {
+				config.default_bus(bus_name);
+			} else {
+				shell.printfln(F("Bus \"%s\" not found"), bus_name.c_str());
+				return;
+			}
 		}
+
+		config.commit();
 	}
 
-	config.commit();
 	shell.printfln(F("Default bus = %s"), config.default_bus().empty() ? "<unset>" : config.default_bus().c_str());
+}
+
+/* [url] */
+static void set_download_url(Shell &shell, const std::vector<std::string> &arguments) {
+	Config config;
+
+	if (!arguments.empty()) {
+		auto &url = arguments[0];
+
+		config.download_url(url);
+		config.commit();
+	}
+
+	shell.printfln(F("Download URL = %s"), config.download_url().empty() ? "<unset>" : config.download_url().c_str());
 }
 
 /* [bus] <preset> [default] */
@@ -826,6 +872,14 @@ static void stop(Shell &shell, const std::vector<std::string> &arguments) {
 			return to_app(shell).detach(bus, nullptr, true);
 		});
 	}
+}
+
+/* [bus] */
+static void restart(Shell &shell, const std::vector<std::string> &arguments) {
+	auto bus = lookup_bus_or_default(shell, arguments, 0);
+
+	if (bus)
+		to_app(shell).restart_script(bus);
 }
 
 } // namespace main
@@ -1225,6 +1279,16 @@ static void reset_config(Shell &shell, const std::vector<std::string> &arguments
 	shell.printfln(F("Reset config to defaults"));
 }
 
+static void restart(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	aurcor_shell.preset().restart_script();
+	shell.printfln(F("Restarted script"));
+}
+
 /* <name> */
 static void name(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &name = arguments[0];
@@ -1614,6 +1678,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::main, user, {F("bus")}, {F("[bus]")}, main::bus, bus_names_autocomplete);
 	commands->add_command(context::main, user, {F("clear")}, {F("[bus]")}, main::clear, bus_names_autocomplete);
 	commands->add_command(context::main, admin, {F("default")}, {F("[bus]"), F("<preset>")}, main::default_, bus_preset_names_default_autocomplete);
+	commands->add_command(context::main, user, {F("download")}, {F("[url]")}, main::download);
 	commands->add_command(context::main, admin, {F("edit")}, {F("[bus]")}, main::edit, bus_names_autocomplete);
 	commands->add_command(context::main, user, {F("list"), F("buses")}, main::list_buses);
 	commands->add_command(context::main, user, {F("list"), F("presets")}, main::list_presets);
@@ -1623,8 +1688,10 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::main, user, {F("run")}, {F("[bus]"), F("<script>")}, main::run, bus_script_names_autocomplete);
 	commands->add_command(context::main, admin, {F("rm")}, {F("<preset>")}, main::rm, preset_names_autocomplete);
 	commands->add_command(context::main, admin, {F("set"), F("default"), F("bus")}, {F("[bus]")}, main::set_default_bus, bus_names_autocomplete);
+	commands->add_command(context::main, admin, {F("set"), F("download"), F("url")}, {F("[url]")}, main::set_download_url);
 	commands->add_command(context::main, user, {F("start")}, {F("[bus]"), F("<preset>"), F("[default]")}, main::start, bus_preset_names_default_autocomplete);
 	commands->add_command(context::main, user, {F("stop")}, {F("[bus]")}, main::stop, bus_names_autocomplete);
+	commands->add_command(context::main, user, {F("restart")}, {F("[bus]")}, main::restart, bus_names_autocomplete);
 
 	commands->add_command(context::bus, user, {F("default")}, {F("[preset]")}, bus::default_, preset_names_autocomplete);
 	commands->add_command(context::bus, user, {F("clear")}, bus::clear);
@@ -1662,6 +1729,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_preset, admin, {F("normal")}, bus_preset::normal);
 	commands->add_command(context::bus_preset, admin, {F("reload")}, bus_preset::reload);
 	commands->add_command(context::bus_preset, admin, {F("reset"), F("config")}, bus_preset::reset_config);
+	commands->add_command(context::bus_preset, admin, {F("restart")}, bus_preset::restart);
 	commands->add_command(context::bus_preset, admin, {F("reverse")}, bus_preset::reverse);
 	commands->add_command(context::bus_preset, admin, {F("save")}, {F("[name]")}, bus_preset::save);
 	commands->add_command(context::bus_preset, admin, {F("script")}, {F("<script>")}, bus_preset::script, script_names_autocomplete);

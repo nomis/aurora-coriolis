@@ -30,6 +30,7 @@
 #include <uuid/log.h>
 
 #include "app/fs.h"
+#include "aurcor/app.h"
 #include "aurcor/util.h"
 
 #ifndef PSTR_ALIGN
@@ -41,8 +42,6 @@ using app::FS;
 using uuid::log::Level;
 
 static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "led-profile";
-
-static const char *directory_name = "/profiles";
 
 namespace aurcor {
 
@@ -316,12 +315,12 @@ bool LEDProfile::compact_locked(size_t limit) {
 std::string LEDProfile::make_filename(const char *bus_name, const char *profile_name) {
 	std::string filename;
 
-	filename.append(directory_name);
+	filename.append(DIRECTORY_NAME);
 	filename.append("/");
 	filename.append(bus_name);
 	filename.append(".");
 	filename.append(profile_name);
-	filename.append(".cbor");
+	filename.append(FILENAME_EXT);
 
 	return filename;
 }
@@ -330,6 +329,7 @@ Result LEDProfile::load(const char *bus_name, const char *profile_name,
 		bool automatic) {
 	auto filename = make_filename(bus_name, profile_name);
 	std::unique_lock data_lock{data_mutex_};
+	std::shared_lock file_lock{App::file_mutex()};
 
 	logger_.log(automatic ? Level::DEBUG : Level::NOTICE,
 		F("Reading profile from file %s"), filename.c_str());
@@ -489,6 +489,7 @@ Result inline LEDProfile::get_ratio_config_ratio_value(
 Result LEDProfile::save(const char *bus_name, const char *profile_name) {
 	auto filename = make_filename(bus_name, profile_name);
 	std::shared_lock data_lock{data_mutex_};
+	std::unique_lock file_lock{App::file_mutex()};
 
 	logger_.notice(F("Writing profile to file %s"), filename.c_str());
 

@@ -61,7 +61,7 @@ public:
 	~MemoryPool() = default;
 
 	bool resize(size_t count);
-	std::unique_ptr<MemoryBlock> allocate();
+	std::unique_ptr<MemoryBlock> allocate(bool zero = true);
 
 private:
 	static uuid::log::Logger logger_;

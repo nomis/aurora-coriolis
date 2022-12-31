@@ -22,14 +22,19 @@
 
 #include <initializer_list>
 #include <memory>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "../app/app.h"
+#include "led_profiles.h"
 
 namespace aurcor {
 
+class Download;
 class LEDBus;
 class MicroPython;
 class Preset;
@@ -41,6 +46,8 @@ public:
 	void start() override;
 	void loop() override;
 
+	static inline std::shared_mutex& file_mutex() { return file_mutex_; }
+
 	std::vector<std::string> bus_names() const;
 	std::shared_ptr<LEDBus> bus(const std::string &name);
 	void attach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp);
@@ -51,6 +58,13 @@ public:
 	void renamed(const std::string &preset_from_name, const std::string &preset_to_name);
 	inline void deleted(const std::string &preset_from_name) { renamed(preset_from_name, ""); }
 	void stop(const std::shared_ptr<LEDBus> &bus);
+	void restart_script(const std::shared_ptr<LEDBus> &bus);
+
+	bool download(const std::string &url);
+	void refresh_files(const std::unordered_set<std::string> &buses,
+		const std::unordered_set<std::string> &presets,
+		const std::unordered_set<std::pair<std::string,enum led_profile_id>,BusLEDProfileHash> &profiles,
+		const std::unordered_set<std::string> &scripts);
 
 private:
 	App(App&&) = delete;
@@ -59,10 +73,22 @@ private:
 	App& operator=(const App&) = delete;
 
 	void add(const std::shared_ptr<LEDBus> &&bus);
+	void refresh_files();
+	void refresh_presets(const std::unordered_set<std::string> &preset_names);
+
+	static std::shared_mutex file_mutex_;
 
 	std::unordered_map<std::string,std::shared_ptr<LEDBus>> buses_;
 	std::unordered_map<std::shared_ptr<LEDBus>,std::shared_ptr<MicroPython>> mps_;
 	std::unordered_map<std::shared_ptr<LEDBus>,std::shared_ptr<Preset>> presets_;
+	std::weak_ptr<Download> download_;
+
+	std::mutex refresh_mutex_;
+	bool refresh_{false};
+	std::unordered_set<std::string> refresh_buses_;
+	std::unordered_set<std::string> refresh_presets_;
+	std::unordered_set<std::pair<std::string,enum led_profile_id>,BusLEDProfileHash> refresh_profiles_;
+	std::unordered_set<std::string> refresh_scripts_;
 };
 
 } // namespace aurcor

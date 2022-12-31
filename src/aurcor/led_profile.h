@@ -50,6 +50,9 @@ public:
 		"Index type is too large to be stored in an unsigned int");
 	static constexpr unsigned int MAX_INDEX = std::numeric_limits<index_t>::max();
 
+	static constexpr const char *DIRECTORY_NAME = "/profiles";
+	static constexpr const char *FILENAME_EXT = ".cbor";
+
 	LEDProfile() = default;
 	~LEDProfile() = default;
 

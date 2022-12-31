@@ -82,6 +82,13 @@ Result LEDProfiles::load(enum led_profile_id id) {
 	return auto_load(id, true);
 }
 
+bool LEDProfiles::loaded(enum led_profile_id id) {
+	size_t profile = (size_t)id;
+	std::unique_lock lock{mutex_};
+
+	return loaded_[profile];
+}
+
 Result LEDProfiles::save(enum led_profile_id id) {
 	size_t profile = (size_t)id;
 

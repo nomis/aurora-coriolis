@@ -19,10 +19,12 @@
 #include "aurcor/util.h"
 
 #include <cstring>
+#include <shared_mutex>
 #include <string>
 #include <vector>
 
 #include "app/fs.h"
+#include "aurcor/app.h"
 
 namespace aurcor {
 
@@ -56,7 +58,8 @@ bool allowed_text(const std::string &text) {
 
 std::vector<std::string> list_filenames(const char *directory_name, const char *extension) {
 	std::vector<std::string> names;
-	const size_t extension_len = std::strlen(extension);
+	const size_t extension_len = std::char_traits<char>::length(extension);
+	std::shared_lock file_lock{App::file_mutex()};
 	auto dir = app::FS.open(directory_name);
 
 	if (dir && dir.isDirectory()) {
@@ -66,7 +69,7 @@ std::vector<std::string> list_filenames(const char *directory_name, const char *
 			if (file) {
 				std::string name = file.name();
 
-				if (name.length() > extension_len && name.rfind(extension, name.length() - extension_len) == name.length() - extension_len) {
+				if (name.length() > extension_len && name.find(extension, name.length() - extension_len) != std::string::npos) {
 					name.resize(name.length() - extension_len);
 					names.emplace_back(name);
 				}

@@ -38,7 +38,7 @@ extern "C" {
 #include <uuid/console.h>
 #include <uuid/log.h>
 
-#include "aurcor/util.h"
+#include "util.h"
 
 #ifndef PSTR_ALIGN
 # define PSTR_ALIGN 4

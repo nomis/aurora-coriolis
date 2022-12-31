@@ -50,6 +50,9 @@ public:
 	static constexpr size_t MAX_NAME_LENGTH = 48;
 	static constexpr size_t MAX_DESCRIPTION_LENGTH = 48;
 
+	static constexpr const char *DIRECTORY_NAME = "/presets";
+	static constexpr const char *FILENAME_EXT = ".cbor";
+
 	Preset(App &app, std::shared_ptr<LEDBus> bus, std::string name = "");
 	~Preset() = default;
 
@@ -102,6 +105,8 @@ public:
 
 	Result rename(const Preset &destination);
 	Result remove();
+
+	void restart_script();
 
 	void loop();
 

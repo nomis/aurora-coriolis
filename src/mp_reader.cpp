@@ -24,13 +24,17 @@ extern "C" {
 	#include <py/runtime.h>
 }
 
+#include <shared_mutex>
+
 #include "app/fs.h"
+#include "aurcor/app.h"
 
 namespace aurcor {
 
 namespace micropython {
 
-Reader::Reader(const char *filename) : file_(app::FS.open(filename)) {
+Reader::Reader(const char *filename)
+	: lock_(App::file_mutex()), file_(app::FS.open(filename)) {
 }
 
 mp_reader_t Reader::from_file(const char *filename) {

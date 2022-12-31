@@ -36,6 +36,9 @@ namespace aurcor {
 
 class LEDBusConfig {
 public:
+	static constexpr const char *DIRECTORY_NAME = "/buses";
+	static constexpr const char *FILENAME_EXT = ".cbor";
+
 	LEDBusConfig(const char *bus_name, size_t default_length);
 	~LEDBusConfig() = default;
 
@@ -49,6 +52,7 @@ public:
 	void default_preset(std::string value);
 
 	void reset();
+	inline void reload() { load(); }
 
 protected:
 	void length_constrained(size_t value);

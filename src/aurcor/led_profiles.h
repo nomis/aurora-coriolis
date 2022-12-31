@@ -66,6 +66,7 @@ public:
 
 	LEDProfile& get(enum led_profile_id id);
 	Result load(enum led_profile_id id);
+	bool loaded(enum led_profile_id id);
 	Result save(enum led_profile_id id);
 
 private:
@@ -77,6 +78,13 @@ private:
 	std::mutex mutex_;
 	std::array<LEDProfile,NUM_LED_PROFILES> profiles_;
 	std::bitset<NUM_LED_PROFILES> loaded_{};
+};
+
+class BusLEDProfileHash {
+public:
+	std::size_t operator() (const std::pair<std::string,enum led_profile_id> &pair) const {
+		return std::hash<std::string>()(pair.first) + pair.second;
+	}
 };
 
 } // namespace aurcor

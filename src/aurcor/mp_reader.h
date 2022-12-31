@@ -22,6 +22,8 @@ extern "C" {
 	#include <py/reader.h>
 }
 
+#include <shared_mutex>
+
 #include "app/fs.h"
 
 namespace aurcor {
@@ -44,6 +46,7 @@ private:
 	static mp_uint_t readbyte(void *data);
 	static void close(void *data);
 
+	std::shared_lock<std::shared_mutex> lock_;
 	fs::File file_;
 };
 

@@ -100,16 +100,9 @@ bool WebClient::open(const std::string &url) {
 			return false;
 		}
 
-		res = curl_easy_setopt(curl_.get(), CURLOPT_FOLLOWLOCATION, 1);
+		res = curl_easy_setopt(curl_.get(), CURLOPT_FOLLOWLOCATION, 0);
 		if (res != CURLE_OK) {
 			logger_.err(F("CURLOPT_FOLLOWLOCATION error: %s"), curl_easy_strerror(res));
-			curl_.reset();
-			return false;
-		}
-
-		res = curl_easy_setopt(curl_.get(), CURLOPT_MAXREDIRS, MAX_REDIRECTS);
-		if (res != CURLE_OK) {
-			logger_.err(F("CURLOPT_MAXREDIRS error: %s"), curl_easy_strerror(res));
 			curl_.reset();
 			return false;
 		}
@@ -149,7 +142,7 @@ bool WebClient::open(const std::string &url) {
 
 		config.crt_bundle_attach = esp_crt_bundle_attach;
 		config.keep_alive_enable = true;
-		config.max_redirection_count = MAX_REDIRECTS;
+		config.disable_auto_redirect = true;
 		config.url = url.c_str();
 
 		handle_ = std::unique_ptr<struct esp_http_client,HandleDeleter>{esp_http_client_init(&config)};
@@ -174,7 +167,8 @@ bool WebClient::open(const std::string &url) {
 	status_code = esp_http_client_get_status_code(handle_.get());
 #endif
 
-	logger_.debug(F("Status code %ld for GET %s"), status_code, url.c_str());
+	logger_.log(status_code != 200 ? uuid::log::Level::DEBUG : uuid::log::Level::TRACE,
+		F("Status code %ld for GET %s"), status_code, url.c_str());
 	if (status_code != 200)
 		return false;
 

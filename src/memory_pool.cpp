@@ -42,7 +42,8 @@ uuid::log::Logger MemoryPool::logger_{FPSTR(__pstr__logger_name), uuid::log::Fac
 
 MemoryPool::MemoryPool(size_t size, uint32_t caps, size_t count)
 		: size_(size), caps_(caps) {
-	resize(count);
+	if (count > 0)
+		resize(count);
 }
 
 bool MemoryPool::resize(size_t count) {
@@ -74,7 +75,7 @@ bool MemoryPool::resize(size_t count) {
 	return true;
 }
 
-std::unique_ptr<MemoryBlock> MemoryPool::allocate() {
+std::unique_ptr<MemoryBlock> MemoryPool::allocate(bool zero) {
 	std::lock_guard lock{mutex_};
 
 	if (!blocks_.empty()) {
@@ -84,7 +85,8 @@ std::unique_ptr<MemoryBlock> MemoryPool::allocate() {
 		blocks_.pop_back();
 		used_++;
 
-		std::memset(block->begin(), 0, block->size());
+		if (zero)
+			std::memset(block->begin(), 0, block->size());
 		return block;
 	}
 

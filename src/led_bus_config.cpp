@@ -31,6 +31,7 @@
 
 #include "app/fs.h"
 #include "app/util.h"
+#include "aurcor/app.h"
 #include "aurcor/preset.h"
 #include "aurcor/util.h"
 
@@ -43,8 +44,6 @@ using app::FS;
 using uuid::log::Level;
 
 static const char __pstr__logger_name[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = "led-bus-config";
-
-static const char *directory_name = "/buses";
 
 namespace aurcor {
 
@@ -121,10 +120,10 @@ void LEDBusConfig::reset_locked() {
 std::string LEDBusConfig::make_filename(const char *bus_name) {
 	std::string filename;
 
-	filename.append(directory_name);
+	filename.append(DIRECTORY_NAME);
 	filename.append("/");
 	filename.append(bus_name);
-	filename.append(".cbor");
+	filename.append(FILENAME_EXT);
 
 	return filename;
 }
@@ -132,6 +131,7 @@ std::string LEDBusConfig::make_filename(const char *bus_name) {
 bool LEDBusConfig::load() {
 	auto filename = make_filename(bus_name_);
 	std::unique_lock data_lock{data_mutex_};
+	std::shared_lock file_lock{App::file_mutex()};
 
 	logger_.debug(F("Reading config from file %s"), filename.c_str());
 
@@ -205,6 +205,7 @@ bool inline LEDBusConfig::load(cbor::Reader &reader) {
 bool LEDBusConfig::save() {
 	auto filename = make_filename(bus_name_);
 	std::shared_lock data_lock{data_mutex_};
+	std::unique_lock file_lock{App::file_mutex()};
 
 	logger_.notice(F("Writing config to file %s"), filename.c_str());
 

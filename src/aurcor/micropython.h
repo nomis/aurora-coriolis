@@ -105,6 +105,9 @@ public:
 	static_assert(TASK_STACK_LIMIT < TASK_STACK_SIZE, "Task stack limit must be lower than task stack size");
 	static_assert(TASK_STACK_LIMIT < TASK_EXC_STACK_LIMIT, "Task stack limit must be lower than task exception stack limit");
 
+	static constexpr const char *DIRECTORY_NAME = "/scripts";
+	static constexpr const char *FILENAME_EXT = ".mpy";
+
 	static void setup(size_t pool_count);
 	static std::string script_filename(const char *path);
 
@@ -254,6 +257,8 @@ class MicroPythonFile final: public MicroPython,
 		public std::enable_shared_from_this<MicroPythonFile> {
 
 public:
+	static constexpr size_t MAX_NAME_LENGTH = 48;
+
 	MicroPythonFile(const std::string &name, std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset);
 	~MicroPythonFile() override;
 

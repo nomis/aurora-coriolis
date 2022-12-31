@@ -36,7 +36,6 @@ namespace aurcor {
 
 class WebClient {
 public:
-	static constexpr int MAX_REDIRECTS = 3;
 	static bool normalise_url(std::string base, std::string url,
 		std::string &absolute_url, std::string &relative_url);
 
