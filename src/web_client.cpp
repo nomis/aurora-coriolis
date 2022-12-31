@@ -47,31 +47,12 @@ namespace aurcor {
 
 uuid::log::Logger WebClient::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::FTP};
 
-#ifndef ENV_NATIVE
-extern const uint8_t x509_crt_imported_bundle_bin_start[] asm("_binary_x509_crt_bundle_start");
-extern const uint8_t x509_crt_imported_bundle_bin_end[]   asm("_binary_x509_crt_bundle_end");
-#endif
-
-void WebClient::init() {
 #ifdef ENV_NATIVE
+void WebClient::init() {
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 	atexit(curl_global_cleanup);
-#else
-	uint16_t num_certs = 0;
-
-	if (x509_crt_imported_bundle_bin_end - x509_crt_imported_bundle_bin_start >= 2) {
-		num_certs = (x509_crt_imported_bundle_bin_start[0] << 8) | x509_crt_imported_bundle_bin_start[1];
-
-		esp_crt_bundle_set(x509_crt_imported_bundle_bin_start);
-	}
-
-	if (num_certs > 0) {
-		logger_.trace(F("Configured %u CA certificates"), num_certs);
-	} else {
-		logger_.crit(F("No CA certificates"));
-	}
-#endif
 }
+#endif
 
 bool WebClient::open(const std::string &url) {
 	long status_code;

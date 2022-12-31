@@ -41,7 +41,9 @@ public:
 
 	WebClient() = default;
 
+#ifdef ENV_NATIVE
 	static void init();
+#endif
 
 	bool open(const std::string &url);
 	ssize_t read(char *data, ssize_t size);

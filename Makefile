@@ -13,10 +13,11 @@ native:
 	platformio run -e native
 
 clean: cleanfs
-	+$(MAKE) -C $(PIPENV) clean
+	+$(MAKE) -C $(PIPENV) -L clean
 	rm -rf lib/micropython/port/build
 	rm -rf .pio
 	+$(MAKE) -C micropython/mpy-cross clean
+	+$(MAKE) -C src/app/pio/certs -L clean
 
 upload:
 	platformio run -t upload

@@ -106,7 +106,9 @@ void App::init() {
 
 void App::start() {
 	app::App::start();
+#ifdef ENV_NATIVE
 	WebClient::init();
+#endif
 	Download::init();
 }
 
