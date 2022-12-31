@@ -25,6 +25,7 @@
 # include <esp_http_client.h>
 #endif
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -35,13 +36,20 @@ namespace aurcor {
 
 class WebClient {
 public:
+	static constexpr int MAX_REDIRECTS = 3;
+	static bool normalise_url(std::string base, std::string url,
+		std::string &absolute_url, std::string &relative_url);
+
 	WebClient() = default;
 
 	static void init();
 
 	bool open(const std::string &url);
 	ssize_t read(char *data, ssize_t size);
-	bool done();
+
+	std::vector<std::string> list_urls(const std::string &url,
+		const std::function<bool(const std::string &path)> &filter,
+		size_t max_path_length = 64);
 
 private:
 #ifdef ENV_NATIVE

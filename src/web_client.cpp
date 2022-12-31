@@ -30,11 +30,12 @@
 #endif
 
 #include <cstdlib>
-#include <cstring>
 #include <iterator>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "aurcor/util.h"
 
 #ifndef PSTR_ALIGN
 # define PSTR_ALIGN 4
@@ -98,6 +99,20 @@ bool WebClient::open(const std::string &url) {
 			curl_.reset();
 			return false;
 		}
+
+		res = curl_easy_setopt(curl_.get(), CURLOPT_FOLLOWLOCATION, 1);
+		if (res != CURLE_OK) {
+			logger_.err(F("CURLOPT_FOLLOWLOCATION error: %s"), curl_easy_strerror(res));
+			curl_.reset();
+			return false;
+		}
+
+		res = curl_easy_setopt(curl_.get(), CURLOPT_MAXREDIRS, MAX_REDIRECTS);
+		if (res != CURLE_OK) {
+			logger_.err(F("CURLOPT_MAXREDIRS error: %s"), curl_easy_strerror(res));
+			curl_.reset();
+			return false;
+		}
 	}
 
 	res = curl_easy_setopt(curl_.get(), CURLOPT_URL, url.c_str());
@@ -134,6 +149,7 @@ bool WebClient::open(const std::string &url) {
 
 		config.crt_bundle_attach = esp_crt_bundle_attach;
 		config.keep_alive_enable = true;
+		config.max_redirection_count = MAX_REDIRECTS;
 		config.url = url.c_str();
 
 		handle_ = std::unique_ptr<struct esp_http_client,HandleDeleter>{esp_http_client_init(&config)};
@@ -158,7 +174,7 @@ bool WebClient::open(const std::string &url) {
 	status_code = esp_http_client_get_status_code(handle_.get());
 #endif
 
-	logger_.debug(F("Status code for GET %s: %ld"), url.c_str(), status_code);
+	logger_.debug(F("Status code %ld for GET %s"), status_code, url.c_str());
 	if (status_code != 200)
 		return false;
 
@@ -182,8 +198,10 @@ ssize_t WebClient::read(char *data, ssize_t size) {
 #ifdef ENV_NATIVE
 	ssize_t available = std::min(size, (ssize_t)data_.size());
 
-	std::memcpy(data, data_.data(), available);
-	data_.erase(data_.begin(), std::next(data_.begin(), available));
+	if (available > 0) {
+		std::memcpy(data, data_.data(), available);
+		data_.erase(data_.begin(), std::next(data_.begin(), available));
+	}
 
 	return available;
 #else
@@ -191,12 +209,245 @@ ssize_t WebClient::read(char *data, ssize_t size) {
 #endif
 }
 
-bool WebClient::done() {
-#ifdef ENV_NATIVE
-	return data_.empty();
-#else
-	return esp_http_client_is_complete_data_received(handle_.get());
-#endif
+std::vector<std::string> WebClient::list_urls(const std::string &url,
+		const std::function<bool(const std::string &path)> &filter,
+		size_t max_path_length) {
+	static constexpr size_t max_tag_length = std::char_traits<char>::length("a");
+	static constexpr size_t max_attr_length = std::char_traits<char>::length("href");
+	const size_t max_href_len = url.length() + max_path_length;
+	std::vector<std::string> urls;
+	std::vector<char> buffer(64);
+
+	if (!open(url))
+		return {};
+
+	ssize_t len = read(buffer.data(), buffer.size());
+
+	if (len < 0)
+		return {};
+	buffer.resize(len);
+
+	enum class State {
+		NONE,
+		TAG_NAME,
+		ATTR_NAME,
+		ATTR_EQUALS,
+		ATTR_QUOT,
+		ATTR_VALUE,
+		TAG_WHITESPACE,
+	};
+	std::string tag_name;
+	std::string attr_name;
+	std::string attr_value;
+	State state = State::NONE;
+	char attr_quot = '\0';
+	bool a_href_value = false;
+
+	while (!buffer.empty()) {
+		for (char c : buffer) {
+			if (c == '<') {
+				state = State::TAG_NAME;
+				tag_name.clear();
+				continue;
+			}
+
+restart:
+			switch (state) {
+			case State::NONE:
+				break;
+
+			case State::TAG_NAME:
+				if (c == '/' || c == '>') {
+					state = State::NONE;
+				} else if (c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == ' ') {
+					if (!tag_name.empty()) {
+						if (tag_name == "a") {
+							state = State::ATTR_NAME;
+							attr_name.clear();
+						} else {
+							state = State::NONE;
+							tag_name.clear();
+						}
+					}
+				} else {
+					if (tag_name.size() <= max_tag_length) {
+						if (c >= 'A' && c <= 'Z')
+							c += ('a' - 'A');
+
+						tag_name.push_back(c);
+					}
+				}
+				break;
+
+			case State::ATTR_NAME:
+				if (c == '>') {
+					state = State::NONE;
+					tag_name.clear();
+					attr_name.clear();
+				} else if (c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == ' ') {
+					if (!attr_name.empty())
+						state = State::ATTR_EQUALS;
+				} else if (c == '=') {
+					state = State::ATTR_QUOT;
+				} else {
+					if (attr_name.size() <= max_attr_length) {
+						if (c >= 'A' && c <= 'Z')
+							c += ('a' - 'A');
+
+						attr_name.push_back(c);
+					}
+				}
+				break;
+
+			case State::ATTR_EQUALS:
+				if (c == '>') {
+					state = State::NONE;
+					tag_name.clear();
+					attr_name.clear();
+				} else if (c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == ' ') {
+					continue;
+				} else if (c == '=') {
+					state = State::ATTR_QUOT;
+				} else {
+					state = State::ATTR_NAME;
+					attr_name.clear();
+					goto restart;
+				}
+				break;
+
+			case State::ATTR_QUOT:
+				if (c == '>') {
+					state = State::NONE;
+					tag_name.clear();
+					attr_name.clear();
+				} else if (c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == ' ') {
+					continue;
+				} else {
+					state = State::ATTR_VALUE;
+					if (c == '"' || c == '\'') {
+						attr_quot = c;
+					} else {
+						attr_quot = ' ';
+					}
+					if (attr_name == "href") {
+						attr_value.clear();
+						a_href_value = true;
+					} else {
+						a_href_value = false;
+					}
+				}
+				break;
+
+			case State::ATTR_VALUE:
+				if (c == '>') {
+					state = State::NONE;
+					tag_name.clear();
+					attr_name.clear();
+					attr_value.clear();
+					continue;
+				} else if (a_href_value) {
+					if (c == attr_quot) {
+						if (attr_value.length() <= max_href_len) {
+							std::string absolute_url, relative_url;
+
+							if (normalise_url(url, attr_value, absolute_url, relative_url)) {
+								if (!relative_url.empty() && filter(relative_url)) {
+									urls.push_back(relative_url);
+								}
+							}
+						}
+					} else {
+						if (attr_value.length() <= max_href_len)
+							attr_value.push_back(c);
+
+						continue;
+					}
+				}
+
+				if (c == attr_quot) {
+					if (attr_quot == ' ') {
+						state = State::TAG_WHITESPACE;
+					} else {
+						state = State::ATTR_NAME;
+						attr_name.clear();
+					}
+				}
+				break;
+
+			case State::TAG_WHITESPACE:
+				if (c == '>') {
+					state = State::NONE;
+				} else if (c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == ' ') {
+					state = State::ATTR_NAME;
+					attr_name.clear();
+				}
+				break;
+			}
+		}
+
+		buffer.resize(buffer.capacity());
+		len = read(buffer.data(), buffer.size());
+		if (len < 0)
+			return {};
+		buffer.resize(len);
+	}
+
+	return urls;
+}
+
+static void url_to_lowercase(std::string &url) {
+	for (size_t slashes = 0, i = 0; i < url.length(); i++) {
+		if (url[i] == '/') {
+			slashes++;
+			if (slashes == 3)
+				break;
+		} else if (url[i] >= 'A' && url[i] <= 'Z') {
+			url[i] += ('a' - 'A');
+		}
+	}
+}
+
+bool WebClient::normalise_url(std::string base, std::string url,
+		std::string &absolute_url, std::string &relative_url) {
+	url_to_lowercase(base);
+
+	size_t scheme_pos = base.find("://");
+
+	if (scheme_pos == std::string::npos)
+		return false;
+
+	std::string scheme = base.substr(0, scheme_pos);
+
+	if (scheme != "http" && scheme != "https")
+		return false;
+
+	size_t path_pos = base.find("/", scheme_pos + std::char_traits<char>::length("://") + 1);
+
+	if (path_pos == std::string::npos) {
+		path_pos = base.length();
+		base.push_back('/');
+	}
+
+	if (url.rfind("//", 0) != std::string::npos) {
+		url_to_lowercase(url);
+		absolute_url = scheme + ":" + url;
+	} else if (url[0] == '/') {
+		absolute_url = base.substr(0, path_pos) + url;
+	} else if (str_begins_case_insensitive(url, "http://")
+			|| str_begins_case_insensitive(url, "https://")) {
+		url_to_lowercase(url);
+	} else {
+		absolute_url = base + url;
+	}
+
+	if (path_pos != base.length() - 1
+			&& absolute_url.rfind(base, 0) != std::string::npos) {
+		relative_url = absolute_url.substr(base.length());
+	} else {
+		relative_url = "";
+	}
+
+	return true;
 }
 
 } // namespace aurcor

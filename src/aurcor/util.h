@@ -22,6 +22,8 @@
 # include <esp_timer.h>
 #endif
 
+#include <strings.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <iterator>
@@ -86,6 +88,10 @@ static inline constexpr int int_divide(int divided, int divisor, unsigned int bi
 
 static inline constexpr unsigned int uint_divide(unsigned int divided, unsigned int divisor, unsigned int bits) {
 	return ((divided << (bits + 1U)) / divisor + (1U << bits)) >> (bits + 1U);
+}
+
+static inline bool str_begins_case_insensitive(const std::string &str, const char *find) {
+	return !::strncasecmp(str.c_str(), find, std::char_traits<char>::length(find));
 }
 
 bool allowed_file_name(const std::string &name);
