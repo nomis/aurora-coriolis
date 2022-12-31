@@ -1,0 +1,6 @@
+.PHONY: settings
+
+settings: fs
+
+include ../aurora-coriolis/Makefile
+PIPENV=../aurora-coriolis/pipenv
