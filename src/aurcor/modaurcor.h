@@ -192,6 +192,7 @@ private:
 	MemoryBlock *led_buffer_;
 	std::shared_ptr<LEDBus> bus_;
 	size_t bus_length_;
+	bool bus_written_{false};
 	std::shared_ptr<Preset> preset_;
 	enum led_profile_id profile_{DEFAULT_PROFILE};
 	size_t wait_us_{0};

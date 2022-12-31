@@ -417,7 +417,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 
 	bus_->profile(profile).transform(buffer, out_bytes);
 
-	if (wait_us) {
+	if (wait_us && bus_written_) {
 		uint64_t start_us = bus_->last_update_us() + wait_us - TIMING_DELAY_US;
 		uint64_t now_us = current_time_us();
 
@@ -426,6 +426,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 	}
 
 	bus_->write(buffer, out_bytes, preset_->reverse());
+	bus_written_ = true;
 
 	return MP_ROM_NONE;
 }
