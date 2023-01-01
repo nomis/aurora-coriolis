@@ -108,6 +108,7 @@ public:
 	Result remove();
 
 	void restart_script();
+	void detach();
 
 	void loop();
 

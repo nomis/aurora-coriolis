@@ -574,4 +574,14 @@ void Preset::restart_script() {
 	running_ = false;
 }
 
+/*
+ * Making "mp_" a weak_ptr would avoid the need to do this, but that would
+ * require allocating a new shared_ptr on every loop() to access it.
+ */
+void Preset::detach() {
+	running_ = false;
+	mp_.reset();
+	stop_time_ms_ = uuid::get_uptime_ms();
+}
+
 } // namespace aurcor

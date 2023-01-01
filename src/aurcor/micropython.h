@@ -218,7 +218,6 @@ private:
 
 class MicroPythonShell final: public MicroPython,
 		public std::enable_shared_from_this<MicroPythonShell> {
-
 public:
 	static constexpr size_t STDIN_LEN = 32;
 	static constexpr size_t STDOUT_LEN = 128;
