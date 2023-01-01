@@ -197,68 +197,52 @@ std::vector<std::string> Preset::config_container_values(const std::string &key)
 	return config_.container_values(key);
 }
 
+Result Preset::config_modified(Result result) {
+	if (result == Result::OK) {
+		config_changed_ = true;
+		modified_ = true;
+	}
+	return result;
+}
+
 Result Preset::add_config(const std::string &key, const std::string &value, size_t before) {
 	std::unique_lock data_lock{data_mutex_};
-	auto result = config_.modify(key, value, ScriptConfig::ContainerOp::ADD, before);
-	if (result == Result::OK)
-		config_changed_ = true;
-	return result;
+	return config_modified(config_.modify(key, value, ScriptConfig::ContainerOp::ADD, before));
 }
 
 Result Preset::move_config(const std::string &key, size_t from_position, size_t to_position) {
 	std::unique_lock data_lock{data_mutex_};
-	auto result = config_.modify(key, "", ScriptConfig::ContainerOp::MOVE_POSITION, from_position, to_position);
-	if (result == Result::OK)
-		config_changed_ = true;
-	return result;
+	return config_modified(config_.modify(key, "", ScriptConfig::ContainerOp::MOVE_POSITION, from_position, to_position));
 }
 
 Result Preset::copy_config(const std::string &key, size_t from_position, size_t to_position) {
 	std::unique_lock data_lock{data_mutex_};
-	auto result = config_.modify(key, "", ScriptConfig::ContainerOp::COPY_POSITION, from_position, to_position);
-	if (result == Result::OK)
-		config_changed_ = true;
-	return result;
+	return config_modified(config_.modify(key, "", ScriptConfig::ContainerOp::COPY_POSITION, from_position, to_position));
 }
 
 Result Preset::del_config(const std::string &key, const std::string &value) {
 	std::unique_lock data_lock{data_mutex_};
-	auto result = config_.modify(key, value, ScriptConfig::ContainerOp::DEL_VALUE);
-	if (result == Result::OK)
-		config_changed_ = true;
-	return result;
+	return config_modified(config_.modify(key, value, ScriptConfig::ContainerOp::DEL_VALUE));
 }
 
 Result Preset::del_config(const std::string &key, size_t index) {
 	std::unique_lock data_lock{data_mutex_};
-	auto result = config_.modify(key, "", ScriptConfig::ContainerOp::DEL_POSITION, index);
-	if (result == Result::OK)
-		config_changed_ = true;
-	return result;
+	return config_modified(config_.modify(key, "", ScriptConfig::ContainerOp::DEL_POSITION, index));
 }
 
 Result Preset::set_config(const std::string &key, const std::string &value) {
 	std::unique_lock data_lock{data_mutex_};
-	auto result = config_.set(key, value);
-	if (result == Result::OK)
-		config_changed_ = true;
-	return result;
+	return config_modified(config_.set(key, value));
 }
 
 Result Preset::set_config(const std::string &key, const std::string &value, size_t position) {
 	std::unique_lock data_lock{data_mutex_};
-	auto result = config_.modify(key, value, ScriptConfig::ContainerOp::SET_POSITION, position);
-	if (result == Result::OK)
-		config_changed_ = true;
-	return result;
+	return config_modified(config_.modify(key, value, ScriptConfig::ContainerOp::SET_POSITION, position));
 }
 
 Result Preset::unset_config(const std::string &key) {
 	std::unique_lock data_lock{data_mutex_};
-	auto result = config_.unset(key);
-	if (result == Result::OK)
-		config_changed_ = true;
-	return result;
+	return config_modified(config_.unset(key));
 }
 
 bool Preset::print_config(Shell &shell, const std::string *filter_key) const {
@@ -269,19 +253,15 @@ bool Preset::print_config(Shell &shell, const std::string *filter_key) const {
 void Preset::clear_config() {
 	std::unique_lock data_lock{data_mutex_};
 
-	if (config_.clear()) {
-		config_changed_ = true;
-		modified_ = true;
-	}
+	if (config_.clear())
+		config_modified(Result::OK);
 }
 
 void Preset::cleanup_config() {
 	std::unique_lock data_lock{data_mutex_};
 
-	if (config_.cleanup()) {
-		config_changed_ = true;
-		modified_ = true;
-	}
+	if (config_.cleanup())
+		config_modified(Result::OK);
 }
 
 size_t Preset::config_keys_size() const {

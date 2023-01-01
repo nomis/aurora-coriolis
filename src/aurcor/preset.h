@@ -121,6 +121,7 @@ private:
 	std::string make_filename() const;
 	bool restart() const;
 
+	Result config_modified(Result result);
 	void reset();
 	Result load(qindesign::cbor::Reader &reader);
 	void save(qindesign::cbor::Writer &writer);
