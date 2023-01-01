@@ -16,6 +16,7 @@
 
 import aurcor
 
+aurcor.output_defaults(repeat=True, fps=60)
 aurcor.register_config({"duration": ("s32", 21000)})
 config = {}
 
@@ -23,4 +24,4 @@ while True:
 	if aurcor.config(config):
 		config["duration"] = max(2, config["duration"])
 	hue = (aurcor.time_ms() % config["duration"]) / config["duration"]
-	aurcor.output_exp_hsv([hue], repeat=True, fps=60)
+	aurcor.output_exp_hsv([hue])

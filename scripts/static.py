@@ -16,9 +16,10 @@
 
 import aurcor
 
+aurcor.output_defaults(repeat=True, fps=1)
 aurcor.register_config({"colours": ("list_rgb", [0])})
 config = {}
 
 while True:
 	aurcor.config(config)
-	aurcor.output_rgb(config["colours"], repeat=True, fps=1)
+	aurcor.output_rgb(config["colours"])
