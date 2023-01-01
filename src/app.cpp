@@ -58,7 +58,6 @@ void App::init() {
 	add(std::make_shared<UARTLEDBus>(0, "led0", 41, 39));
 	add(std::make_shared<UARTLEDBus>(1, "led1", 42, 40));
 	add(std::make_shared<NullLEDBus>("null0"));
-	add(std::make_shared<NullLEDBus>("null1"));
 #else
 	add(std::make_shared<NullLEDBus>("led0"));
 	add(std::make_shared<NullLEDBus>("led1"));
@@ -67,6 +66,9 @@ void App::init() {
 #endif
 
 	MicroPython::setup(buses_.size());
+#ifndef ENV_NATIVE
+	heap_caps_malloc_extmem_enable(64);
+#endif
 
 	for (auto &entry : buses_) {
 		auto &bus = entry.second;
