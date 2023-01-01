@@ -34,4 +34,4 @@ while True:
 	if aurcor.config(config):
 		config["repeat"] = max(1, config["repeat"])
 		config["duration"] = max(2, config["duration"])
-	aurcor.output_exp_hsv(generate(config), repeat=True, fps=60)
+	aurcor.output_exp_hsv(generate(config), fps=60)
