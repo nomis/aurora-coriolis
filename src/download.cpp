@@ -20,6 +20,10 @@
 
 #include <Arduino.h>
 
+#ifndef ENV_NATIVE
+# include <esp_pthread.h>
+#endif
+
 #include <cstring>
 #include <functional>
 #include <memory>
@@ -64,6 +68,13 @@ void Download::init() {
 
 bool Download::start() {
 	try {
+#ifndef ENV_NATIVE
+		auto cfg = esp_pthread_get_default_config();
+		cfg.stack_size = TASK_STACK_SIZE;
+		cfg.prio = uxTaskPriorityGet(nullptr);
+		esp_pthread_set_cfg(&cfg);
+#endif
+
 		thread_ = std::thread{&Download::run, this};
 		return true;
 	} catch (...) {

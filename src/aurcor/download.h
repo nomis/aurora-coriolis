@@ -36,6 +36,7 @@ namespace aurcor {
 class Download: public std::enable_shared_from_this<Download> {
 public:
 	static constexpr size_t MAX_FILE_SIZE = 64 * 1024;
+	static constexpr size_t TASK_STACK_SIZE = 4 * 1024;
 
 	static void init();
 

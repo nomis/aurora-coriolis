@@ -24,6 +24,10 @@
 # include <soc/cache_memory.h>
 #endif
 
+#ifndef ENV_NATIVE
+# include <esp_pthread.h>
+#endif
+
 #include <algorithm>
 #include <csetjmp>
 #include <cstring>
@@ -124,6 +128,13 @@ bool MicroPython::start() {
 	running_ = true;
 
 	try {
+#ifndef ENV_NATIVE
+		auto cfg = esp_pthread_get_default_config();
+		cfg.stack_size = TASK_STACK_SIZE;
+		cfg.prio = uxTaskPriorityGet(nullptr);
+		esp_pthread_set_cfg(&cfg);
+#endif
+
 		thread_ = std::thread{&MicroPython::running_thread, this};
 	} catch (...) {
 		logger_.emerg("Out of memory");

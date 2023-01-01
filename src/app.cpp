@@ -18,10 +18,6 @@
 
 #include "aurcor/app.h"
 
-#ifndef ENV_NATIVE
-# include <esp_pthread.h>
-#endif
-
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -71,14 +67,6 @@ void App::init() {
 #endif
 
 	MicroPython::setup(buses_.size());
-
-#ifndef ENV_NATIVE
-	auto cfg = esp_pthread_get_default_config();
-	cfg.stack_size = MicroPython::TASK_STACK_SIZE;
-	cfg.prio = uxTaskPriorityGet(nullptr);
-	cfg.inherit_cfg = true;
-	esp_pthread_set_cfg(&cfg);
-#endif
 
 	for (auto &entry : buses_) {
 		auto &bus = entry.second;
