@@ -4,10 +4,5 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-cbor2 = "*"
-PyYAML = "*"
-
-[dev-packages]
-
-[requires]
-python_version = "3.8"
+cbor2 = "~=5.4"
+PyYAML = "~=6.0"
