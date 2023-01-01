@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1497,9 +1497,9 @@ static bool parse_position(Shell &shell, const std::string &text, size_t &value)
 	long long ll_value = std::strtoll(text.c_str(), &end, 0);
 	bool ret;
 
-	if (std::is_same<typeof(ll_value), typeof(value)>::value
-			&& (ll_value < std::numeric_limits<typeof(value)>::min()
-				|| ll_value > std::numeric_limits<typeof(value)>::max())) {
+	if (ll_value < 0
+			|| (std::is_same<typeof(ll_value), typeof(value)>::value
+				&& ll_value > std::numeric_limits<typeof(value)>::max())) {
 		ret = false;
 	} else {
 		value = ll_value;
