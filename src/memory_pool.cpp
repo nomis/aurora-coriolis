@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,7 +75,7 @@ bool MemoryPool::resize(size_t count) {
 	return true;
 }
 
-std::unique_ptr<MemoryBlock> MemoryPool::allocate(bool zero) {
+std::unique_ptr<MemoryBlock> MemoryPool::allocate() {
 	std::lock_guard lock{mutex_};
 
 	if (!blocks_.empty()) {
@@ -85,8 +85,6 @@ std::unique_ptr<MemoryBlock> MemoryPool::allocate(bool zero) {
 		blocks_.pop_back();
 		used_++;
 
-		if (zero)
-			std::memset(block->begin(), 0, block->size());
 		return block;
 	}
 
