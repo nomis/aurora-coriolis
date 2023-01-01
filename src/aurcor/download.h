@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +18,10 @@
 
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <string>
+#include <thread>
 #include <unordered_set>
 
 #include <uuid/log.h>
@@ -39,14 +41,15 @@ public:
 
 	Download(App &app, const std::string &url);
 
-	std::weak_ptr<Download> start();
+	bool start();
+	bool finished();
 
 	static std::shared_ptr<MemoryPool> buffers_;
 
 private:
 	static std::string filename_without_extension(const std::string &path, const std::string &extension);
 
-	void run(std::shared_ptr<Download> self);
+	void run();
 	void download_buses(const std::string &path);
 	void download_presets(const std::string &path);
 	void download_profiles(const std::string &path);
@@ -61,12 +64,14 @@ private:
 
 	App &app_;
 	std::string url_;
+	std::thread thread_;
 	std::unique_ptr<MemoryBlock> buffer_;
 	WebClient client_;
 	std::unordered_set<std::string> changed_buses_;
 	std::unordered_set<std::string> changed_presets_;
 	std::unordered_set<std::pair<std::string,enum led_profile_id>,BusLEDProfileHash> changed_profiles_;
 	std::unordered_set<std::string> changed_scripts_;
+	std::atomic<bool> done_{false};
 };
 
 } // namespace aurcor

@@ -115,6 +115,9 @@ void App::start() {
 void App::loop() {
 	app::App::loop();
 
+	if (download_ && download_->finished())
+		download_.reset();
+
 	refresh_files();
 
 	for (auto &preset : presets_)
@@ -264,10 +267,12 @@ void App::restart_script(const std::shared_ptr<LEDBus> &bus) {
 }
 
 bool App::download(const std::string &url) {
-	if (download_.lock())
+	if (download_)
 		return false;
 
-	download_ = std::make_shared<Download>(*this, url)->start();
+	download_ = std::make_shared<Download>(*this, url);
+	if (!download_->start())
+		download_.reset();
 	return true;
 }
 

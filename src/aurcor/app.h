@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,7 +81,7 @@ private:
 	std::unordered_map<std::string,std::shared_ptr<LEDBus>> buses_;
 	std::unordered_map<std::shared_ptr<LEDBus>,std::shared_ptr<MicroPython>> mps_;
 	std::unordered_map<std::shared_ptr<LEDBus>,std::shared_ptr<Preset>> presets_;
-	std::weak_ptr<Download> download_;
+	std::shared_ptr<Download> download_;
 
 	std::mutex refresh_mutex_;
 	bool refresh_{false};

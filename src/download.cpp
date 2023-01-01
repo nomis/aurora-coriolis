@@ -62,19 +62,30 @@ void Download::init() {
 	buffers_->resize(1);
 }
 
-std::weak_ptr<Download> Download::start() {
-	auto self = shared_from_this();
-
-	std::thread{std::bind(&Download::run, this, self)}.detach();
-
-	return self;
+bool Download::start() {
+	try {
+		thread_ = std::thread{&Download::run, this};
+		return true;
+	} catch (...) {
+		logger_.emerg("Out of memory");
+		return false;
+	}
 }
 
-void Download::run(std::shared_ptr<Download> self) {
+bool Download::finished() {
+	if (!done_)
+		return false;
+
+	thread_.join();
+	return true;
+}
+
+void Download::run() {
 	buffer_ = buffers_->allocate();
 
 	if (!buffer_) {
 		logger_.err("No file buffer available for download");
+		done_ = true;
 		return;
 	}
 
@@ -104,6 +115,7 @@ void Download::run(std::shared_ptr<Download> self) {
 	logger_.debug("Download complete");
 
 	app_.refresh_files(changed_buses_, changed_presets_, changed_profiles_, changed_scripts_);
+	done_ = true;
 }
 
 std::string Download::filename_without_extension(const std::string &filename, const std::string &extension) {
