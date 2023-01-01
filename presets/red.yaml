@@ -1,0 +1,5 @@
+desc: Red
+script: static
+config:
+  colours/list_rgb:
+  - 0xFF0000

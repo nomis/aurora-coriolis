@@ -1,0 +1,5 @@
+desc: Blue
+script: static
+config:
+  colours/list_rgb:
+  - 0x0000FF
