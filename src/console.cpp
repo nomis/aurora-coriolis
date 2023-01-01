@@ -1461,6 +1461,20 @@ static void clear(Shell &shell, const std::vector<std::string> &arguments) {
 		false, true);
 }
 
+/* <value> */
+static void del(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &value = arguments[0];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	auto &name = aurcor_shell.preset_cfg_name();
+	preset_config_result(aurcor_shell, name, value, "",
+		aurcor_shell.preset().del_config(name, value),
+		true, true);
+}
+
 static void show(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &aurcor_shell = to_shell(shell);
 
@@ -1658,24 +1672,6 @@ static void set(Shell &shell, const std::vector<std::string> &arguments) {
 
 } // namespace bus_preset_cfglist
 
-namespace bus_preset_cfgset {
-
-/* <value> */
-static void del(Shell &shell, const std::vector<std::string> &arguments) {
-	auto &value = arguments[0];
-	auto &aurcor_shell = to_shell(shell);
-
-	if (!aurcor_shell.preset_active())
-		return;
-
-	auto &name = aurcor_shell.preset_cfg_name();
-	preset_config_result(aurcor_shell, name, value, "",
-		aurcor_shell.preset().del_config(name, value),
-		true, true);
-}
-
-} // namespace bus_preset_cfgset
-
 namespace context {
 
 static constexpr auto main = ShellContext::MAIN;
@@ -1758,10 +1754,12 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_preset, admin, {F("unset")}, {F("<config property>")}, bus_preset::unset, preset_config_property_name_autocomplete);
 
 	commands->add_command(context::bus_preset_cfglist, admin, {F("after")}, {F("<position>"), F("<value>")}, bus_preset_cfglist::after);
+	commands->add_command(context::bus_preset_cfglist, admin, {F("add")}, {F("<value>")}, bus_preset_cfgcontainer::add);
 	commands->add_command(context::bus_preset_cfglist, admin, {F("append")}, {F("<value>")}, bus_preset_cfgcontainer::add);
 	commands->add_command(context::bus_preset_cfglist, admin, {F("before")}, {F("<position>"), F("<value>")}, bus_preset_cfglist::before);
 	commands->add_command(context::bus_preset_cfglist, admin, {F("clear")}, bus_preset_cfgcontainer::clear);
 	commands->add_command(context::bus_preset_cfglist, admin, {F("cp")}, {F("<position>"), F("<position>")}, bus_preset_cfglist::cp);
+	commands->add_command(context::bus_preset_cfglist, admin, {F("del")}, {F("<value>")}, bus_preset_cfgcontainer::del);
 	commands->add_command(context::bus_preset_cfglist, admin, {F("mv")}, {F("<position>"), F("<position>")}, bus_preset_cfglist::mv);
 	commands->add_command(context::bus_preset_cfglist, admin, {F("prepend")}, {F("<value>")}, bus_preset_cfglist::prepend);
 	commands->add_command(context::bus_preset_cfglist, admin, {F("rm")}, {F("<position>")}, bus_preset_cfglist::rm);
@@ -1770,7 +1768,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 
 	commands->add_command(context::bus_preset_cfgset, admin, {F("add")}, {F("<value>")}, bus_preset_cfgcontainer::add);
 	commands->add_command(context::bus_preset_cfgset, admin, {F("clear")}, bus_preset_cfgcontainer::clear);
-	commands->add_command(context::bus_preset_cfgset, admin, {F("del")}, {F("<value>")}, bus_preset_cfgset::del, preset_config_property_container_value_autocomplete);
+	commands->add_command(context::bus_preset_cfgset, admin, {F("del")}, {F("<value>")}, bus_preset_cfgcontainer::del, preset_config_property_container_value_autocomplete);
 	commands->add_command(context::bus_preset_cfgset, user, {F("show")}, bus_preset_cfgcontainer::show);
 }
 
