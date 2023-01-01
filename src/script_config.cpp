@@ -671,6 +671,7 @@ bool ScriptConfig::parse_u16(ContainerOp op, const std::string &text, uint16_t &
 	switch (op) {
 	case ContainerOp::ADD:
 	case ContainerOp::DEL_VALUE:
+	case ContainerOp::SET_POSITION:
 		break;
 
 	case ContainerOp::DEL_POSITION:
@@ -696,6 +697,7 @@ bool ScriptConfig::parse_s32(ContainerOp op, const std::string &text, int32_t &v
 	switch (op) {
 	case ContainerOp::ADD:
 	case ContainerOp::DEL_VALUE:
+	case ContainerOp::SET_POSITION:
 		break;
 
 	case ContainerOp::DEL_POSITION:
@@ -721,6 +723,7 @@ bool ScriptConfig::parse_rgb(ContainerOp op, const std::string &text, int32_t &v
 	switch (op) {
 	case ContainerOp::ADD:
 	case ContainerOp::DEL_VALUE:
+	case ContainerOp::SET_POSITION:
 		break;
 
 	case ContainerOp::DEL_POSITION:
@@ -797,6 +800,15 @@ Result ScriptConfig::modify_container(T &container, V value, ContainerOp op, siz
 			return Result::NOT_FOUND;
 		}
 		break;
+
+	case ContainerOp::SET_POSITION:
+		if (is_vector<T>::value && index1 < container.size()) {
+			container.erase(std::next(container.begin(), index1));
+			container::add(container, std::move(value), index1);
+		} else {
+			return Result::NOT_FOUND;
+		}
+		break;
 	}
 
 	return Result::OK;
@@ -818,6 +830,7 @@ Result ScriptConfig::modify(const std::string &key, const std::string &value,
 		case ContainerOp::DEL_VALUE:
 		case ContainerOp::DEL_POSITION:
 		case ContainerOp::MOVE_POSITION:
+		case ContainerOp::SET_POSITION:
 			break;
 		}
 	}

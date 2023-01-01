@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -240,6 +240,14 @@ Result Preset::del_config(const std::string &key, size_t index) {
 Result Preset::set_config(const std::string &key, const std::string &value) {
 	std::unique_lock data_lock{data_mutex_};
 	auto result = config_.set(key, value);
+	if (result == Result::OK)
+		config_changed_ = true;
+	return result;
+}
+
+Result Preset::set_config(const std::string &key, const std::string &value, size_t position) {
+	std::unique_lock data_lock{data_mutex_};
+	auto result = config_.modify(key, value, ScriptConfig::ContainerOp::SET_POSITION, position);
 	if (result == Result::OK)
 		config_changed_ = true;
 	return result;

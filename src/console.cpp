@@ -1636,6 +1636,26 @@ static void rm(Shell &shell, const std::vector<std::string> &arguments) {
 		false, true);
 }
 
+/* <position> <value> */
+static void set(Shell &shell, const std::vector<std::string> &arguments) {
+	auto &position = arguments[0];
+	auto &value = arguments[1];
+	auto &aurcor_shell = to_shell(shell);
+
+	if (!aurcor_shell.preset_active())
+		return;
+
+	size_t int_position;
+
+	if (!parse_position(shell, position, int_position))
+		return;
+
+	auto &name = aurcor_shell.preset_cfg_name();
+	preset_config_result(aurcor_shell, name, value, position,
+		aurcor_shell.preset().set_config(name, value, int_position),
+		false, true, true);
+}
+
 } // namespace bus_preset_cfglist
 
 namespace bus_preset_cfgset {
@@ -1745,6 +1765,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus_preset_cfglist, admin, {F("mv")}, {F("<position>"), F("<position>")}, bus_preset_cfglist::mv);
 	commands->add_command(context::bus_preset_cfglist, admin, {F("prepend")}, {F("<value>")}, bus_preset_cfglist::prepend);
 	commands->add_command(context::bus_preset_cfglist, admin, {F("rm")}, {F("<position>")}, bus_preset_cfglist::rm);
+	commands->add_command(context::bus_preset_cfglist, admin, {F("set")}, {F("<position>"), F("<value>")}, bus_preset_cfglist::set);
 	commands->add_command(context::bus_preset_cfglist, user, {F("show")}, bus_preset_cfgcontainer::show);
 
 	commands->add_command(context::bus_preset_cfgset, admin, {F("add")}, {F("<value>")}, bus_preset_cfgcontainer::add);
