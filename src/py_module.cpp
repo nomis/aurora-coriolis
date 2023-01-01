@@ -160,7 +160,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 
 		ARG_rotate,
 	};
-	static constexpr size_t N_BEFORE_DEFAULTS = 2;
+	static constexpr size_t N_BEFORE_DEFAULTS = 1;
 	static constexpr size_t N_AFTER_DEFAULTS = 1;
 	static const mp_arg_t allowed_args[] = {
 		// BEFORE_DEFAULTS
