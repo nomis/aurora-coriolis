@@ -1,0 +1,4 @@
+desc: Hue Fade
+script: hue_fade
+config:
+  duration/s32: 21000
