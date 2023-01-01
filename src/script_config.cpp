@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -745,6 +745,9 @@ bool ScriptConfig::parse_rgb(ContainerOp op, const std::string &text, int32_t &v
 	return end[0] == '\0';
 }
 
+template <class T>
+using is_vector = std::is_same<T, std::vector<typename T::value_type,typename T::allocator_type>>;
+
 template <class T, class V>
 Result ScriptConfig::modify_container(T &container, V value, ContainerOp op, size_t index1, size_t index2) {
 	switch (op) {
@@ -763,7 +766,7 @@ Result ScriptConfig::modify_container(T &container, V value, ContainerOp op, siz
 		}
 
 	case ContainerOp::DEL_POSITION:
-		if (index1 < container.size()) {
+		if (is_vector<T>::value && index1 < container.size()) {
 			container.erase(std::next(container.begin(), index1));
 		} else {
 			return Result::NOT_FOUND;
@@ -771,7 +774,7 @@ Result ScriptConfig::modify_container(T &container, V value, ContainerOp op, siz
 		break;
 
 	case ContainerOp::MOVE_POSITION:
-		if (index1 < container.size()) {
+		if (is_vector<T>::value && index1 < container.size()) {
 			value = *std::next(container.begin(), index1);
 			if (index2 > index1 && index2 != std::numeric_limits<typeof(index2)>::max())
 				index2++;
@@ -787,7 +790,7 @@ Result ScriptConfig::modify_container(T &container, V value, ContainerOp op, siz
 		break;
 
 	case ContainerOp::COPY_POSITION:
-		if (index1 < container.size()) {
+		if (is_vector<T>::value && index1 < container.size()) {
 			value = *std::next(container.begin(), index1);
 			container::add(container, std::move(value), index2);
 		} else {
