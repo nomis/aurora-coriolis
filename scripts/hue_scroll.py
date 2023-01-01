@@ -16,11 +16,22 @@
 
 import aurcor
 
-aurcor.register_config({"duration": ("s32", 21000)})
+aurcor.register_config({
+	"repeat": ("s32", 1),
+	"duration": ("s32", 21000),
+})
 config = {}
+
+def generate(config):
+	length = aurcor.length()
+	step = config["repeat"] / aurcor.length()
+	hue = (aurcor.time_ms() % config["duration"]) / config["duration"]
+	while True:
+		yield hue
+		hue += step
 
 while True:
 	if aurcor.config(config):
+		config["repeat"] = max(1, config["repeat"])
 		config["duration"] = max(2, config["duration"])
-	hue = (aurcor.time_ms() % config["duration"]) / config["duration"]
-	aurcor.output_exp_hsv([hue], repeat=True, fps=60)
+	aurcor.output_exp_hsv(generate(config), repeat=True, fps=60)
