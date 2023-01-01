@@ -122,7 +122,14 @@ bool MicroPython::start() {
 
 	started_ = true;
 	running_ = true;
-	thread_ = std::thread{&MicroPython::running_thread, this};
+
+	try {
+		thread_ = std::thread{&MicroPython::running_thread, this};
+	} catch (...) {
+		logger_.emerg("Out of memory");
+		running_ = false;
+		return false;
+	}
 
 	return true;
 }
