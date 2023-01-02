@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -128,6 +128,9 @@ inline PyModule& PyModule::current() {
 }
 
 mp_obj_t PyModule::length() {
+	if (!config_used_)
+		bus_length_ = bus_->length();
+
 	return MP_OBJ_NEW_SMALL_INT(bus_length_);
 }
 
@@ -142,6 +145,11 @@ mp_obj_t PyModule::config(mp_obj_t dict) {
 
 	if (bus_length != bus_length_) {
 		bus_length_ = bus_length;
+		ret = true;
+	}
+
+	if (!config_used_) {
+		config_used_ = true;
 		ret = true;
 	}
 
@@ -251,6 +259,9 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		reverse_ = reverse;
 		return MP_ROM_NONE;
 	}
+
+	if (!config_used_)
+		bus_length_ = bus_->length();
 
 	ssize_t signed_rotate_length = parsed_args[ARG_rotate].u_int;
 	auto values = parsed_args[ARG_values].u_obj;
