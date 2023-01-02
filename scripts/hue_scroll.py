@@ -24,7 +24,7 @@ aurcor.register_config({
 })
 config = {}
 
-def generate(config):
+def generate():
 	length = aurcor.length()
 	step = config["repeat"] / aurcor.length()
 
@@ -43,4 +43,4 @@ while True:
 		if not math.isfinite(config["repeat"]):
 			config["repeat"] = 1.0
 		config["duration"] = max(2, config["duration"])
-	aurcor.output_exp_hsv(generate(config))
+	aurcor.output_exp_hsv(generate())
