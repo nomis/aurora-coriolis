@@ -631,7 +631,41 @@ extern "C" ::mp_lexer_t *mp_lexer_new_from_file(const char *filename) {
 			aurcor::MicroPython::script_filename(filename).c_str()));
 }
 
+extern "C" MP_IPT ::mp_map_t *mp_builtin_module_map__thread;
+
+bool aurcor::MicroPython::builtin_filename(const char *path) {
+	volatile bool builtin = false;
+
+	micropython_nlr_begin();
+
+	std::string lookup_path = path;
+	size_t pos1 = lookup_path.find('/');
+	size_t pos2 = lookup_path.find('.');
+	size_t pos = std::min(pos1, pos2);
+	if (pos != std::string::npos)
+		lookup_path.resize(pos);
+
+	std::string ulookup_path = "u" + lookup_path;
+
+	micropython_nlr_try();
+
+	qstr lookup_qstr = qstr_from_strn(lookup_path.c_str(), lookup_path.length());
+	builtin = mp_map_lookup(mp_builtin_module_map__thread, MP_OBJ_NEW_QSTR(lookup_qstr), MP_MAP_LOOKUP) != MP_OBJ_NULL;
+	if (!builtin) {
+		qstr ulookup_qstr = qstr_from_strn(ulookup_path.c_str(), ulookup_path.length());
+		builtin = mp_map_lookup(mp_builtin_module_map__thread, MP_OBJ_NEW_QSTR(ulookup_qstr), MP_MAP_LOOKUP) != MP_OBJ_NULL;
+	}
+
+	micropython_nlr_finally();
+	micropython_nlr_end();
+
+	return builtin;
+}
+
 extern "C" ::mp_import_stat_t mp_import_stat(const char *path) {
+	if (aurcor::MicroPython::builtin_filename(path))
+		return MP_IMPORT_STAT_NO_EXIST;
+
 	std::shared_lock file_lock{aurcor::App::file_mutex()};
 	auto file = app::FS.open(aurcor::MicroPython::script_filename(path).c_str());
 	return !file ? MP_IMPORT_STAT_NO_EXIST
