@@ -148,7 +148,7 @@ size_t ScriptConfig::Property::size(bool values) const {
 		return as_s32().size(values);
 
 	case Type::LIST_U16:
-		return as_s32_list().size(values);
+		return as_u16_list().size(values);
 
 	case Type::LIST_S32:
 	case Type::LIST_RGB:
@@ -177,7 +177,7 @@ bool ScriptConfig::Property::has_value(Property &property) {
 		return property.as_s32().has_value();
 
 	case Type::LIST_U16:
-		return property.as_s32_list().has_value();
+		return property.as_u16_list().has_value();
 
 	case Type::LIST_S32:
 	case Type::LIST_RGB:
@@ -208,8 +208,8 @@ bool ScriptConfig::Property::clear_default(Property &property) {
 		return property.as_s32().has_value();
 
 	case Type::LIST_U16:
-		property.as_s32_list().clear_default();
-		return property.as_s32_list().has_value();
+		property.as_u16_list().clear_default();
+		return property.as_u16_list().has_value();
 
 	case Type::LIST_S32:
 	case Type::LIST_RGB:
@@ -243,8 +243,8 @@ bool ScriptConfig::Property::clear_value(Property &property) {
 		return property.as_s32().registered();
 
 	case Type::LIST_U16:
-		property.as_s32_list().clear_value();
-		return property.as_s32_list().registered();
+		property.as_u16_list().clear_value();
+		return property.as_u16_list().registered();
 
 	case Type::LIST_S32:
 	case Type::LIST_RGB:
@@ -543,7 +543,7 @@ void ScriptConfig::populate_dict(mp_obj_t dict) {
 		case Type::S32:
 		case Type::RGB:
 			if (property.as_s32().has_any()) {
-				elem->value = MP_OBJ_NEW_SMALL_INT(property.as_s32().get_any());
+				elem->value = mp_obj_new_int(property.as_s32().get_any());
 			} else {
 				elem->value = mp_const_none;
 			}
