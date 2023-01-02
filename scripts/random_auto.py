@@ -29,7 +29,7 @@ last = aurcor.ticks64_us()
 
 def generate():
 	if config["type"] == 1:
-		return aurcor.exp_hsv_to_rgb_int(random.randint(0, aurcor.EXP_HUE_RANGE - 1), random.uniform(0.5, 1.0), random.uniform(0.25, 0.5))
+		return aurcor.exp_hsv_to_rgb_int(random.randint(0, aurcor.EXP_HUE_RANGE - 1), random.uniform(0.5, 1.0), random.uniform(0.5, 1.0))
 	elif config["type"] == 2:
 		return aurcor.exp_hsv_to_rgb_int(random.randint(0, aurcor.EXP_HUE_RANGE - 1))
 
