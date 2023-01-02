@@ -65,6 +65,9 @@ MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_rgb_to_exp_hsv_tuple_obj);
 mp_obj_t aurcor_length(void);
 MP_DECLARE_CONST_FUN_OBJ_0(aurcor_length_obj);
 
+mp_obj_t aurcor_default_fps(void);
+MP_DECLARE_CONST_FUN_OBJ_0(aurcor_default_fps_obj);
+
 mp_obj_t aurcor_register_config(mp_obj_t dict);
 MP_DECLARE_CONST_FUN_OBJ_1(aurcor_register_config_obj);
 
@@ -150,6 +153,7 @@ public:
 	PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset);
 
 	mp_obj_t length();
+	mp_obj_t default_fps();
 	mp_obj_t register_config(mp_obj_t dict);
 	mp_obj_t config(mp_obj_t dict);
 	mp_obj_t output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs, OutputType type, bool set_defaults);
@@ -159,9 +163,11 @@ private:
 	static constexpr enum led_profile_id DEFAULT_PROFILE = LED_PROFILE_NORMAL;
 	static constexpr mp_int_t MIN_WAIT_MS = 10;
 	static constexpr mp_int_t MAX_WAIT_MS = 1000;
+public:
 	static constexpr mp_int_t MIN_FPS = 1000 / MAX_WAIT_MS;
 	static constexpr mp_int_t MAX_FPS = 1000 / MIN_WAIT_MS;
-	static constexpr size_t DEFAULT_WAIT_US = 0;
+private:
+	static constexpr unsigned long DEFAULT_WAIT_US = 0;
 	static constexpr bool DEFAULT_REPEAT = false;
 	static constexpr bool DEFAULT_REVERSE = false;
 
@@ -176,6 +182,7 @@ private:
 	static constexpr bool RGB_TO_HSV_USE_FLOAT = false;
 
 	friend mp_obj_t ::aurcor_length();
+	friend mp_obj_t ::aurcor_default_fps();
 	friend mp_obj_t ::aurcor_register_config(mp_obj_t dict);
 	friend mp_obj_t ::aurcor_config(mp_obj_t dict);
 	friend mp_obj_t ::aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
@@ -192,10 +199,11 @@ private:
 	MemoryBlock *led_buffer_;
 	std::shared_ptr<LEDBus> bus_;
 	size_t bus_length_;
+	unsigned int bus_default_fps_;
 	std::shared_ptr<Preset> preset_;
 
 	enum led_profile_id profile_{DEFAULT_PROFILE};
-	size_t wait_us_{0};
+	unsigned long wait_us_{0};
 	bool repeat_{DEFAULT_REPEAT};
 	bool reverse_{DEFAULT_REVERSE};
 

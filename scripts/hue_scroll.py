@@ -16,7 +16,6 @@
 
 import aurcor
 
-aurcor.output_defaults(fps=60)
 aurcor.register_config({
 	"repeat": ("s32", 1),
 	"duration": ("s32", 21000),

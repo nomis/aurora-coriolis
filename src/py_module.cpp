@@ -55,6 +55,10 @@ mp_obj_t aurcor_length() {
 	return PyModule::current().length();
 }
 
+mp_obj_t aurcor_default_fps() {
+	return PyModule::current().default_fps();
+}
+
 mp_obj_t aurcor_register_config(mp_obj_t dict) {
 	return PyModule::current().register_config(dict);
 }
@@ -119,8 +123,10 @@ namespace aurcor {
 
 namespace micropython {
 
-PyModule::PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset)
-		: led_buffer_(led_buffer), bus_(std::move(bus)), bus_length_(bus_->length()), preset_(std::move(preset)) {
+PyModule::PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus,
+		std::shared_ptr<Preset> preset) : led_buffer_(led_buffer),
+		bus_(std::move(bus)), bus_length_(bus_->length()),
+		bus_default_fps_(bus_->default_fps()), preset_(std::move(preset)) {
 }
 
 inline PyModule& PyModule::current() {
@@ -128,10 +134,11 @@ inline PyModule& PyModule::current() {
 }
 
 mp_obj_t PyModule::length() {
-	if (!config_used_)
-		bus_length_ = bus_->length();
-
 	return MP_OBJ_NEW_SMALL_INT(bus_length_);
+}
+
+mp_obj_t PyModule::default_fps() {
+	return MP_OBJ_NEW_SMALL_INT(bus_default_fps_);
 }
 
 mp_obj_t PyModule::register_config(mp_obj_t dict) {
@@ -142,9 +149,15 @@ mp_obj_t PyModule::register_config(mp_obj_t dict) {
 mp_obj_t PyModule::config(mp_obj_t dict) {
 	bool ret = preset_->populate_config(dict);
 	size_t bus_length = bus_->length();
+	unsigned int bus_default_fps = bus_->default_fps();
 
 	if (bus_length != bus_length_) {
 		bus_length_ = bus_length;
+		ret = true;
+	}
+
+	if (bus_default_fps != bus_default_fps_) {
+		bus_default_fps_ = bus_default_fps;
 		ret = true;
 	}
 
@@ -260,8 +273,8 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		return MP_ROM_NONE;
 	}
 
-	if (!config_used_)
-		bus_length_ = bus_->length();
+	if (wait_us == 0 && bus_default_fps_ > 0)
+		wait_us = 1000000 / bus_default_fps_;
 
 	ssize_t signed_rotate_length = parsed_args[ARG_rotate].u_int;
 	auto values = parsed_args[ARG_values].u_obj;
@@ -438,6 +451,11 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 
 	bus_->write(buffer, out_bytes, preset_->reverse());
 	bus_written_ = true;
+
+	if (!config_used_) {
+		bus_length_ = bus_->length();
+		bus_default_fps_ = bus_->default_fps();
+	}
 
 	return MP_ROM_NONE;
 }

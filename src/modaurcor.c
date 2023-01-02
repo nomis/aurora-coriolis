@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_rgb_to_hsv_tuple_obj, 1, 3, aurcor_rg
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(aurcor_rgb_to_exp_hsv_tuple_obj, 1, 3, aurcor_rgb_to_exp_hsv_tuple);
 
 MP_DEFINE_CONST_FUN_OBJ_0(aurcor_length_obj, aurcor_length);
+MP_DEFINE_CONST_FUN_OBJ_0(aurcor_default_fps_obj, aurcor_default_fps);
 MP_DEFINE_CONST_FUN_OBJ_1(aurcor_register_config_obj, aurcor_register_config);
 MP_DEFINE_CONST_FUN_OBJ_1(aurcor_config_obj, aurcor_config);
 
@@ -109,6 +110,7 @@ STATIC const mp_rom_map_elem_t aurcor_module_globals_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR_time_us),           MP_ROM_PTR(&aurcor_time_us_obj) },
 
 	{ MP_ROM_QSTR(MP_QSTR_length),            MP_ROM_PTR(&aurcor_length_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_default_fps),       MP_ROM_PTR(&aurcor_default_fps_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_register_config),   MP_ROM_PTR(&aurcor_register_config_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_config),            MP_ROM_PTR(&aurcor_config_obj) },
 

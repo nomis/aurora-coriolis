@@ -902,11 +902,24 @@ static void show_default_preset(Shell &shell, std::shared_ptr<LEDBus> &bus) {
 	shell.printfln(F("Default preset: %s"), default_preset.empty() ? "<unset>" : default_preset.c_str());
 };
 
+__attribute__((noinline))
+static void show_default_fps(Shell &shell) {
+	shell.printfln(F("Default FPS:    %u"), to_shell(shell).bus()->default_fps());
+};
+
 static void clear(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &bus = to_shell(shell).bus();
 
 	shell.logger().info("Clearing bus \"%s\" from console %s", bus->name(), to_shell(shell).console_name().c_str());
 	bus->clear();
+}
+
+/* [fps] */
+static void fps(Shell &shell, const std::vector<std::string> &arguments) {
+	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
+		to_shell(shell).bus()->default_fps(std::atol(arguments[0].c_str()));
+	}
+	show_default_fps(shell);
 }
 
 /* [preset] */
@@ -1060,6 +1073,8 @@ static void show(Shell &shell, const std::vector<std::string> &arguments) {
 	shell.printfln(F("Current preset: %s%s"),
 		preset ? preset->get()->name().c_str() : "<none>",
 		preset ? (preset->get()->modified() ? " (unsaved)" : "") : "");
+
+	show_default_fps(shell);
 }
 
 } // namespace bus
@@ -1712,6 +1727,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus, user, {F("default")}, {F("[preset]")}, bus::default_, preset_names_autocomplete);
 	commands->add_command(context::bus, user, {F("clear")}, bus::clear);
 	commands->add_command(context::bus, admin, {F("edit")}, {F("[preset]")}, bus::edit);
+	commands->add_command(context::bus, user, {F("fps")}, {F("[fps]")}, bus::fps);
 	commands->add_command(context::bus, user, {F("length")}, {F("[length]")}, bus::length);
 	commands->add_command(context::bus, admin, {F("normal")}, bus::normal);
 	commands->add_command(context::bus, user, {F("profile")}, {F("<profile>")}, bus::profile, profile_names_autocomplete);

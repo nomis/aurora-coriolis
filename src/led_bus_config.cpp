@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@
 #include "app/fs.h"
 #include "app/util.h"
 #include "aurcor/app.h"
+#include "aurcor/modaurcor.h"
 #include "aurcor/preset.h"
 #include "aurcor/util.h"
 
@@ -50,8 +51,8 @@ namespace aurcor {
 uuid::log::Logger LEDBusConfig::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::DAEMON};
 
 LEDBusConfig::LEDBusConfig(const char *bus_name, size_t default_length)
-		: bus_name_(bus_name) {
-	length_constrained(default_length);
+		: bus_name_(bus_name), default_length_(default_length) {
+	length_constrained(default_length_);
 	load();
 }
 
@@ -71,7 +72,11 @@ void LEDBusConfig::length(size_t value) {
 }
 
 void LEDBusConfig::length_constrained(size_t value) {
-	length_ = std::max(MIN_LEDS, std::min(MAX_LEDS, value));
+	length_ = uint_constrain(value, MAX_LEDS, MIN_LEDS);
+}
+
+void LEDBusConfig::default_fps_constrained(unsigned int value) {
+	default_fps_ = uint_constrain(value, micropython::PyModule::MAX_FPS);
 }
 
 bool LEDBusConfig::reverse() const {
@@ -102,6 +107,21 @@ void LEDBusConfig::default_preset(std::string value) {
 	}
 }
 
+unsigned int LEDBusConfig::default_fps() const {
+	std::shared_lock data_lock{data_mutex_};
+	return default_fps_;
+}
+
+void LEDBusConfig::default_fps(unsigned int value) {
+	std::unique_lock data_lock{data_mutex_};
+	if (default_fps_ != value || !default_fps_set_) {
+		default_fps_constrained(value);
+		default_fps_set_ = true;
+		data_lock.unlock();
+		save();
+	}
+}
+
 void LEDBusConfig::reset() {
 	std::unique_lock data_lock{data_mutex_};
 
@@ -111,10 +131,12 @@ void LEDBusConfig::reset() {
 }
 
 void LEDBusConfig::reset_locked() {
-	length_constrained(0);
-	length_set_ = true;
+	length_constrained(default_length_);
+	length_set_ = false;
 	reverse_ = false;
 	default_preset_ = "";
+	default_fps_ = DEFAULT_DEFAULT_FPS;
+	default_fps_set_ = false;
 }
 
 std::string LEDBusConfig::make_filename(const char *bus_name) {
@@ -194,6 +216,14 @@ bool inline LEDBusConfig::load(cbor::Reader &reader) {
 				value.resize(Preset::MAX_NAME_LENGTH);
 
 			default_preset_ = value;
+		} else if (key == "default_fps") {
+			uint64_t value;
+
+			if (!cbor::expectUnsignedInt(reader, &value))
+				return false;
+
+			default_fps_constrained(value);
+			default_fps_set_ = true;
 		} else if (!reader.isWellFormed()) {
 			return false;
 		}
@@ -231,7 +261,7 @@ bool LEDBusConfig::save() {
 }
 
 void LEDBusConfig::save(cbor::Writer &writer) {
-	writer.beginMap(3);
+	writer.beginMap(4);
 
 	app::write_text(writer, "length");
 	writer.writeUnsignedInt(length_);
@@ -241,6 +271,9 @@ void LEDBusConfig::save(cbor::Writer &writer) {
 
 	app::write_text(writer, "default_preset");
 	app::write_text(writer, default_preset_);
+
+	app::write_text(writer, "default_fps");
+	writer.writeUnsignedInt(default_fps_);
 }
 
 } // namespace aurcor

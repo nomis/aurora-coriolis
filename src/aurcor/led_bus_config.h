@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,6 +36,8 @@ namespace aurcor {
 
 class LEDBusConfig {
 public:
+	static constexpr unsigned int DEFAULT_DEFAULT_FPS = 50;
+
 	static constexpr const char *DIRECTORY_NAME = "/buses";
 	static constexpr const char *FILENAME_EXT = ".cbor";
 
@@ -51,11 +53,15 @@ public:
 	std::string default_preset() const;
 	void default_preset(std::string value);
 
+	unsigned int default_fps() const;
+	void default_fps(unsigned int value);
+
 	void reset();
 	inline void reload() { load(); }
 
 protected:
 	void length_constrained(size_t value);
+	void default_fps_constrained(unsigned int value);
 
 	bool load();
 	bool save();
@@ -72,10 +78,13 @@ private:
 
 	const char *bus_name_;
 	mutable std::shared_mutex data_mutex_;
+	size_t default_length_;
 	size_t length_;
-	bool length_set_{false};
-	bool reverse_{false};
 	std::string default_preset_;
+	unsigned int default_fps_{DEFAULT_DEFAULT_FPS};
+	bool length_set_{false};
+	bool default_fps_set_{false};
+	bool reverse_{false};
 };
 
 } // namespace aurcor
