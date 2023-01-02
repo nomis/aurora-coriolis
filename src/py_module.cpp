@@ -75,6 +75,10 @@ mp_obj_t aurcor_next_ticks30_ms(size_t n_args, const mp_obj_t *args, mp_map_t *k
 	return PyModule::current().next_ticks30_ms(n_args, args, kwargs);
 }
 
+mp_obj_t aurcor_next_ticks64_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	return PyModule::current().next_ticks64_ms(n_args, args, kwargs);
+}
+
 mp_obj_t aurcor_next_ticks64_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
 	return PyModule::current().next_ticks64_us(n_args, args, kwargs);
 }
@@ -882,6 +886,15 @@ mp_obj_t PyModule::next_ticks30_ms(size_t n_args, const mp_obj_t *args, mp_map_t
 	next_wait_us(n_args, args, kwargs, now_us, start_us);
 
 	return MP_OBJ_NEW_SMALL_INT((start_us / 1000ULL) & (MICROPY_PY_UTIME_TICKS_PERIOD - 1));
+}
+
+mp_obj_t PyModule::next_ticks64_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	uint64_t now_us;
+	uint64_t start_us;
+
+	next_wait_us(n_args, args, kwargs, now_us, start_us);
+
+	return mp_obj_new_int_from_ll(start_us / 1000ULL);
 }
 
 mp_obj_t PyModule::next_ticks64_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {

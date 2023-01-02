@@ -91,6 +91,9 @@ MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj);
 mp_obj_t aurcor_next_ticks30_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_next_ticks30_ms_obj);
 
+mp_obj_t aurcor_next_ticks64_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_next_ticks64_ms_obj);
+
 mp_obj_t aurcor_next_ticks64_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_next_ticks64_us_obj);
 
@@ -175,6 +178,7 @@ public:
 	mp_obj_t output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs, OutputType type, bool set_defaults);
 
 	mp_obj_t next_ticks30_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	mp_obj_t next_ticks64_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	mp_obj_t next_ticks64_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	mp_obj_t next_time(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	mp_obj_t next_time_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
@@ -208,6 +212,7 @@ private:
 	friend mp_obj_t ::aurcor_register_config(mp_obj_t dict);
 	friend mp_obj_t ::aurcor_config(mp_obj_t dict);
 	friend mp_obj_t ::aurcor_next_ticks30_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	friend mp_obj_t ::aurcor_next_ticks64_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_next_ticks64_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_next_time(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_next_time_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);

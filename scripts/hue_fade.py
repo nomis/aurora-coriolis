@@ -17,11 +17,20 @@
 import aurcor
 
 aurcor.output_defaults(repeat=True)
-aurcor.register_config({"duration": ("s32", 21000)})
+aurcor.register_config({
+	"duration": ("s32", 30000),
+	"real_time": ("bool", True),
+})
 config = {}
 
 while True:
 	if aurcor.config(config):
 		config["duration"] = max(2, config["duration"])
-	hue = (aurcor.next_time_ms() % config["duration"]) / config["duration"]
+
+	if config["real_time"]:
+		next_output_ms = aurcor.next_time_ms()
+	else:
+		next_output_ms = aurcor.next_ticks64_ms()
+
+	hue = (next_output_ms % config["duration"]) / config["duration"]
 	aurcor.output_exp_hsv([hue])

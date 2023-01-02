@@ -19,14 +19,21 @@ import math
 
 aurcor.register_config({
 	"repeat": ("float", 1.0),
-	"duration": ("s32", 21000),
+	"duration": ("s32", 30000),
+	"real_time": ("bool", True),
 })
 config = {}
 
 def generate(config):
 	length = aurcor.length()
 	step = config["repeat"] / aurcor.length()
-	hue = (aurcor.next_time_ms() % config["duration"]) / config["duration"]
+
+	if config["real_time"]:
+		next_output_ms = aurcor.next_time_ms()
+	else:
+		next_output_ms = aurcor.next_ticks64_ms()
+
+	hue = (next_output_ms % config["duration"]) / config["duration"]
 	while True:
 		yield hue
 		hue += step
