@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -191,16 +191,15 @@ std::vector<std::string> WebClient::list_urls(const std::string &url,
 	static constexpr size_t max_attr_length = std::char_traits<char>::length("href");
 	const size_t max_href_len = url.length() + max_path_length;
 	std::vector<std::string> urls;
-	std::vector<char> buffer(64);
+	char buffer[64];
 
 	if (!open(url))
 		return {};
 
-	ssize_t len = read(buffer.data(), buffer.size());
+	ssize_t len = read(buffer, sizeof(buffer));
 
 	if (len < 0)
 		return {};
-	buffer.resize(len);
 
 	enum class State {
 		NONE,
@@ -218,8 +217,10 @@ std::vector<std::string> WebClient::list_urls(const std::string &url,
 	char attr_quot = '\0';
 	bool a_href_value = false;
 
-	while (!buffer.empty()) {
-		for (char c : buffer) {
+	while (len > 0) {
+		for (ssize_t i = 0; i < len; i++) {
+			char c = buffer[i];
+
 			if (c == '<') {
 				state = State::TAG_NAME;
 				tag_name.clear();
@@ -360,11 +361,9 @@ restart:
 			}
 		}
 
-		buffer.resize(buffer.capacity());
-		len = read(buffer.data(), buffer.size());
+		len = read(buffer, sizeof(buffer));
 		if (len < 0)
 			return {};
-		buffer.resize(len);
 	}
 
 	return urls;
