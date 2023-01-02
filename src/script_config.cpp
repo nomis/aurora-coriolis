@@ -1183,10 +1183,10 @@ bool ScriptConfig::print(Shell &shell, const std::string *filter_key) const {
 				type = "float";
 
 				if (prop.has_default())
-					std::snprintf(default_str.data(), default_str.size(), "%11f", prop.get_default());
+					std::snprintf(default_str.data(), default_str.size(), "%11g", prop.get_default());
 
 				if (prop.has_value())
-					std::snprintf(value_str.data(), value_str.size(), "%11f", prop.get_value());
+					std::snprintf(value_str.data(), value_str.size(), "%11g", prop.get_value());
 				break;
 			}
 
