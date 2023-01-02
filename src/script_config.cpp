@@ -69,6 +69,9 @@ inline ScriptConfig::Property::pointer_type ScriptConfig::Property::create(Scrip
 	case Type::RGB:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::S32Property(true, registered)};
 
+	case Type::FLOAT:
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::FloatProperty(registered)};
+
 	case Type::LIST_U16:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListU16Property(registered)};
 
@@ -105,6 +108,10 @@ void ScriptConfig::Property::Deleter::operator()(Property *property) {
 
 	case Type::RGB:
 		delete static_cast<ScriptConfig::S32Property*>(property);
+		break;
+
+	case Type::FLOAT:
+		delete static_cast<ScriptConfig::FloatProperty*>(property);
 		break;
 
 	case Type::LIST_U16:
@@ -147,6 +154,9 @@ size_t ScriptConfig::Property::size(bool values) const {
 	case Type::RGB:
 		return as_s32().size(values);
 
+	case Type::FLOAT:
+		return as_float().size(values);
+
 	case Type::LIST_U16:
 		return as_u16_list().size(values);
 
@@ -175,6 +185,9 @@ bool ScriptConfig::Property::has_value(Property &property) {
 	case Type::S32:
 	case Type::RGB:
 		return property.as_s32().has_value();
+
+	case Type::FLOAT:
+		return property.as_float().has_value();
 
 	case Type::LIST_U16:
 		return property.as_u16_list().has_value();
@@ -206,6 +219,10 @@ bool ScriptConfig::Property::clear_default(Property &property) {
 	case Type::RGB:
 		property.as_s32().clear_default();
 		return property.as_s32().has_value();
+
+	case Type::FLOAT:
+		property.as_float().clear_default();
+		return property.as_float().has_value();
 
 	case Type::LIST_U16:
 		property.as_u16_list().clear_default();
@@ -242,6 +259,10 @@ bool ScriptConfig::Property::clear_value(Property &property) {
 		property.as_s32().clear_value();
 		return property.as_s32().registered();
 
+	case Type::FLOAT:
+		property.as_float().clear_value();
+		return property.as_float().registered();
+
 	case Type::LIST_U16:
 		property.as_u16_list().clear_value();
 		return property.as_u16_list().registered();
@@ -273,6 +294,8 @@ ScriptConfig::Type ScriptConfig::type_of(const std::string &type) {
 		return Type::S32;
 	} else if (type == "rgb") {
 		return Type::RGB;
+	} else if (type == "float") {
+		return Type::FLOAT;
 	} else if (type == "list_u16") {
 		return Type::LIST_U16;
 	} else if (type == "list_s32") {
@@ -473,6 +496,10 @@ void ScriptConfig::register_properties(mp_obj_t dict) {
 				property.as_s32().set_default(convert_rgb_value(default_value));
 				break;
 
+			case Type::FLOAT:
+				property.as_float().set_default(mp_obj_get_float_to_f(default_value));
+				break;
+
 			case Type::LIST_U16:
 				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_u16_list(), total_size);
 				break;
@@ -544,6 +571,14 @@ void ScriptConfig::populate_dict(mp_obj_t dict) {
 		case Type::RGB:
 			if (property.as_s32().has_any()) {
 				elem->value = mp_obj_new_int(property.as_s32().get_any());
+			} else {
+				elem->value = mp_const_none;
+			}
+			break;
+
+		case Type::FLOAT:
+			if (property.as_float().has_any()) {
+				elem->value = mp_obj_new_float_from_f(property.as_float().get_any());
 			} else {
 				elem->value = mp_const_none;
 			}
@@ -659,6 +694,7 @@ std::vector<std::string> ScriptConfig::container_values(const std::string &key) 
 		case Type::BOOL:
 		case Type::S32:
 		case Type::RGB:
+		case Type::FLOAT:
 		case Type::INVALID:
 			break;
 		}
@@ -745,6 +781,29 @@ bool ScriptConfig::parse_rgb(ContainerOp op, const std::string &text, int32_t &v
 		return false;
 
 	value = ll_value;
+	return end[0] == '\0';
+}
+
+bool ScriptConfig::parse_float(ContainerOp op, const std::string &text, float &value) {
+	switch (op) {
+	case ContainerOp::ADD:
+	case ContainerOp::DEL_VALUE:
+	case ContainerOp::SET_POSITION:
+		break;
+
+	case ContainerOp::DEL_POSITION:
+	case ContainerOp::MOVE_POSITION:
+	case ContainerOp::COPY_POSITION:
+	default:
+		return true;
+	}
+
+	char *end;
+	value = std::strtof(text.c_str(), &end);
+
+	if (text.empty())
+		return false;
+
 	return end[0] == '\0';
 }
 
@@ -883,6 +942,7 @@ Result ScriptConfig::modify(const std::string &key, const std::string &value,
 	case Type::BOOL:
 	case Type::S32:
 	case Type::RGB:
+	case Type::FLOAT:
 	case Type::INVALID:
 	default:
 		return Result::OUT_OF_RANGE;
@@ -935,6 +995,21 @@ Result ScriptConfig::set(const std::string &key, const std::string &value) {
 
 			if (parse_rgb(ContainerOp::ADD, value, int_value)) {
 				property.as_s32().set_value(int_value);
+			} else {
+				return Result::OUT_OF_RANGE;
+			}
+		}
+		break;
+
+	case Type::FLOAT:
+		if (value.empty()) {
+			if (!Property::clear_value(property))
+				properties_.erase(it);
+		} else {
+			float float_value;
+
+			if (parse_float(ContainerOp::ADD, value, float_value)) {
+				property.as_float().set_value(float_value);
 			} else {
 				return Result::OUT_OF_RANGE;
 			}
@@ -1032,6 +1107,7 @@ bool ScriptConfig::print(Shell &shell, const std::string *filter_key) const {
 			case Type::BOOL:
 			case Type::S32:
 			case Type::RGB:
+			case Type::FLOAT:
 				print_header = true;
 				break;
 
@@ -1098,6 +1174,19 @@ bool ScriptConfig::print(Shell &shell, const std::string *filter_key) const {
 				if (prop.has_value())
 					std::snprintf(value_str.data(), value_str.size(),
 						property.type() == Type::RGB ? "#%06X" : "%11d", prop.get_value());
+				break;
+			}
+
+		case Type::FLOAT: {
+				auto prop = property.as_float();
+
+				type = "float";
+
+				if (prop.has_default())
+					std::snprintf(default_str.data(), default_str.size(), "%11f", prop.get_default());
+
+				if (prop.has_value())
+					std::snprintf(value_str.data(), value_str.size(), "%11f", prop.get_value());
 				break;
 			}
 
@@ -1387,6 +1476,19 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 				break;
 			}
 
+		case Type::FLOAT: {
+				float value;
+
+				if (!app::expect_float(reader, value)) {
+					if (VERBOSE)
+						logger_.trace(F("Parse error reading key \"%s\""), key.c_str());
+					return Result::PARSE_ERROR;
+				}
+
+				property.as_float().set_value(value);
+				break;
+			}
+
 		case Type::LIST_U16:
 			if (downgrade_result(result,
 					load_container_uint(reader, key, property,
@@ -1491,6 +1593,11 @@ void ScriptConfig::save(cbor::Writer &writer) {
 				count++;
 			break;
 
+		case Type::FLOAT:
+			if (property.as_float().has_value())
+				count++;
+			break;
+
 		case Type::LIST_U16:
 			if (property.as_u16_list().has_value())
 				count++;
@@ -1538,6 +1645,13 @@ void ScriptConfig::save(cbor::Writer &writer) {
 			if (property.as_s32().has_value()) {
 				write_key(writer, key, property.type() == Type::RGB ? "rgb": "s32");
 				writer.writeInt(property.as_s32().get_value());
+			}
+			break;
+
+		case Type::FLOAT:
+			if (property.as_float().has_value()) {
+				write_key(writer, key, "float");
+				writer.writeFloat(property.as_float().get_value());
 			}
 			break;
 

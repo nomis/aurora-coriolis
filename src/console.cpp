@@ -174,7 +174,7 @@ static void preset_config_result(AurcorShell &shell, const std::string &name,
 	case Result::PARSE_ERROR:
 	case Result::IO_ERROR:
 	default:
-		shell.printfln(F("Config value \"%s\" invalid for property \"%s\""), value.c_str(), name.c_str());
+		shell.printfln(F("Config value \"%s\" is invalid for property \"%s\""), value.c_str(), name.c_str());
 		break;
 	}
 }
@@ -384,6 +384,7 @@ static std::vector<std::string> preset_config_property_primitive_name_value_auto
 			types[ScriptConfig::Type::BOOL] = true;
 			types[ScriptConfig::Type::S32] = true;
 			types[ScriptConfig::Type::RGB] = true;
+			types[ScriptConfig::Type::FLOAT] = true;
 
 			auto keys = aurcor_shell.preset().config_keys(types);
 			std::sort(keys.begin(), keys.end());
@@ -404,6 +405,7 @@ static std::vector<std::string> preset_config_property_primitive_name_value_auto
 
 			case ScriptConfig::Type::S32:
 			case ScriptConfig::Type::RGB:
+			case ScriptConfig::Type::FLOAT:
 			case ScriptConfig::Type::LIST_U16:
 			case ScriptConfig::Type::LIST_S32:
 			case ScriptConfig::Type::LIST_RGB:
@@ -1265,6 +1267,7 @@ static void edit(Shell &shell, const std::vector<std::string> &arguments) {
 	case ScriptConfig::Type::BOOL:
 	case ScriptConfig::Type::S32:
 	case ScriptConfig::Type::RGB:
+	case ScriptConfig::Type::FLOAT:
 		shell.printfln(F("Config property \"%s\" is not a list or a set"), name.c_str());
 		break;
 

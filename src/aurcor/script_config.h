@@ -56,6 +56,7 @@ public:
 		BOOL,
 		S32,
 		RGB,
+		FLOAT,
 
 		LIST_U16,
 		LIST_S32,
@@ -72,6 +73,7 @@ public:
 
 	class BoolProperty;
 	class S32Property;
+	class FloatProperty;
 	class ListU16Property;
 	class ListS32Property;
 	class SetU16Property;
@@ -105,6 +107,7 @@ public:
 
 		inline BoolProperty& as_bool() { return static_cast<BoolProperty&>(*this); }
 		inline S32Property& as_s32() { return static_cast<S32Property&>(*this); }
+		inline FloatProperty& as_float() { return static_cast<FloatProperty&>(*this); }
 		inline ListU16Property& as_u16_list() { return static_cast<ListU16Property&>(*this); }
 		inline ListS32Property& as_s32_list() { return static_cast<ListS32Property&>(*this); }
 		inline SetU16Property& as_u16_set() { return static_cast<SetU16Property&>(*this); }
@@ -112,6 +115,7 @@ public:
 
 		inline const BoolProperty& as_bool() const { return static_cast<const BoolProperty&>(*this); }
 		inline const S32Property& as_s32() const { return static_cast<const S32Property&>(*this); }
+		inline const FloatProperty& as_float() const { return static_cast<const FloatProperty&>(*this); }
 		inline const ListU16Property& as_u16_list() const { return static_cast<const ListU16Property&>(*this); }
 		inline const ListS32Property& as_s32_list() const { return static_cast<const ListS32Property&>(*this); }
 		inline const SetU16Property& as_u16_set() const { return static_cast<const SetU16Property&>(*this); }
@@ -197,7 +201,34 @@ public:
 		int32_t value_;
 	};
 
-	static_assert(sizeof(S32Property) <= 3 * sizeof(uintptr_t), "Int32Property is minimum size");
+	static_assert(sizeof(S32Property) <= 3 * sizeof(uintptr_t), "S32Property is minimum size");
+
+	class FloatProperty: public Property {
+	public:
+		FloatProperty(bool registered) : Property(Type::FLOAT, registered) {}
+
+		inline float get_default() const { return default_; }
+		inline void set_default(float value) { default_ = value; default_set(); }
+
+		inline float get_value() const { return value_; }
+		inline void set_value(float value) { value_ = value; value_set(); }
+
+		inline float get_any() const { if (has_value()) { return get_value(); } else { return get_default(); } }
+
+		using Property::has_default;
+		using Property::clear_default;
+		using Property::has_value;
+		using Property::clear_value;
+		using Property::has_any;
+
+		size_t size(bool values) const { return rounded_sizeof<FloatProperty>(); }
+
+	private:
+		float default_;
+		float value_;
+	};
+
+	static_assert(sizeof(FloatProperty) <= 3 * sizeof(uintptr_t), "FloatProperty is minimum size");
 
 	class ListU16Property: public Property {
 	public:
@@ -356,6 +387,7 @@ private:
 	static bool parse_u16(ContainerOp op, const std::string &text, uint16_t &value);
 	static bool parse_s32(ContainerOp op, const std::string &text, int32_t &value);
 	static bool parse_rgb(ContainerOp op, const std::string &text, int32_t &value);
+	static bool parse_float(ContainerOp op, const std::string &text, float &value);
 
 	template <class T, class V>
 	static Result modify_container(T &container, V value, ContainerOp op, size_t index1, size_t index2);

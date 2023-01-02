@@ -15,9 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import aurcor
+import math
 
 aurcor.register_config({
-	"repeat": ("s32", 1),
+	"repeat": ("float", 1.0),
 	"duration": ("s32", 21000),
 })
 config = {}
@@ -32,6 +33,7 @@ def generate(config):
 
 while True:
 	if aurcor.config(config):
-		config["repeat"] = max(1, config["repeat"])
+		if not math.isfinite(config["repeat"]):
+			config["repeat"] = 1.0
 		config["duration"] = max(2, config["duration"])
 	aurcor.output_exp_hsv(generate(config))
