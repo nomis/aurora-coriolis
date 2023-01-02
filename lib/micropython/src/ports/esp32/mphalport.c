@@ -37,25 +37,19 @@
 #include "shared/runtime/pyexec.h"
 #include "mphalport.h"
 
-#ifdef ENV_NATIVE
-# include <time.h>
-# include <unistd.h>
+#include <esp_timer.h>
 
 mp_uint_t mp_hal_ticks_ms(void) {
-    struct timespec ts;
-
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-
-    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+    return esp_timer_get_time() / 1000ULL;
 }
 
 mp_uint_t mp_hal_ticks_us(void) {
-    struct timespec ts;
-
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-
-    return ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
+    return esp_timer_get_time();
 }
+
+#ifdef ENV_NATIVE
+# include <time.h>
+# include <unistd.h>
 
 void mp_hal_delay_ms(mp_uint_t ms) {
     struct timespec ts = {
@@ -77,14 +71,6 @@ void mp_hal_delay_us(mp_uint_t us) {
 #else
 # include "freertos/FreeRTOS.h"
 # include "freertos/task.h"
-
-mp_uint_t mp_hal_ticks_ms(void) {
-    return esp_timer_get_time() / 1000;
-}
-
-mp_uint_t mp_hal_ticks_us(void) {
-    return esp_timer_get_time();
-}
 
 void mp_hal_delay_ms(mp_uint_t ms) {
     uint64_t us = ms * 1000;

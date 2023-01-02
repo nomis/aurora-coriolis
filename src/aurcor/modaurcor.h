@@ -88,6 +88,22 @@ mp_obj_t aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *k
 MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj);
 
 
+mp_obj_t aurcor_next_ticks30_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_next_ticks30_ms_obj);
+
+mp_obj_t aurcor_next_ticks64_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_next_ticks64_us_obj);
+
+mp_obj_t aurcor_next_time(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_next_time_obj);
+
+mp_obj_t aurcor_next_time_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_next_time_ms_obj);
+
+mp_obj_t aurcor_next_time_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_next_time_us_obj);
+
+
 mp_obj_t aurcor_time(void);
 MP_DECLARE_CONST_FUN_OBJ_0(aurcor_time_obj);
 
@@ -158,6 +174,12 @@ public:
 	mp_obj_t config(mp_obj_t dict);
 	mp_obj_t output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs, OutputType type, bool set_defaults);
 
+	mp_obj_t next_ticks30_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	mp_obj_t next_ticks64_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	mp_obj_t next_time(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	mp_obj_t next_time_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	mp_obj_t next_time_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+
 private:
 	static constexpr size_t TIMING_DELAY_US = 10;
 	static constexpr enum led_profile_id DEFAULT_PROFILE = LED_PROFILE_NORMAL;
@@ -185,6 +207,11 @@ private:
 	friend mp_obj_t ::aurcor_default_fps();
 	friend mp_obj_t ::aurcor_register_config(mp_obj_t dict);
 	friend mp_obj_t ::aurcor_config(mp_obj_t dict);
+	friend mp_obj_t ::aurcor_next_ticks30_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	friend mp_obj_t ::aurcor_next_ticks64_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	friend mp_obj_t ::aurcor_next_time(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	friend mp_obj_t ::aurcor_next_time_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	friend mp_obj_t ::aurcor_next_time_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_rgb(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_exp_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
@@ -195,6 +222,11 @@ private:
 	static mp_int_t hue_obj_to_int(mp_obj_t hue, bool exp);
 	static mp_int_t saturation_obj_to_int(mp_obj_t saturation);
 	static mp_int_t value_obj_to_int(mp_obj_t value);
+
+	unsigned long calc_wait_us(mp_obj_t fps, mp_obj_t wait_us, bool set_defaults);
+	void next_wait_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs,
+		uint64_t &now_us, uint64_t &start_us);
+	void next_timeofday(struct timeval &tv, uint64_t offset_us);
 
 	MemoryBlock *led_buffer_;
 	std::shared_ptr<LEDBus> bus_;

@@ -19,6 +19,7 @@
 #include "aurcor/modaurcor.h"
 
 #ifndef NO_QSTR
+# include <esp_timer.h>
 # include <py/runtime.h>
 # include <py/obj.h>
 # include <py/qstr.h>
@@ -66,10 +67,21 @@ MP_DEFINE_CONST_FUN_OBJ_0(aurcor_default_fps_obj, aurcor_default_fps);
 MP_DEFINE_CONST_FUN_OBJ_1(aurcor_register_config_obj, aurcor_register_config);
 MP_DEFINE_CONST_FUN_OBJ_1(aurcor_config_obj, aurcor_config);
 
+MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_next_ticks30_ms_obj, 0, aurcor_next_ticks30_ms);
+MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_next_ticks64_us_obj, 0, aurcor_next_ticks64_us);
+MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_next_time_obj, 0, aurcor_next_time);
+MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_next_time_ms_obj, 0, aurcor_next_time_ms);
+MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_next_time_us_obj, 0, aurcor_next_time_us);
+
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_rgb_obj, 1, aurcor_output_rgb);
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_hsv_obj, 1, aurcor_output_hsv);
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_exp_hsv_obj, 1, aurcor_output_exp_hsv);
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj, 0, aurcor_output_defaults);
+
+mp_obj_t aurcor_ticks64_us(void) {
+	return mp_obj_new_int_from_ll(esp_timer_get_time());
+}
+MP_DEFINE_CONST_FUN_OBJ_0(aurcor_ticks64_us_obj, aurcor_ticks64_us);
 
 // Returns the number of milliseconds since the Epoch, as an integer.
 mp_obj_t aurcor_time(void) {
@@ -101,10 +113,16 @@ STATIC const mp_rom_map_elem_t aurcor_module_globals_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR_version),           MP_ROM_PTR(&aurcor_version_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_profiles),          MP_ROM_PTR(&aurcor_profiles_module) },
 
-	{ MP_ROM_QSTR(MP_QSTR_ticks32_add),       MP_ROM_PTR(&mp_utime_ticks_add_obj) },
-	{ MP_ROM_QSTR(MP_QSTR_ticks32_diff),      MP_ROM_PTR(&mp_utime_ticks_diff_obj) },
-	{ MP_ROM_QSTR(MP_QSTR_ticks32_ms),        MP_ROM_PTR(&mp_utime_ticks_ms_obj) },
-	{ MP_ROM_QSTR(MP_QSTR_ticks64_us),        MP_ROM_PTR(&mp_utime_ticks_us_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_next_ticks30_ms),   MP_ROM_PTR(&aurcor_next_ticks30_ms_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_next_ticks64_us),   MP_ROM_PTR(&aurcor_next_ticks64_us_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_next_time),         MP_ROM_PTR(&aurcor_next_time_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_next_time_ms),      MP_ROM_PTR(&aurcor_next_time_ms_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_next_time_us),      MP_ROM_PTR(&aurcor_next_time_us_obj) },
+
+	{ MP_ROM_QSTR(MP_QSTR_ticks30_add),       MP_ROM_PTR(&mp_utime_ticks_add_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_ticks30_diff),      MP_ROM_PTR(&mp_utime_ticks_diff_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_ticks30_ms),        MP_ROM_PTR(&mp_utime_ticks_ms_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_ticks64_us),        MP_ROM_PTR(&aurcor_ticks64_us_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_time),              MP_ROM_PTR(&aurcor_time_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_time_ms),           MP_ROM_PTR(&aurcor_time_ms_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_time_us),           MP_ROM_PTR(&aurcor_time_us_obj) },

@@ -18,9 +18,7 @@
 
 #pragma once
 
-#ifndef ENV_NATIVE
-# include <esp_timer.h>
-#endif
+#include <esp_timer.h>
 
 #include <strings.h>
 
@@ -62,15 +60,7 @@ static inline Result downgrade_result(Result &current, Result result) {
 }
 
 static inline uint64_t current_time_us() {
-#ifdef ENV_NATIVE
-	struct timespec ts;
-
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-
-	return ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
-#else
 	return esp_timer_get_time();
-#endif
 }
 
 static inline int int_constrain(int value, int max, int min = 0) {

@@ -26,7 +26,7 @@ config = {}
 def generate(config):
 	length = aurcor.length()
 	step = config["repeat"] / aurcor.length()
-	hue = (aurcor.time_ms() % config["duration"]) / config["duration"]
+	hue = (aurcor.next_time_ms() % config["duration"]) / config["duration"]
 	while True:
 		yield hue
 		hue += step

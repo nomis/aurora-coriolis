@@ -23,5 +23,5 @@ config = {}
 while True:
 	if aurcor.config(config):
 		config["duration"] = max(2, config["duration"])
-	hue = (aurcor.time_ms() % config["duration"]) / config["duration"]
+	hue = (aurcor.next_time_ms() % config["duration"]) / config["duration"]
 	aurcor.output_exp_hsv([hue])

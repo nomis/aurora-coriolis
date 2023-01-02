@@ -19,6 +19,8 @@
 #include "aurcor/modaurcor.h"
 
 #ifndef NO_QSTR
+# include <sys/time.h>
+
 # include <algorithm>
 # include <array>
 # include <cassert>
@@ -32,6 +34,8 @@ extern "C" {
 	# include <py/objtuple.h>
 	# include <py/qstr.h>
 	# include <py/smallint.h>
+	# include <extmod/utime_mphal.h>
+	# include <shared/timeutils/timeutils.h>
 }
 
 # include "aurcor/led_profile.h"
@@ -65,6 +69,26 @@ mp_obj_t aurcor_register_config(mp_obj_t dict) {
 
 mp_obj_t aurcor_config(mp_obj_t dict) {
 	return PyModule::current().config(dict);
+}
+
+mp_obj_t aurcor_next_ticks30_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	return PyModule::current().next_ticks30_ms(n_args, args, kwargs);
+}
+
+mp_obj_t aurcor_next_ticks64_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	return PyModule::current().next_ticks64_us(n_args, args, kwargs);
+}
+
+mp_obj_t aurcor_next_time(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	return PyModule::current().next_time(n_args, args, kwargs);
+}
+
+mp_obj_t aurcor_next_time_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	return PyModule::current().next_time_ms(n_args, args, kwargs);
+}
+
+mp_obj_t aurcor_next_time_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	return PyModule::current().next_time_us(n_args, args, kwargs);
 }
 
 mp_obj_t aurcor_hsv_to_rgb_buffer(size_t n_args, const mp_obj_t *args) {
@@ -205,7 +229,6 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		&parsed_args[off_allowed_args]);
 
 	auto profile = set_defaults ? DEFAULT_PROFILE : profile_;
-	auto wait_us = set_defaults ? DEFAULT_WAIT_US : wait_us_;
 	auto repeat = set_defaults ? DEFAULT_REPEAT : repeat_;
 	auto reverse = set_defaults ? DEFAULT_REPEAT : reverse_;
 
@@ -222,34 +245,8 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		profile = (enum led_profile_id)value;
 	}
 
-	if (parsed_args[ARG_fps].u_obj != MP_ROM_NONE
-			&& parsed_args[ARG_wait_ms].u_obj != MP_ROM_NONE) {
-		mp_raise_ValueError(MP_ERROR_TEXT("can't specify both fps and wait_ms at the same time"));
-	}
-
-	if (parsed_args[ARG_fps].u_obj != MP_ROM_NONE) {
-		if (!mp_obj_is_int(parsed_args[ARG_fps].u_obj))
-			mp_raise_TypeError(MP_ERROR_TEXT("fps must be an int"));
-
-		mp_int_t value = mp_obj_get_int(parsed_args[ARG_fps].u_obj);
-
-		if (value < MIN_FPS || value > MAX_FPS)
-			mp_raise_ValueError(MP_ERROR_TEXT("fps out of range"));
-
-		wait_us = 1000000 / value;
-	}
-
-	if (parsed_args[ARG_wait_ms].u_obj != MP_ROM_NONE) {
-		if (!mp_obj_is_int(parsed_args[ARG_wait_ms].u_obj))
-			mp_raise_TypeError(MP_ERROR_TEXT("wait_ms must be an int"));
-
-		mp_int_t value = mp_obj_get_int(parsed_args[ARG_wait_ms].u_obj);
-
-		if (value != 0 && (value < MIN_WAIT_MS || value > MAX_WAIT_MS))
-			mp_raise_ValueError(MP_ERROR_TEXT("wait_ms out of range"));
-
-		wait_us = value * 1000;
-	}
+	auto wait_us = calc_wait_us(parsed_args[ARG_fps].u_obj,
+		parsed_args[ARG_wait_ms].u_obj, set_defaults);
 
 	if (parsed_args[ARG_repeat].u_obj != MP_ROM_NONE) {
 		if (!mp_obj_is_bool(parsed_args[ARG_repeat].u_obj))
@@ -272,9 +269,6 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		reverse_ = reverse;
 		return MP_ROM_NONE;
 	}
-
-	if (wait_us == 0 && bus_default_fps_ > 0)
-		wait_us = 1000000 / bus_default_fps_;
 
 	ssize_t signed_rotate_length = parsed_args[ARG_rotate].u_int;
 	auto values = parsed_args[ARG_values].u_obj;
@@ -801,6 +795,153 @@ inline mp_int_t PyModule::value_obj_to_int(mp_obj_t value) {
 		mp_raise_TypeError(MP_ERROR_TEXT("value must be an int or float"));
 	}
 }
+
+unsigned long PyModule::calc_wait_us(mp_obj_t fps, mp_obj_t wait_ms, bool set_defaults) {
+	auto wait_us = set_defaults ? DEFAULT_WAIT_US : wait_us_;
+
+	if (fps != MP_ROM_NONE && wait_ms != MP_ROM_NONE) {
+		mp_raise_ValueError(MP_ERROR_TEXT("can't specify both fps and wait_ms at the same time"));
+	}
+
+	if (fps != MP_ROM_NONE) {
+		if (!mp_obj_is_int(fps))
+			mp_raise_TypeError(MP_ERROR_TEXT("fps must be an int"));
+
+		mp_int_t value = mp_obj_get_int(fps);
+
+		if (value < MIN_FPS || value > MAX_FPS)
+			mp_raise_ValueError(MP_ERROR_TEXT("fps out of range"));
+
+		wait_us = 1000000 / value;
+	}
+
+	if (wait_ms != MP_ROM_NONE) {
+		if (!mp_obj_is_int(wait_ms))
+			mp_raise_TypeError(MP_ERROR_TEXT("wait_ms must be an int"));
+
+		mp_int_t value = mp_obj_get_int(wait_ms);
+
+		if (value != 0 && (value < MIN_WAIT_MS || value > MAX_WAIT_MS))
+			mp_raise_ValueError(MP_ERROR_TEXT("wait_ms out of range"));
+
+		wait_us = value * 1000;
+	}
+
+	if (!set_defaults && wait_us == 0 && bus_default_fps_ > 0)
+		wait_us = 1000000 / bus_default_fps_;
+
+	return wait_us;
+}
+
+void PyModule::next_wait_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs,
+		uint64_t &now_us, uint64_t &start_us) {
+	enum {
+		ARG_fps,
+		ARG_wait_ms,
+	};
+	static const mp_arg_t allowed_args[] = {
+		{MP_QSTR_fps,         MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
+		{MP_QSTR_wait_ms,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
+	};
+	mp_arg_val_t parsed_args[MP_ARRAY_SIZE(allowed_args)];
+	mp_arg_parse_all(n_args, args, kwargs, MP_ARRAY_SIZE(allowed_args),
+		allowed_args, parsed_args);
+
+	unsigned long wait_us = calc_wait_us(parsed_args[ARG_fps].u_obj, parsed_args[ARG_wait_ms].u_obj, false);
+
+	if (wait_us && bus_written_) {
+		start_us = bus_->last_update_us() + wait_us - TIMING_DELAY_US;
+		now_us = current_time_us();
+
+		if (now_us > start_us)
+			start_us = now_us;
+	} else {
+		start_us = now_us = current_time_us();
+	}
+}
+
+void PyModule::next_timeofday(struct timeval &tv, uint64_t offset_us) {
+    gettimeofday(&tv, NULL);
+
+	while (offset_us >= 1000000ULL) {
+		tv.tv_sec++;
+		offset_us -= 1000000ULL;
+	}
+
+	tv.tv_usec += offset_us;
+	if (tv.tv_usec > 10000000) {
+		tv.tv_sec++;
+		tv.tv_usec -= 1000000;
+	}
+}
+
+mp_obj_t PyModule::next_ticks30_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	uint64_t now_us;
+	uint64_t start_us;
+
+	next_wait_us(n_args, args, kwargs, now_us, start_us);
+
+	return MP_OBJ_NEW_SMALL_INT((start_us / 1000ULL) & (MICROPY_PY_UTIME_TICKS_PERIOD - 1));
+}
+
+mp_obj_t PyModule::next_ticks64_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	uint64_t now_us;
+	uint64_t start_us;
+
+	next_wait_us(n_args, args, kwargs, now_us, start_us);
+
+	return mp_obj_new_int_from_ll(start_us);
+}
+
+mp_obj_t PyModule::next_time(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	uint64_t now_us;
+	uint64_t start_us;
+	struct timeval tv;
+
+	next_wait_us(n_args, args, kwargs, now_us, start_us);
+	next_timeofday(tv, start_us - now_us);
+
+	int32_t seconds = tv.tv_sec;
+#if !MICROPY_EPOCH_IS_1970
+	seconds = (uint32_t)seconds - TIMEUTILS_SECONDS_1970_TO_2000;
+#endif
+    return mp_obj_new_int(seconds);
+}
+
+mp_obj_t PyModule::next_time_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	uint64_t now_us;
+	uint64_t start_us;
+	struct timeval tv;
+
+	next_wait_us(n_args, args, kwargs, now_us, start_us);
+	next_timeofday(tv, start_us - now_us);
+
+	int32_t seconds = tv.tv_sec;
+#if !MICROPY_EPOCH_IS_1970
+	seconds = (uint32_t)seconds - TIMEUTILS_SECONDS_1970_TO_2000;
+#endif
+	int64_t ms = seconds * 1000LL;
+	ms += tv.tv_usec / 1000LL;
+    return mp_obj_new_int_from_ll(ms);
+}
+
+mp_obj_t PyModule::next_time_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	uint64_t now_us;
+	uint64_t start_us;
+	struct timeval tv;
+
+	next_wait_us(n_args, args, kwargs, now_us, start_us);
+	next_timeofday(tv, start_us - now_us);
+
+	int32_t seconds = tv.tv_sec;
+#if !MICROPY_EPOCH_IS_1970
+	seconds = (uint32_t)seconds - TIMEUTILS_SECONDS_1970_TO_2000;
+#endif
+	int64_t us = seconds * 1000000LL;
+	us += tv.tv_usec;
+	return mp_obj_new_int_from_ll(us);
+}
+
 
 } // namespace micropython
 
