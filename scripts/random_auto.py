@@ -19,18 +19,19 @@ import aurcor
 import random
 
 aurcor.register_config({
-	"colours": ("set_rgb", [0]),
+	"type": ("s32", 1),
+	"count": ("s32", 1),
 	"duration": ("s32", 10000),
 })
 config = {}
 buffer = array.array('I')
 last = aurcor.ticks64_us()
 
-def generate(without=None):
-	if without is None or len(colours) < 2:
-		return random.choice(colours)
-	else:
-		return random.choice(list(config["colours"] - set((without,))))
+def generate():
+	if config["type"] == 1:
+		return aurcor.exp_hsv_to_rgb_int(random.randint(0, aurcor.EXP_HUE_RANGE - 1), random.uniform(0.5, 1.0), random.uniform(0.25, 0.5))
+	elif config["type"] == 2:
+		return aurcor.exp_hsv_to_rgb_int(random.randint(0, aurcor.EXP_HUE_RANGE - 1))
 
 def fill():
 	global buffer
@@ -42,12 +43,15 @@ def fill():
 def replace(count):
 	if count == 1:
 		pos = random.randint(0, len(buffer) - 1)
-		buffer[pos] = generate(buffer[pos])
+		buffer[pos] = generate()
+	elif count >= len(buffer):
+		for pos in range(0, len(buffer)):
+			buffer[pos] = generate()
 	else:
 		positions = set(range(0, len(buffer)))
 		while count > 0:
 			pos = random.choice(list(positions))
-			buffer[pos] = generate(buffer[pos])
+			buffer[pos] = generate()
 			positions -= set((pos,))
 			count -= 1
 
@@ -56,13 +60,21 @@ def change():
 
 	now = aurcor.ticks64_us()
 	if now - last >= interval:
-		replace(min((now - last) // interval, len(buffer)))
+		replace(min((now - last) // interval * config["count"], len(buffer)))
 		last = now
 
 while True:
 	if aurcor.config(config):
-		colours = list(config["colours"])
-		interval = max(1, config["duration"] * 1000 // aurcor.length())
+		config["type"] = max(1, min(2, config["type"]))
+		if config["count"] == 0 or config["count"] > aurcor.length():
+			config["count"] = aurcor.length()
+
+		if config["type"] == 1:
+			aurcor.output_defaults(profile=aurcor.profiles.HDR)
+		elif config["type"] == 2:
+			aurcor.output_defaults(profile=aurcor.profiles.NORMAL)
+
+		interval = max(1, config["count"] * config["duration"] * 1000 // aurcor.length())
 		fill()
 
 	change()

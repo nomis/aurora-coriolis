@@ -1,0 +1,6 @@
+desc: Single Random 1 (slow)
+script: random_auto
+config:
+  type/s32: 1
+  count/s32: 1
+  duration/s32: 10000
