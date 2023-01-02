@@ -1,5 +1,5 @@
 desc: White
-script: static
+script: static_rgb
 config:
   colours/list_rgb:
   - 0xFFFFFF

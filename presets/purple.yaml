@@ -1,5 +1,5 @@
 desc: Purple
-script: static
+script: static_rgb
 config:
   colours/list_rgb:
   - 0x8000FF
