@@ -28,12 +28,16 @@ def generate():
 	length = aurcor.length()
 	step = config["repeat"] / aurcor.length()
 
-	if config["real_time"]:
-		next_output_ms = aurcor.next_time_ms()
-	else:
-		next_output_ms = aurcor.next_ticks64_ms()
+	if config["duration"] > 0:
+		if config["real_time"]:
+			next_output_ms = aurcor.next_time_ms()
+		else:
+			next_output_ms = aurcor.next_ticks64_ms()
 
-	hue = (next_output_ms % config["duration"]) / config["duration"]
+		hue = (next_output_ms % config["duration"]) / config["duration"]
+	else:
+		hue = 0
+
 	while True:
 		yield hue
 		hue += step
@@ -42,5 +46,6 @@ while True:
 	if aurcor.config(config):
 		if not math.isfinite(config["repeat"]):
 			config["repeat"] = 1.0
-		config["duration"] = max(2, config["duration"])
+		if config["duration"] == 1:
+			config["duration"] = 2
 	aurcor.output_exp_hsv(generate())
