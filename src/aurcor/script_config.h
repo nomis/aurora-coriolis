@@ -154,7 +154,7 @@ public:
 		BoolProperty(bool registered) : Property(Type::BOOL, registered) {}
 
 		inline bool get_default() const { return default_; }
-		inline void set_default(bool value) { default_ = default_; default_set(); }
+		inline void set_default(bool value) { default_ = value; default_set(); }
 
 		inline bool get_value() const { return value_; }
 		inline void set_value(bool value) { value_ = value; value_set(); }
