@@ -22,7 +22,6 @@ aurcor.register_config({
 	"duration": ("s32", 30000),
 	"real_time": ("bool", True),
 })
-config = {}
 
 def generate():
 	length = aurcor.length()
@@ -41,6 +40,8 @@ def generate():
 	while True:
 		yield hue
 		hue += step
+
+config = {}
 
 while True:
 	if aurcor.config(config):

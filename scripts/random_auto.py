@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import array
 import aurcor
 import random
 
@@ -23,9 +22,6 @@ aurcor.register_config({
 	"count": ("s32", 1),
 	"duration": ("s32", 10000),
 })
-config = {}
-buffer = array.array('I')
-last = aurcor.ticks64_us()
 
 def generate():
 	if config["type"] == 1:
@@ -36,7 +32,7 @@ def generate():
 def fill():
 	global buffer
 
-	buffer = array.array('I', [0] * aurcor.length())
+	buffer = [0] * aurcor.length()
 	for pos in range(0, len(buffer)):
 		buffer[pos] = generate()
 
@@ -62,6 +58,9 @@ def change():
 	if now - last >= interval:
 		replace(min((now - last) // interval * config["count"], len(buffer)))
 		last = now
+
+config = {}
+last = aurcor.ticks64_us()
 
 while True:
 	if aurcor.config(config):
