@@ -18,7 +18,7 @@ import aurcor
 import math
 
 aurcor.register_config({
-	"repeat": ("float", 1.0),
+	"repeat": ("float", 1),
 	"duration": ("s32", 30000),
 	"real_time": ("bool", True),
 })
@@ -46,7 +46,7 @@ config = {}
 while True:
 	if aurcor.config(config):
 		if not math.isfinite(config["repeat"]):
-			config["repeat"] = 1.0
+			config["repeat"] = 1
 		if config["duration"] == 1:
 			config["duration"] = 2
 	aurcor.output_exp_hsv(generate())

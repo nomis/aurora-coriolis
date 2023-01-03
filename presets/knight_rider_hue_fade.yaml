@@ -1,0 +1,5 @@
+desc: Knight Rider (Hue Fade)
+script: hue_fade
+config:
+  duration/s32: 30000
+  sweep.enabled/bool: true

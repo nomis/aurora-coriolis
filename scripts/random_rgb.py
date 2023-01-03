@@ -18,17 +18,21 @@ from micropython import const
 import aurcor
 import random
 
+import sweep
+
 FROM_SET = const(0)
 AUTO_TYPE1 = const(1)
 AUTO_TYPE2 = const(2)
 MAX_AUTO = const(2)
 
-aurcor.register_config({
+config = {
 	"auto": ("s32", 0),
 	"colours": ("set_rgb", [0]),
 	"count": ("s32", 1),
 	"duration": ("s32", 10000),
-})
+}
+config.update(sweep.create_config())
+aurcor.register_config(config)
 
 def generate_from_set(without=None):
 	if without is None or len(colours) < 2:
@@ -78,7 +82,6 @@ def change():
 		replace(min((now - last) // interval * config["count"], len(buffer)))
 		last = now
 
-config = {}
 last = aurcor.ticks64_us()
 
 while True:
@@ -99,7 +102,8 @@ while True:
 			aurcor.output_defaults(profile=aurcor.profiles.NORMAL)
 
 		interval = max(1, config["count"] * config["duration"] * 1000 // aurcor.length())
+		sweep.config_changed(config)
 		fill()
 
 	change()
-	aurcor.output_rgb(buffer)
+	aurcor.output_rgb(sweep.apply_mask_rgb(config, buffer))

@@ -16,10 +16,27 @@
 
 import aurcor
 
-aurcor.output_defaults(repeat=True, fps=1)
-aurcor.register_config({"colours": ("list_rgb", [0])})
-config = {}
+import sweep
+
+config = {"colours": ("list_rgb", [0])}
+config.update(sweep.create_config())
+aurcor.register_config(config)
+
+def repeat_colours():
+	length = aurcor.length()
+
+	remaining = length - len(config["colours"])
+	while remaining > 0:
+		config["colours"].extend(config["colours"][0:min(len(config["colours"]), remaining)])
+		remaining = length - len(config["colours"])
 
 while True:
-	aurcor.config(config)
-	aurcor.output_rgb(config["colours"])
+	if aurcor.config(config):
+		sweep.config_changed(config)
+		if sweep.enabled(config):
+			repeat_colours()
+
+	if sweep.enabled(config):
+		aurcor.output_rgb(sweep.apply_mask_rgb(config, config["colours"]))
+	else:
+		aurcor.output_rgb(config["colours"], repeat=True)
