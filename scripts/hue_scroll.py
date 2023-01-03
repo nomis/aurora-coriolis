@@ -24,7 +24,6 @@ aurcor.register_config({
 })
 
 def generate():
-	length = aurcor.length()
 	step = config["repeat"] / aurcor.length()
 
 	if config["duration"] > 0:
