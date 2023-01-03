@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@
 
 namespace aurcor {
 
-bool allowed_file_name(const std::string &name) {
+bool allowed_file_name(const std::string &name, bool key) {
 	for (auto c : name) {
 		if (c >= 'a' && c <= 'z')
 			continue;
@@ -36,7 +36,7 @@ bool allowed_file_name(const std::string &name) {
 			continue;
 		else if (c >= '0' && c <= '9')
 			continue;
-		else if (c >= '+' && c <= '.') /* +,-. */
+		else if (c >= '+' && c <= (key ? '.' : '-')) /* +,-. */
 			continue;
 		else if (c == '_')
 			continue;

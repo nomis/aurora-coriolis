@@ -348,7 +348,7 @@ size_t ScriptConfig::size(bool values) const {
 }
 
 bool ScriptConfig::allowed_key(const std::string &key) {
-	return !key.empty() && key.length() < MAX_KEY_LENGTH && allowed_file_name(key);
+	return !key.empty() && key.length() < MAX_KEY_LENGTH && allowed_file_name(key, true);
 }
 
 mp_int_t ScriptConfig::convert_rgb_value(mp_obj_t value_obj) {
