@@ -1,6 +1,6 @@
 desc: Single Random 1 (medium)
-script: random_auto
+script: random_rgb
 config:
-  type/s32: 2
+  auto/s32: 2
   count/s32: 1
   duration/s32: 7500

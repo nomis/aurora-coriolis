@@ -14,45 +14,68 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from micropython import const
 import aurcor
 import random
 
+FROM_SET = const(0)
+AUTO_TYPE1 = const(1)
+AUTO_TYPE2 = const(2)
+MAX_AUTO = const(2)
+
 aurcor.register_config({
+	"auto": ("s32", 0),
 	"colours": ("set_rgb", [0]),
+	"count": ("s32", 1),
 	"duration": ("s32", 10000),
 })
 
-def generate(without=None):
+def generate_from_set(without=None):
 	if without is None or len(colours) < 2:
 		return random.choice(colours)
 	else:
 		return random.choice(list(config["colours"] - set((without,))))
 
+def generate_type1(without=None):
+	return aurcor.exp_hsv_to_rgb_int(random.randint(0, aurcor.EXP_HUE_RANGE - 1), random.uniform(0.5, 1.0), random.uniform(0.5, 1.0))
+
+def generate_type2(without=None):
+	return aurcor.exp_hsv_to_rgb_int(random.randint(0, aurcor.EXP_HUE_RANGE - 1))
+
 def fill():
-	global buffer
+	global buffer, positions
 
 	buffer = [0] * aurcor.length()
-	for pos in range(0, len(buffer)):
+	positions = list(range(0, aurcor.length()))
+	for pos in positions:
 		buffer[pos] = generate()
+
+def shuffle(count):
+	length = len(positions) - 1
+	for pos in range(0, count):
+		other = random.randint(pos, length)
+		tmp = positions[pos]
+		positions[pos] = positions[other]
+		positions[other] = tmp
 
 def replace(count):
 	if count == 1:
 		pos = random.randint(0, len(buffer) - 1)
 		buffer[pos] = generate(buffer[pos])
-	else:
-		positions = set(range(0, len(buffer)))
-		while count > 0:
-			pos = random.choice(list(positions))
+	elif count >= len(buffer):
+		for pos in positions:
 			buffer[pos] = generate(buffer[pos])
-			positions -= set((pos,))
-			count -= 1
+	else:
+		shuffle(count)
+		for pos in range(0, count):
+			buffer[positions[pos]] = generate(buffer[pos])
 
 def change():
 	global last
 
 	now = aurcor.ticks64_us()
 	if now - last >= interval:
-		replace(min((now - last) // interval, len(buffer)))
+		replace(min((now - last) // interval * config["count"], len(buffer)))
 		last = now
 
 config = {}
@@ -61,7 +84,21 @@ last = aurcor.ticks64_us()
 while True:
 	if aurcor.config(config):
 		colours = list(config["colours"])
-		interval = max(1, config["duration"] * 1000 // aurcor.length())
+
+		config["auto"] = max(0, min(MAX_AUTO, config["auto"]))
+		if config["count"] == 0 or config["count"] > aurcor.length():
+			config["count"] = aurcor.length()
+
+		if config["auto"] == FROM_SET:
+			generate = generate_from_set
+		elif config["auto"] == AUTO_TYPE1:
+			generate = generate_type1
+			aurcor.output_defaults(profile=aurcor.profiles.HDR)
+		elif config["auto"] == AUTO_TYPE2:
+			generate = generate_type2
+			aurcor.output_defaults(profile=aurcor.profiles.NORMAL)
+
+		interval = max(1, config["count"] * config["duration"] * 1000 // aurcor.length())
 		fill()
 
 	change()

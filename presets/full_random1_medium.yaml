@@ -1,6 +1,6 @@
 desc: Full Random 1 (medium)
-script: random_auto
+script: random_rgb
 config:
-  type/s32: 1
+  auto/s32: 1
   count/s32: 0
   duration/s32: 500
