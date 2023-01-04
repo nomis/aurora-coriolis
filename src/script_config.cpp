@@ -19,6 +19,7 @@
 #include "aurcor/script_config.h"
 
 #include <bitset>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -804,7 +805,10 @@ bool ScriptConfig::parse_float(ContainerOp op, const std::string &text, float &v
 	if (text.empty())
 		return false;
 
-	return end[0] == '\0';
+	if (end[0] != '\0')
+		return false;
+
+	return std::isfinite(value);
 }
 
 template <class T>
@@ -1485,7 +1489,12 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 					return Result::PARSE_ERROR;
 				}
 
-				property.as_float().set_value(value);
+				if (std::isfinite(value)) {
+					property.as_float().set_value(value);
+				} else {
+					if (VERBOSE)
+						logger_.trace(F("Ignoring non-finite value for key \"%s\""), key.c_str());
+				}
 				break;
 			}
 

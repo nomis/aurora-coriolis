@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import aurcor
-import math
 
 aurcor.register_config({
 	"repeat": ("float", 1),
@@ -44,8 +43,6 @@ config = {}
 
 while True:
 	if aurcor.config(config):
-		if not math.isfinite(config["repeat"]):
-			config["repeat"] = 1
 		if config["duration"] == 1:
 			config["duration"] = 2
 	aurcor.output_exp_hsv(generate())

@@ -16,7 +16,6 @@
 
 from micropython import const
 import aurcor
-import math
 
 # 1x speed = 1500ms duration for 50 LEDs
 DURATION_PER_LED_US = const(30 * 1000)
@@ -26,7 +25,8 @@ def create_config(enabled=False):
 		"sweep.enabled": ("bool", enabled),
 		"sweep.active_length": ("float", 12), # Percent
 		"sweep.fade_length": ("float", 16), # Percent
-		"sweep.fade_rate": ("float", 0.75),
+		"sweep.fade_rate1": ("float", 0.5),
+		"sweep.fade_rateN": ("float", 0.75),
 		"sweep.speed": ("float", 1), # Relative speed based on length
 		"sweep.duration": ("s32", None), # Duration in ms; overrides speed
 		"sweep.real_time": ("bool", True),
@@ -40,9 +40,6 @@ def config_changed(config):
 
 	config["sweep.active_length"] = max(0.0, min(100.0, config["sweep.active_length"]))
 	config["sweep.fade_length"] = max(0.0, min(100.0, config["sweep.fade_length"]))
-
-	if not math.isfinite(config["sweep.speed"]):
-		config["sweep.speed"] = 1
 
 	length = aurcor.length()
 	active_length = max(1, length * config["sweep.active_length"] // 200)
@@ -74,7 +71,8 @@ def _apply_mask(config, values, rgb):
 	else:
 		next_output_us = aurcor.next_ticks64_us()
 
-	fade_rate = config["sweep.fade_rate"]
+	fade_rate1 = config["sweep.fade_rate1"]
+	fade_rateN = config["sweep.fade_rateN"]
 	total_length = active_length + fade_length
 
 	length = max(2, aurcor.length() - 2 * active_length) + 1
@@ -103,7 +101,7 @@ def _apply_mask(config, values, rgb):
 			else:
 				power = i - (pos + active_length)
 
-			value *= 0.5 * (fade_rate ** power)
+			value *= fade_rate1 * (fade_rateN ** power)
 
 			if rgb:
 				yield aurcor.hsv_to_rgb_int(hue, saturation, value)
