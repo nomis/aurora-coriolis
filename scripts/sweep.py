@@ -24,7 +24,7 @@ def create_config(enabled=False):
 	return {
 		"sweep.enabled": ("bool", enabled),
 		"sweep.active_length": ("float", 12), # Percent
-		"sweep.fade_length": ("float", 16), # Percent
+		"sweep.fade_length": ("float", 32), # Percent
 		"sweep.fade_rate1": ("float", 0.5),
 		"sweep.fade_rateN": ("float", 0.75),
 		"sweep.speed": ("float", 1), # Relative speed based on length
@@ -39,11 +39,11 @@ def config_changed(config):
 		return
 
 	config["sweep.active_length"] = max(0.0, min(100.0, config["sweep.active_length"]))
-	config["sweep.fade_length"] = max(0.0, min(100.0, config["sweep.fade_length"]))
+	config["sweep.fade_length"] = max(0.0, min(max(0.0, 100.0 - config["sweep.active_length"]), config["sweep.fade_length"]))
 
 	length = aurcor.length()
 	active_length = max(1, length * config["sweep.active_length"] // 200)
-	fade_length = max(0, length * config["sweep.fade_length"] // 100)
+	fade_length = max(0, length * config["sweep.fade_length"] // 200)
 
 	if config["sweep.duration"] is None:
 		duration_us = max(2, round(DURATION_PER_LED_US * length / max(1e-10, config["sweep.speed"])))
