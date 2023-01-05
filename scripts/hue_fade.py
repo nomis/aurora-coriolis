@@ -20,7 +20,7 @@ import sweep
 
 config = {
 	"duration": ("s32", 30000),
-	"real_time": ("bool", True),
+	"real_time": ("bool", False),
 }
 config.update(sweep.create_config())
 aurcor.register_config(config)

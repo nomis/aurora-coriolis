@@ -29,11 +29,11 @@ def create_config(enabled=False):
 		"sweep.fade_rateN": ("float", 0.75),
 		"sweep.speed": ("float", 1), # Relative speed based on length
 		"sweep.duration": ("s32", None), # Duration in ms; overrides speed
-		"sweep.real_time": ("bool", True),
+		"sweep.real_time": ("bool", False),
 	}
 
 def config_changed(config):
-	global active_length, fade_length, duration_us
+	global active_length, fade_length, total_length, sweep_length, duration_us
 
 	if not config["sweep.enabled"]:
 		return
@@ -44,6 +44,8 @@ def config_changed(config):
 	length = aurcor.length()
 	active_length = max(1, length * config["sweep.active_length"] // 200)
 	fade_length = max(0, length * config["sweep.fade_length"] // 200)
+	total_length = active_length + fade_length
+	sweep_length = max(2, length - 2 * active_length) + 1
 
 	if config["sweep.duration"] is None:
 		duration_us = max(2, round(DURATION_PER_LED_US * length / max(1e-10, config["sweep.speed"])))
@@ -73,13 +75,11 @@ def _apply_mask(config, values, rgb):
 
 	fade_rate1 = config["sweep.fade_rate1"]
 	fade_rateN = config["sweep.fade_rateN"]
-	total_length = active_length + fade_length
 
-	length = max(2, aurcor.length() - 2 * active_length) + 1
-	pos = round(((next_output_us % duration_us) / duration_us) * 2 * length)
-	if pos >= length:
-		pos = length - (pos - length)
-	pos = active_length + max(0, min(length - 1, pos)) - 1
+	pos = round(((next_output_us % duration_us) / duration_us) * 2 * sweep_length)
+	if pos >= sweep_length:
+		pos = sweep_length - (pos - sweep_length)
+	pos = active_length + max(0, min(sweep_length - 1, pos)) - 1
 	pos = max(active_length, min(aurcor.length() - active_length, pos))
 
 	for i in range(0, len(values)):
