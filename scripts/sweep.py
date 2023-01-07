@@ -16,102 +16,121 @@
 
 from micropython import const
 import aurcor
+import time
 
-# 1x speed = 1500ms duration for 50 LEDs
-DURATION_PER_LED_US = const(30 * 1000)
+# 1x speed = 1125ms duration for 50 LEDs
+INTERVAL_US = const(12500)
 
 def create_config(enabled=False):
 	return {
 		"sweep.enabled": ("bool", enabled),
 		"sweep.active_length": ("float", 12), # Percent
-		"sweep.fade_length": ("float", 32), # Percent
+		"sweep.fade_length": ("float", 8), # Percent
 		"sweep.fade_rate1": ("float", 0.5),
 		"sweep.fade_rateN": ("float", 0.75),
 		"sweep.speed": ("float", 1), # Relative speed based on length
 		"sweep.duration": ("s32", None), # Duration in ms; overrides speed
-		"sweep.real_time": ("bool", False),
 	}
 
-def config_changed(config):
-	global active_length, fade_length, total_length, sweep_length, duration_us
+def apply_default_config(default_config={}):
+	default_config = default_config.copy()
 
-	if not config["sweep.enabled"]:
+	if is_enabled:
+		if "fps" in default_config:
+			del default_config["fps"]
+
+		if "wait_ms" in default_config:
+			del default_config["wait_ms"]
+
+		default_config["wait_us"] = 0
+
+	return default_config
+
+def config_changed(config):
+	global is_enabled, length, fade_multipliers, last_update_us, current_pos
+	global active_length, fade_length, total_length, sweep_length, interval_us
+
+	is_enabled = config["sweep.enabled"]
+
+	if not is_enabled:
 		return
 
 	config["sweep.active_length"] = max(0.0, min(100.0, config["sweep.active_length"]))
 	config["sweep.fade_length"] = max(0.0, min(max(0.0, 100.0 - config["sweep.active_length"]), config["sweep.fade_length"]))
 
 	length = aurcor.length()
-	active_length = max(1, length * config["sweep.active_length"] // 200)
-	fade_length = max(0, length * config["sweep.fade_length"] // 200)
+	active_length = max(1, round(length * config["sweep.active_length"] // 200))
+	fade_length = max(0, round(length * config["sweep.fade_length"] // 200))
 	total_length = active_length + fade_length
 	sweep_length = max(2, length - 2 * active_length) + 1
 
+	fade_multipliers = list([config["sweep.fade_rate1"] * (config["sweep.fade_rateN"] ** n) / aurcor.MAX_VALUE for n in range(0, fade_length)])
+
+	current_pos = 0
+	last_update_us = None
+
 	if config["sweep.duration"] is None:
-		duration_us = max(2, round(DURATION_PER_LED_US * length / max(1e-10, config["sweep.speed"])))
+		interval_us = INTERVAL_US // max(1e-10, config["sweep.speed"])
 	else:
-		duration_us = max(2, config["sweep.duration"] * 1000)
+		interval_us = config["sweep.duration"] * 1000 / (2 * sweep_length)
+	interval_us = max(1, min(1000000, round(interval_us)))
 
-def enabled(config):
-	return config["sweep.enabled"]
+def enabled():
+	return is_enabled
 
-def apply_mask_rgb(config, values):
-	if not enabled(config):
+def refresh():
+	global current_pos, last_update_us
+
+	now_us = aurcor.ticks64_us()
+
+	if last_update_us is None:
+		last_update_us = now_us
+		return True
+
+	elapsed_us = now_us - last_update_us
+	if elapsed_us >= interval_us:
+		current_pos = (current_pos + 1) % (2 * sweep_length)
+		last_update_us = now_us
+		return True
+
+	return False
+
+def sleep(max_us=1000000):
+	now_us = aurcor.ticks64_us()
+	timeout_us = min(interval_us, max_us)
+
+	elapsed_us = now_us - last_update_us
+	if elapsed_us < timeout_us:
+		time.sleep_us(timeout_us - elapsed_us)
+
+def apply_mask_hsv(values):
+	if not is_enabled:
 		return values
 
-	return _apply_mask(config, values, True)
-
-def apply_mask_hsv(config, values):
-	if not enabled(config):
-		return values
-
-	return _apply_mask(config, values, False)
-
-def _apply_mask(config, values, rgb):
-	if config["sweep.real_time"]:
-		next_output_us = aurcor.next_time_us()
+	if current_pos < sweep_length:
+		pos = current_pos
 	else:
-		next_output_us = aurcor.next_ticks64_us()
+		pos = sweep_length - (current_pos - sweep_length)
 
-	fade_rate1 = config["sweep.fade_rate1"]
-	fade_rateN = config["sweep.fade_rateN"]
-
-	pos = round(((next_output_us % duration_us) / duration_us) * 2 * sweep_length)
-	if pos >= sweep_length:
-		pos = sweep_length - (pos - sweep_length)
 	pos = active_length + max(0, min(sweep_length - 1, pos)) - 1
-	pos = max(active_length, min(aurcor.length() - active_length, pos))
+	pos = max(active_length, min(length - active_length, pos))
 
-	for i in range(0, len(values)):
-		if i >= pos - active_length and i <= pos + active_length:
-			yield values[i]
-		elif i >= pos - total_length and i <= pos + total_length:
-			if rgb:
-				hue, saturation, value = aurcor.rgb_to_hsv_tuple(values[i])
-			elif type(values[i]) in (float, int):
-				hue, saturation, value = values[i], aurcor.MAX_SATURATION, 1.0
-			else:
-				hue, saturation, value = values[i]
+	values = values.copy()
+	for i in range(max(0, pos - total_length), min(length, pos - active_length)):
+		hue, saturation, value = values[i]
+		values[i] = hue, saturation, value * fade_multipliers[(pos - active_length) - i - 1]
 
-			if type(value) != float:
-				value /= aurcor.MAX_VALUE
+	for i in range(pos + active_length + 1, min(length, pos + total_length + 1)):
+		hue, saturation, value = values[i]
+		values[i] = hue, saturation, value * fade_multipliers[i - (pos + active_length) - 1]
 
-			if i < pos:
-				power = (pos - active_length) - i
-			else:
-				power = i - (pos + active_length)
+	for i in range(0, min(length, pos - total_length)):
+		values[i] = (0, 0, 0)
 
-			value *= fade_rate1 * (fade_rateN ** power)
+	for i in range(pos + total_length + 1, length):
+		values[i] = (0, 0, 0)
 
-			if rgb:
-				yield aurcor.hsv_to_rgb_int(hue, saturation, value)
-			else:
-				yield hue, saturation, value
-		elif rgb:
-			yield 0
-		else:
-			yield 0, 0, 0
-
+	return values
 
 if __name__ == "__main__":
 	import logging

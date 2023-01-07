@@ -33,10 +33,17 @@ def repeat_colours():
 while True:
 	if aurcor.config(config):
 		sweep.config_changed(config)
-		if sweep.enabled(config):
-			repeat_colours()
 
-	if sweep.enabled(config):
-		aurcor.output_rgb(sweep.apply_mask_rgb(config, config["colours"]))
+		if sweep.enabled():
+			repeat_colours()
+			colours = list(map(aurcor.rgb_to_hsv_tuple, config["colours"]))
+
+		aurcor.output_defaults(**sweep.apply_default_config())
+
+	if sweep.enabled():
+		if sweep.refresh():
+			aurcor.output_hsv(sweep.apply_mask_hsv(colours))
+		else:
+			sweep.sleep()
 	else:
 		aurcor.output_rgb(config["colours"], repeat=True)

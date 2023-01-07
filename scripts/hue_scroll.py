@@ -18,7 +18,7 @@ import aurcor
 
 aurcor.register_config({
 	"repeat": ("float", 1),
-	"duration": ("s32", 30000),
+	"duration": ("s32", 25000),
 	"real_time": ("bool", False),
 })
 

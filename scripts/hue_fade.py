@@ -19,26 +19,35 @@ import aurcor
 import sweep
 
 config = {
-	"duration": ("s32", 30000),
+	"duration": ("s32", 25000),
 	"real_time": ("bool", False),
 }
 config.update(sweep.create_config())
 aurcor.register_config(config)
 
+last_hue = None
 while True:
 	if aurcor.config(config):
 		config["duration"] = max(2, config["duration"])
 
+		interval_us = max(1, round((config["duration"] * 1000) / aurcor.EXP_HUE_RANGE))
+
 		sweep.config_changed(config)
+		aurcor.output_defaults(**sweep.apply_default_config())
 
 	if config["real_time"]:
 		next_output_ms = aurcor.next_time_ms()
 	else:
 		next_output_ms = aurcor.next_ticks64_ms()
 
-	hue = (next_output_ms % config["duration"]) / config["duration"]
+	hue = aurcor.EXP_HUE_RANGE * (next_output_ms % config["duration"]) // config["duration"]
 
-	if sweep.enabled(config):
-		aurcor.output_exp_hsv(sweep.apply_mask_hsv(config, [hue] * aurcor.length()))
+	if sweep.enabled():
+		if sweep.refresh() or hue != last_hue:
+			aurcor.output_exp_hsv(sweep.apply_mask_hsv([[hue, aurcor.MAX_SATURATION, aurcor.MAX_VALUE]] * aurcor.length()))
+		else:
+			sweep.sleep(interval_us)
 	else:
 		aurcor.output_exp_hsv([hue], repeat=True)
+
+	last_hue = hue

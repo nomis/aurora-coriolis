@@ -32,20 +32,10 @@ config = {
 aurcor.register_config(config)
 
 def generate():
-	if config["duration"] == 0:
-		yield from ()
-
-	length = aurcor.length()
-
 	if config["real_time"]:
 		next_output_us = aurcor.next_time_us()
 	else:
 		next_output_us = aurcor.next_ticks64_us()
-
-	burst_count = config["number"]
-	colour_count = len(config["colours"])
-	fade_rate1 = config["fade_rate1"]
-	fade_rateN = config["fade_rateN"]
 
 	current_us = (next_output_us % total_duration_us)
 	burst_idx = current_us // burst_duration_us
@@ -56,38 +46,39 @@ def generate():
 	else:
 		current_pos = round(burst_length * ((current_us % burst_duration_us) / burst_duration_us))
 
+	i = length - 1
 	while True:
 		if burst_idx >= burst_count:
 			for pos in range(current_pos, blank_length):
-				yield 0
+				buffer[i] = 0
+
+				if i == 0:
+					return buffer
+				i -= 1
 
 			current_pos = 0
 			burst_idx = 0
 			colour_idx = (colour_idx + burst_count) % colour_count
 		else:
-			colour_rgb = config["colours"][(colour_idx + burst_idx) % colour_count]
-			colour_hsv = aurcor.rgb_to_hsv_tuple(colour_rgb)
+			colour = colours[(colour_idx + burst_idx) % colour_count]
+			hue, saturation, value = colour
 
 			for pos in range(current_pos, burst_length):
 				if pos < fade_length:
-					hue, saturation, value = colour_hsv
-					power = fade_length - pos - 1
-					value = value / aurcor.MAX_VALUE * fade_rate1 * (fade_rateN ** power)
-					yield aurcor.hsv_to_rgb_int(hue, saturation, value)
+					buffer[i] = hue, saturation, value * fade_multipliers[fade_length - pos - 1]
 				elif pos < fade_active_length:
-					yield colour_rgb
+					buffer[i] = colour
 				elif pos < fade_active_fade_length:
-					hue, saturation, value = colour_hsv
-					power = fade_length - (fade_active_fade_length - pos) - 1
-					value = value / aurcor.MAX_VALUE * fade_rate1 * (fade_rateN ** power)
-					yield aurcor.hsv_to_rgb_int(hue, saturation, value)
+					buffer[i] = hue, saturation, fade_multipliers[fade_length - (fade_active_fade_length - pos) - 1]
 				else:
-					yield 0
+					buffer[i] = 0, 0, 0
+
+				if i == 0:
+					return buffer
+				i -= 1
 
 			current_pos = 0
 			burst_idx += 1
-
-aurcor.output_defaults(reverse=True)
 
 while True:
 	if aurcor.config(config):
@@ -97,11 +88,14 @@ while True:
 		config["number"] = max(1, min(aurcor.length(), config["number"]))
 
 		length = aurcor.length()
-		active_length = length // (2 + config["number"]) // 3
-		fade_length = length // (2 + config["number"]) // 6
+		burst_count = config["number"]
+		colour_count = len(config["colours"])
+
+		active_length = length // (2 + burst_count) // 3
+		fade_length = length // (2 + burst_count) // 6
 		fade_active_length = fade_length + active_length + 1 + active_length
 		fade_active_fade_length = fade_active_length + fade_length
-		burst_length = (fade_length + active_length + length) // config["number"]
+		burst_length = (fade_length + active_length + length) // burst_count
 
 		single_active_length = length // 9
 		single_fade_length = length // 18
@@ -110,12 +104,16 @@ while True:
 		if config["duration"] is None:
 			interval_us = max(1, round(DURATION_PER_LED_US / max(1e-10, config["speed"])))
 		else:
-			total_length = burst_length * config["number"] + blank_length
+			total_length = burst_length * burst_count + blank_length
 			interval_us = max(1, round(config["duration"] * 1000 / total_length))
 
 		burst_duration_us = burst_length * interval_us
 		blank_duration_us = blank_length * interval_us
-		total_burst_duration_us = burst_duration_us * config["number"]
+		total_burst_duration_us = burst_duration_us * burst_count
 		total_duration_us = total_burst_duration_us + blank_duration_us
 
-	aurcor.output_rgb(generate())
+		colours = list(map(aurcor.rgb_to_hsv_tuple, config["colours"]))
+		fade_multipliers = list([config["fade_rate1"] * (config["fade_rateN"] ** n) / aurcor.MAX_VALUE for n in range(0, fade_length)])
+		buffer = [0] * length
+
+	aurcor.output_hsv(generate())

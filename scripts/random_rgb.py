@@ -35,24 +35,26 @@ config.update(sweep.create_config())
 aurcor.register_config(config)
 
 def generate_from_set(without=None):
-	if without is None or len(colours) < 2:
-		return random.choice(colours)
+	if without is None or len(colours_list) < 2:
+		return random.choice(colours_list)
 	else:
-		return random.choice(list(config["colours"] - set((without,))))
+		return random.choice(list(colours_set - set((without,))))
 
 def generate_type1(without=None):
-	return aurcor.exp_hsv_to_rgb_int(random.randint(0, aurcor.EXP_HUE_RANGE - 1), random.uniform(0.5, 1.0), random.uniform(0.5, 1.0))
+	return (random.randint(0, aurcor.EXP_HUE_RANGE - 1), random.uniform(0.5, 1.0), random.uniform(0.5, 1.0))
 
 def generate_type2(without=None):
-	return aurcor.exp_hsv_to_rgb_int(random.randint(0, aurcor.EXP_HUE_RANGE - 1))
+	return (random.randint(0, aurcor.EXP_HUE_RANGE - 1), aurcor.MAX_SATURATION, aurcor.MAX_VALUE)
 
 def fill():
-	global buffer, positions
+	global buffer, positions, last
 
-	buffer = [0] * aurcor.length()
+	buffer = [[0, 0, 0]] * aurcor.length()
 	positions = list(range(0, aurcor.length()))
 	for pos in positions:
 		buffer[pos] = generate()
+
+	last = aurcor.ticks64_us()
 
 def shuffle(count):
 	length = len(positions) - 1
@@ -78,32 +80,44 @@ def change():
 	global last
 
 	now = aurcor.ticks64_us()
-	if now - last >= interval:
-		replace(min((now - last) // interval * config["count"], len(buffer)))
+	if now - last >= interval_us:
+		replace(min((now - last) // interval_us * config["count"], len(buffer)))
 		last = now
+		return True
 
-last = aurcor.ticks64_us()
+	return False
 
 while True:
 	if aurcor.config(config):
-		colours = list(config["colours"])
+		colours_set = set(map(aurcor.rgb_to_hsv_tuple, config["colours"]))
+		colours_list = list(colours_set)
 
 		config["auto"] = max(0, min(MAX_AUTO, config["auto"]))
 		if config["count"] == 0 or config["count"] > aurcor.length():
 			config["count"] = aurcor.length()
 
+		defaults = {}
+
 		if config["auto"] == FROM_SET:
 			generate = generate_from_set
 		elif config["auto"] == AUTO_TYPE1:
 			generate = generate_type1
-			aurcor.output_defaults(profile=aurcor.profiles.HDR)
+			defaults["profile"] = aurcor.profiles.HDR
 		elif config["auto"] == AUTO_TYPE2:
 			generate = generate_type2
-			aurcor.output_defaults(profile=aurcor.profiles.NORMAL)
+			defaults["profile"] = aurcor.profiles.NORMAL
 
-		interval = max(1, config["count"] * config["duration"] * 1000 // aurcor.length())
-		sweep.config_changed(config)
+		interval_us = max(1, config["count"] * config["duration"] * 1000 // aurcor.length())
 		fill()
 
-	change()
-	aurcor.output_rgb(sweep.apply_mask_rgb(config, buffer))
+		sweep.config_changed(config)
+		aurcor.output_defaults(**sweep.apply_default_config(defaults))
+
+	changed = change()
+	if sweep.enabled():
+		if sweep.refresh() or changed:
+			aurcor.output_hsv(sweep.apply_mask_hsv(buffer))
+		else:
+			sweep.sleep(interval_us)
+	else:
+		aurcor.output_hsv(buffer)
