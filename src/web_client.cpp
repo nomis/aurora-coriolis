@@ -121,7 +121,7 @@ bool WebClient::open(const std::string &url) {
 	} else {
 		esp_http_client_config_t config{};
 
-		config.crt_bundle_attach = esp_crt_bundle_attach;
+		config.crt_bundle_attach = arduino_esp_crt_bundle_attach;
 		config.keep_alive_enable = true;
 		config.disable_auto_redirect = true;
 		config.url = url.c_str();
