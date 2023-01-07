@@ -104,7 +104,7 @@ static void fps_above_max() {
 		"  File \"<stdin>\", line 2, in <module>\r\n"
 		"ValueError: fps out of range\r\n",
 		TestMicroPython::run_script(R"python(
-import aurcor; aurcor.output_rgb([], fps=101)
+import aurcor; aurcor.output_rgb([], fps=1001)
 )python")->output_.c_str());
 }
 

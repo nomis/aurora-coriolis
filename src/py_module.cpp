@@ -825,7 +825,7 @@ unsigned long PyModule::calc_wait_us(mp_obj_t fps, mp_obj_t wait_ms, bool set_de
 
 		mp_int_t value = mp_obj_get_int(wait_ms);
 
-		if (value != 0 && (value < MIN_WAIT_MS || value > MAX_WAIT_MS))
+		if (value < 0 || value > MAX_WAIT_MS)
 			mp_raise_ValueError(MP_ERROR_TEXT("wait_ms out of range"));
 
 		wait_us = value * 1000;

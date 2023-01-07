@@ -187,11 +187,10 @@ public:
 private:
 	static constexpr size_t TIMING_DELAY_US = 10;
 	static constexpr enum led_profile_id DEFAULT_PROFILE = LED_PROFILE_NORMAL;
-	static constexpr mp_int_t MIN_WAIT_MS = 10;
 	static constexpr mp_int_t MAX_WAIT_MS = 1000;
 public:
 	static constexpr mp_int_t MIN_FPS = 1000 / MAX_WAIT_MS;
-	static constexpr mp_int_t MAX_FPS = 1000 / MIN_WAIT_MS;
+	static constexpr mp_int_t MAX_FPS = 1000;
 private:
 	static constexpr unsigned long DEFAULT_WAIT_US = 0;
 	static constexpr bool DEFAULT_REPEAT = false;
