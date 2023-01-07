@@ -193,7 +193,7 @@ public:
 	static constexpr mp_int_t MIN_FPS = 1000 / MAX_WAIT_MS;
 	static constexpr mp_int_t MAX_FPS = 1000;
 private:
-	static constexpr unsigned long DEFAULT_WAIT_US = 0;
+	static constexpr long DEFAULT_WAIT_US = -1;
 	static constexpr bool DEFAULT_REPEAT = false;
 	static constexpr bool DEFAULT_REVERSE = false;
 
@@ -228,7 +228,7 @@ private:
 	static mp_int_t saturation_obj_to_int(mp_obj_t saturation);
 	static mp_int_t value_obj_to_int(mp_obj_t value);
 
-	unsigned long calc_wait_us(mp_obj_t fps_obj, mp_obj_t wait_ms_obj, mp_obj_t wait_us_obj, bool set_defaults);
+	long calc_wait_us(mp_obj_t fps_obj, mp_obj_t wait_ms_obj, mp_obj_t wait_us_obj, bool set_defaults);
 	void next_wait_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs,
 		uint64_t &now_us, uint64_t &start_us);
 	void next_timeofday(struct timeval &tv, uint64_t offset_us);
@@ -240,7 +240,7 @@ private:
 	std::shared_ptr<Preset> preset_;
 
 	enum led_profile_id profile_{DEFAULT_PROFILE};
-	unsigned long wait_us_{0};
+	long wait_us_{DEFAULT_WAIT_US};
 	bool repeat_{DEFAULT_REPEAT};
 	bool reverse_{DEFAULT_REVERSE};
 

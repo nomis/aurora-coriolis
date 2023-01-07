@@ -251,7 +251,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		profile = (enum led_profile_id)value;
 	}
 
-	auto wait_us = calc_wait_us(parsed_args[ARG_fps].u_obj,
+	long wait_us = calc_wait_us(parsed_args[ARG_fps].u_obj,
 		parsed_args[ARG_wait_ms].u_obj, parsed_args[ARG_wait_us].u_obj,
 		set_defaults);
 
@@ -480,7 +480,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 
 	bus_->profile(profile).transform(buffer, out_bytes);
 
-	if (wait_us && bus_written_) {
+	if (wait_us > 0 && bus_written_) {
 		uint64_t start_us = bus_->last_update_us() + wait_us - TIMING_DELAY_US;
 		uint64_t now_us = current_time_us();
 
@@ -841,7 +841,7 @@ inline mp_int_t PyModule::value_obj_to_int(mp_obj_t value) {
 	}
 }
 
-unsigned long PyModule::calc_wait_us(mp_obj_t fps_obj, mp_obj_t wait_ms_obj, mp_obj_t wait_us_obj, bool set_defaults) {
+long PyModule::calc_wait_us(mp_obj_t fps_obj, mp_obj_t wait_ms_obj, mp_obj_t wait_us_obj, bool set_defaults) {
 	auto wait_us = set_defaults ? DEFAULT_WAIT_US : wait_us_;
 	unsigned int set = 0;
 
@@ -887,7 +887,7 @@ unsigned long PyModule::calc_wait_us(mp_obj_t fps_obj, mp_obj_t wait_ms_obj, mp_
 	if (set > 1)
 		mp_raise_ValueError(MP_ERROR_TEXT("can't specify more than one of fps, wait_ms or wait_us at the same time"));
 
-	if (!set_defaults && wait_us == 0 && bus_default_fps_ > 0)
+	if (!set_defaults && wait_us == DEFAULT_WAIT_US && bus_default_fps_ > 0)
 		wait_us = 1000000 / bus_default_fps_;
 
 	return wait_us;
@@ -909,7 +909,7 @@ void PyModule::next_wait_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwarg
 	mp_arg_parse_all(n_args, args, kwargs, MP_ARRAY_SIZE(allowed_args),
 		allowed_args, parsed_args);
 
-	unsigned long wait_us = calc_wait_us(parsed_args[ARG_fps].u_obj,
+	long wait_us = calc_wait_us(parsed_args[ARG_fps].u_obj,
 		parsed_args[ARG_wait_ms].u_obj, parsed_args[ARG_wait_us].u_obj, false);
 
 	if (wait_us && bus_written_) {
