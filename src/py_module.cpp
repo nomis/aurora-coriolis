@@ -452,30 +452,30 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		}
 	}
 
-	if (generator_reverse) {
-		if (repeat && out_bytes > 0 && out_bytes < max_bytes) {
-			while (out_bytes > 0) {
+	if (repeat && out_bytes > 0 && out_bytes < max_bytes) {
+		if (generator_reverse) {
+			do {
 				size_t available_bytes = std::min(out_bytes, max_bytes - out_bytes);
 				assert(available_bytes > 0);
 
 				std::memcpy(&buffer[out_bytes - available_bytes], &buffer[max_bytes - available_bytes], available_bytes);
 				out_bytes -= available_bytes;
-			}
-		}
-
-		if (out_bytes > 0)
-			std::memset(buffer, 0, out_bytes);
-
-		out_bytes = max_bytes;
-	} else {
-		if (repeat && out_bytes > 0) {
-			while (out_bytes < max_bytes) {
+			} while (out_bytes > 0);
+		} else {
+			do {
 				size_t available_bytes = std::min(out_bytes, max_bytes - out_bytes);
 
 				std::memcpy(&buffer[out_bytes], &buffer[0], available_bytes);
 				out_bytes += available_bytes;
-			}
+			} while (out_bytes < max_bytes);
 		}
+	}
+
+	if (generator_reverse) {
+		if (out_bytes > 0)
+			std::memset(buffer, 0, out_bytes);
+
+		out_bytes = max_bytes;
 	}
 
 	bus_->profile(profile).transform(buffer, out_bytes);
