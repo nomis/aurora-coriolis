@@ -43,7 +43,7 @@ public:
 	static constexpr size_t BYTES_PER_LED = 3;
 	static constexpr size_t MAX_BYTES = MAX_LEDS * BYTES_PER_LED;
 	static constexpr unsigned long UPDATE_RATE_HZ = 800000;
-	static constexpr size_t RESET_TIME_US = 280;
+	static constexpr size_t RESET_TIME_US = LED_BUS_RESET_TIME_US;
 	static constexpr TickType_t SEMAPHORE_TIMEOUT_TICKS = 30 * 1000 * portTICK_PERIOD_MS;
 
 	LEDBus(const char *name, size_t default_length = 1);
@@ -53,6 +53,8 @@ public:
 	const char *name() const { return name_; }
 	inline size_t length() const { return config_.length(); }
 	inline void length(size_t value) { config_.length(value); }
+	inline unsigned int reset_time_us() const { return config_.reset_time_us(); }
+	inline void reset_time_us(unsigned int value) { config_.reset_time_us(value); }
 	inline bool reverse() const { return config_.reverse(); }
 	inline void reverse(bool value) { config_.reverse(value); }
 	inline std::string default_preset() const { return config_.default_preset(); }

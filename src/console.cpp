@@ -515,6 +515,13 @@ static std::shared_ptr<LEDBus> lookup_bus_or_default(Shell &shell, const std::ve
 	}
 }
 
+__attribute__((noinline))
+static std::vector<std::string> reset_times_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	return {"50", "280"};
+};
+
 namespace bus {
 
 static void show_default_preset(Shell &shell, std::shared_ptr<LEDBus> &bus);
@@ -894,6 +901,11 @@ static void show_length(Shell &shell) {
 };
 
 __attribute__((noinline))
+static void show_reset_time(Shell &shell) {
+	shell.printfln(F("Reset time:     %u µs"), to_shell(shell).bus()->reset_time_us());
+};
+
+__attribute__((noinline))
 static void show_direction(Shell &shell) {
 	shell.printfln(F("Direction:      %s"), to_shell(shell).bus()->reverse() ? "reverse" : "normal");
 };
@@ -914,14 +926,6 @@ static void clear(Shell &shell, const std::vector<std::string> &arguments) {
 
 	shell.logger().info("Clearing bus \"%s\" from console %s", bus->name(), to_shell(shell).console_name().c_str());
 	bus->clear();
-}
-
-/* [fps] */
-static void fps(Shell &shell, const std::vector<std::string> &arguments) {
-	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
-		to_shell(shell).bus()->default_fps(std::atol(arguments[0].c_str()));
-	}
-	show_default_fps(shell);
 }
 
 /* [preset] */
@@ -982,6 +986,14 @@ static void edit(Shell &shell, const std::vector<std::string> &arguments) {
 	}
 }
 
+/* [fps] */
+static void fps(Shell &shell, const std::vector<std::string> &arguments) {
+	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
+		to_shell(shell).bus()->default_fps(std::atol(arguments[0].c_str()));
+	}
+	show_default_fps(shell);
+}
+
 /* [length] */
 static void length(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
@@ -1008,6 +1020,14 @@ static void profile(Shell &shell, const std::vector<std::string> &arguments) {
 	} else {
 		shell.printfln(F("Profile \"%s\" not found"), profile_name.c_str());
 	}
+}
+
+/* [microseconds] */
+static void reset_time(Shell &shell, const std::vector<std::string> &arguments) {
+	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
+		to_shell(shell).bus()->reset_time_us(std::atol(arguments[0].c_str()));
+	}
+	show_reset_time(shell);
 }
 
 static void reverse(Shell &shell, const std::vector<std::string> &arguments) {
@@ -1067,6 +1087,7 @@ static void stop(Shell &shell, const std::vector<std::string> &arguments) {
 
 static void show(Shell &shell, const std::vector<std::string> &arguments) {
 	show_length(shell);
+	show_reset_time(shell);
 	show_direction(shell);
 	show_default_preset(shell, to_shell(shell).bus());
 
@@ -1734,6 +1755,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus, user, {F("length")}, {F("[length]")}, bus::length);
 	commands->add_command(context::bus, admin, {F("normal")}, bus::normal);
 	commands->add_command(context::bus, user, {F("profile")}, {F("<profile>")}, bus::profile, profile_names_autocomplete);
+	commands->add_command(context::bus, user, {F("reset"), F("time")}, {F("[microseconds]")}, bus::reset_time, reset_times_autocomplete);
 	commands->add_command(context::bus, admin, {F("reverse")}, bus::reverse);
 	commands->add_command(context::bus, user, {F("run")}, {F("<script>")}, bus::run, script_names_autocomplete);
 	commands->add_command(context::bus, user, {F("start")}, {F("<preset>"), F("[default]")}, bus::start, preset_names_default_autocomplete);

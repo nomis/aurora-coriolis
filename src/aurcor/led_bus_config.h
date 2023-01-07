@@ -36,7 +36,8 @@ namespace aurcor {
 
 class LEDBusConfig {
 public:
-	static constexpr unsigned int DEFAULT_DEFAULT_FPS = 50;
+	static constexpr uint16_t DEFAULT_RESET_TIME_US = LED_BUS_RESET_TIME_US;
+	static constexpr uint16_t DEFAULT_DEFAULT_FPS = 50;
 
 	static constexpr const char *DIRECTORY_NAME = "/buses";
 	static constexpr const char *FILENAME_EXT = ".cbor";
@@ -46,6 +47,9 @@ public:
 
 	size_t length() const;
 	void length(size_t value);
+
+	unsigned int reset_time_us() const;
+	void reset_time_us(unsigned int value);
 
 	bool reverse() const;
 	void reverse(bool value);
@@ -61,6 +65,7 @@ public:
 
 protected:
 	void length_constrained(size_t value);
+	void reset_time_us_constrained(unsigned int value);
 	void default_fps_constrained(unsigned int value);
 
 	bool load();
@@ -81,8 +86,10 @@ private:
 	size_t default_length_;
 	size_t length_;
 	std::string default_preset_;
-	unsigned int default_fps_{DEFAULT_DEFAULT_FPS};
+	uint16_t reset_time_us_{DEFAULT_RESET_TIME_US};
+	uint16_t default_fps_{DEFAULT_DEFAULT_FPS};
 	bool length_set_{false};
+	bool reset_time_us_set_{false};
 	bool default_fps_set_{false};
 	bool reverse_{false};
 };

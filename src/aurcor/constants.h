@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,6 +52,8 @@ static constexpr size_t MIN_RATIO_LEDS = AURCOR_MIN_RATIO_LEDS;
 
 static_assert(MIN_LEDS > 0, "Must have at least one LED");
 static_assert(MAX_LEDS > 0, "Must have at least one LED");
+
+static constexpr size_t LED_BUS_RESET_TIME_US = 280;
 
 } // namespace aurcor
 

@@ -19,6 +19,7 @@
 #include "aurcor/led_bus_config.h"
 
 #include <algorithm>
+#include <limits>
 #include <mutex>
 #include <shared_mutex>
 #include <utility>
@@ -75,8 +76,23 @@ void LEDBusConfig::length_constrained(size_t value) {
 	length_ = uint_constrain(value, MAX_LEDS, MIN_LEDS);
 }
 
-void LEDBusConfig::default_fps_constrained(unsigned int value) {
-	default_fps_ = uint_constrain(value, micropython::PyModule::MAX_FPS);
+unsigned int LEDBusConfig::reset_time_us() const {
+	std::shared_lock data_lock{data_mutex_};
+	return reset_time_us_;
+}
+
+void LEDBusConfig::reset_time_us(unsigned int value) {
+	std::unique_lock data_lock{data_mutex_};
+	if (reset_time_us_ != value || !reset_time_us_set_) {
+		reset_time_us_constrained(value);
+		reset_time_us_set_ = true;
+		data_lock.unlock();
+		save();
+	}
+}
+
+void LEDBusConfig::reset_time_us_constrained(unsigned int value) {
+	reset_time_us_ = uint_constrain(value, std::numeric_limits<typeof(reset_time_us_)>::max());
 }
 
 bool LEDBusConfig::reverse() const {
@@ -122,6 +138,10 @@ void LEDBusConfig::default_fps(unsigned int value) {
 	}
 }
 
+void LEDBusConfig::default_fps_constrained(unsigned int value) {
+	default_fps_ = uint_constrain(value, micropython::PyModule::MAX_FPS);
+}
+
 void LEDBusConfig::reset() {
 	std::unique_lock data_lock{data_mutex_};
 
@@ -133,6 +153,8 @@ void LEDBusConfig::reset() {
 void LEDBusConfig::reset_locked() {
 	length_constrained(default_length_);
 	length_set_ = false;
+	reset_time_us_ = DEFAULT_RESET_TIME_US;
+	reset_time_us_set_ = false;
 	reverse_ = false;
 	default_preset_ = "";
 	default_fps_ = DEFAULT_DEFAULT_FPS;
@@ -203,6 +225,14 @@ bool inline LEDBusConfig::load(cbor::Reader &reader) {
 
 			length_constrained(value);
 			length_set_ = true;
+		} else if (key == "reset_time_us") {
+			uint64_t value;
+
+			if (!cbor::expectUnsignedInt(reader, &value))
+				return false;
+
+			reset_time_us_constrained(value);
+			reset_time_us_set_ = true;
 		} else if (key == "reverse") {
 			if (!cbor::expectBoolean(reader, &reverse_))
 				return false;
@@ -261,19 +291,45 @@ bool LEDBusConfig::save() {
 }
 
 void LEDBusConfig::save(cbor::Writer &writer) {
-	writer.beginMap(4);
+	size_t values = 0;
 
-	app::write_text(writer, "length");
-	writer.writeUnsignedInt(length_);
+	if (length_set_)
+		values++;
+	if (reset_time_us_set_)
+		values++;
+	if (reverse_)
+		values++;
+	if (!default_preset_.empty())
+		values++;
+	if (default_fps_set_)
+		values++;
 
-	app::write_text(writer, "reverse");
-	writer.writeBoolean(reverse_);
+	writer.beginMap(values);
 
-	app::write_text(writer, "default_preset");
-	app::write_text(writer, default_preset_);
+	if (length_set_) {
+		app::write_text(writer, "length");
+		writer.writeUnsignedInt(length_);
+	}
 
-	app::write_text(writer, "default_fps");
-	writer.writeUnsignedInt(default_fps_);
+	if (reset_time_us_set_) {
+		app::write_text(writer, "reset_time_us");
+		writer.writeUnsignedInt(reset_time_us_);
+	}
+
+	if (reverse_) {
+		app::write_text(writer, "reverse");
+		writer.writeBoolean(true);
+	}
+
+	if (!default_preset_.empty()) {
+		app::write_text(writer, "default_preset");
+		app::write_text(writer, default_preset_);
+	}
+
+	if (default_fps_set_) {
+		app::write_text(writer, "default_fps");
+		writer.writeUnsignedInt(default_fps_);
+	}
 }
 
 } // namespace aurcor
