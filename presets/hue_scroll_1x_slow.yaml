@@ -2,4 +2,4 @@ desc: Hue Scroll (1x, slow)
 script: hue_scroll
 config:
   repeat/float: 1.0
-  duration/s32: 30000
+  duration/s32: 25000
