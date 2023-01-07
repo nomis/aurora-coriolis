@@ -204,6 +204,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		ARG_profile,
 		ARG_fps,
 		ARG_wait_ms,
+		ARG_wait_us,
 		ARG_repeat,
 		ARG_reverse,
 
@@ -218,6 +219,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		{MP_QSTR_profile,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 		{MP_QSTR_fps,         MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 		{MP_QSTR_wait_ms,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
+		{MP_QSTR_wait_us,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 		{MP_QSTR_repeat,      MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 		{MP_QSTR_reverse,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 
@@ -250,7 +252,8 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 	}
 
 	auto wait_us = calc_wait_us(parsed_args[ARG_fps].u_obj,
-		parsed_args[ARG_wait_ms].u_obj, set_defaults);
+		parsed_args[ARG_wait_ms].u_obj, parsed_args[ARG_wait_us].u_obj,
+		set_defaults);
 
 	if (parsed_args[ARG_repeat].u_obj != MP_ROM_NONE) {
 		if (!mp_obj_is_bool(parsed_args[ARG_repeat].u_obj))
@@ -800,36 +803,51 @@ inline mp_int_t PyModule::value_obj_to_int(mp_obj_t value) {
 	}
 }
 
-unsigned long PyModule::calc_wait_us(mp_obj_t fps, mp_obj_t wait_ms, bool set_defaults) {
+unsigned long PyModule::calc_wait_us(mp_obj_t fps_obj, mp_obj_t wait_ms_obj, mp_obj_t wait_us_obj, bool set_defaults) {
 	auto wait_us = set_defaults ? DEFAULT_WAIT_US : wait_us_;
+	unsigned int set = 0;
 
-	if (fps != MP_ROM_NONE && wait_ms != MP_ROM_NONE) {
-		mp_raise_ValueError(MP_ERROR_TEXT("can't specify both fps and wait_ms at the same time"));
-	}
-
-	if (fps != MP_ROM_NONE) {
-		if (!mp_obj_is_int(fps))
+	if (fps_obj != MP_ROM_NONE) {
+		if (!mp_obj_is_int(fps_obj))
 			mp_raise_TypeError(MP_ERROR_TEXT("fps must be an int"));
 
-		mp_int_t value = mp_obj_get_int(fps);
+		mp_int_t value = mp_obj_get_int(fps_obj);
 
 		if (value < MIN_FPS || value > MAX_FPS)
 			mp_raise_ValueError(MP_ERROR_TEXT("fps out of range"));
 
 		wait_us = 1000000 / value;
+		set++;
 	}
 
-	if (wait_ms != MP_ROM_NONE) {
-		if (!mp_obj_is_int(wait_ms))
+	if (wait_ms_obj != MP_ROM_NONE) {
+		if (!mp_obj_is_int(wait_ms_obj))
 			mp_raise_TypeError(MP_ERROR_TEXT("wait_ms must be an int"));
 
-		mp_int_t value = mp_obj_get_int(wait_ms);
+		mp_int_t value = mp_obj_get_int(wait_ms_obj);
 
 		if (value < 0 || value > MAX_WAIT_MS)
 			mp_raise_ValueError(MP_ERROR_TEXT("wait_ms out of range"));
 
 		wait_us = value * 1000;
+		set++;
 	}
+
+	if (wait_us_obj != MP_ROM_NONE) {
+		if (!mp_obj_is_int(wait_us_obj))
+			mp_raise_TypeError(MP_ERROR_TEXT("wait_us must be an int"));
+
+		mp_int_t value = mp_obj_get_int(wait_us_obj);
+
+		if (value < 0 || value > MAX_WAIT_US)
+			mp_raise_ValueError(MP_ERROR_TEXT("wait_us out of range"));
+
+		wait_us = value;
+		set++;
+	}
+
+	if (set > 1)
+		mp_raise_ValueError(MP_ERROR_TEXT("can't specify more than one of fps, wait_ms or wait_us at the same time"));
 
 	if (!set_defaults && wait_us == 0 && bus_default_fps_ > 0)
 		wait_us = 1000000 / bus_default_fps_;
@@ -842,16 +860,19 @@ void PyModule::next_wait_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwarg
 	enum {
 		ARG_fps,
 		ARG_wait_ms,
+		ARG_wait_us,
 	};
 	static const mp_arg_t allowed_args[] = {
 		{MP_QSTR_fps,         MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 		{MP_QSTR_wait_ms,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
+		{MP_QSTR_wait_us,     MP_ARG_KW_ONLY | MP_ARG_OBJ,    {u_obj: MP_ROM_NONE}},
 	};
 	mp_arg_val_t parsed_args[MP_ARRAY_SIZE(allowed_args)];
 	mp_arg_parse_all(n_args, args, kwargs, MP_ARRAY_SIZE(allowed_args),
 		allowed_args, parsed_args);
 
-	unsigned long wait_us = calc_wait_us(parsed_args[ARG_fps].u_obj, parsed_args[ARG_wait_ms].u_obj, false);
+	unsigned long wait_us = calc_wait_us(parsed_args[ARG_fps].u_obj,
+		parsed_args[ARG_wait_ms].u_obj, parsed_args[ARG_wait_us].u_obj, false);
 
 	if (wait_us && bus_written_) {
 		start_us = bus_->last_update_us() + wait_us - TIMING_DELAY_US;

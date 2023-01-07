@@ -188,6 +188,7 @@ private:
 	static constexpr size_t TIMING_DELAY_US = 10;
 	static constexpr enum led_profile_id DEFAULT_PROFILE = LED_PROFILE_NORMAL;
 	static constexpr mp_int_t MAX_WAIT_MS = 1000;
+	static constexpr mp_int_t MAX_WAIT_US = MAX_WAIT_MS * 1000;
 public:
 	static constexpr mp_int_t MIN_FPS = 1000 / MAX_WAIT_MS;
 	static constexpr mp_int_t MAX_FPS = 1000;
@@ -227,7 +228,7 @@ private:
 	static mp_int_t saturation_obj_to_int(mp_obj_t saturation);
 	static mp_int_t value_obj_to_int(mp_obj_t value);
 
-	unsigned long calc_wait_us(mp_obj_t fps, mp_obj_t wait_us, bool set_defaults);
+	unsigned long calc_wait_us(mp_obj_t fps_obj, mp_obj_t wait_ms_obj, mp_obj_t wait_us_obj, bool set_defaults);
 	void next_wait_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs,
 		uint64_t &now_us, uint64_t &start_us);
 	void next_timeofday(struct timeval &tv, uint64_t offset_us);

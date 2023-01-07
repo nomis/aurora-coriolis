@@ -64,9 +64,29 @@ static void fps_and_wait_ms() {
 	TEST_ASSERT_EQUAL_STRING(
 		"Traceback (most recent call last):\r\n"
 		"  File \"<stdin>\", line 2, in <module>\r\n"
-		"ValueError: can't specify both fps and wait_ms at the same time\r\n",
+		"ValueError: can't specify more than one of fps, wait_ms or wait_us at the same time\r\n",
 		TestMicroPython::run_script(R"python(
 import aurcor; aurcor.output_rgb([], fps=1, wait_ms=1000)
+)python")->output_.c_str());
+}
+
+static void fps_and_wait_us() {
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"ValueError: can't specify more than one of fps, wait_ms or wait_us at the same time\r\n",
+		TestMicroPython::run_script(R"python(
+import aurcor; aurcor.output_rgb([], fps=1, wait_us=1000000)
+)python")->output_.c_str());
+}
+
+static void wait_ms_and_wait_us() {
+	TEST_ASSERT_EQUAL_STRING(
+		"Traceback (most recent call last):\r\n"
+		"  File \"<stdin>\", line 2, in <module>\r\n"
+		"ValueError: can't specify more than one of fps, wait_ms or wait_us at the same time\r\n",
+		TestMicroPython::run_script(R"python(
+import aurcor; aurcor.output_rgb([], wait_ms=1000, wait_us=1000000)
 )python")->output_.c_str());
 }
 
@@ -123,16 +143,6 @@ import aurcor; aurcor.output_rgb([], wait_ms="10")
 		"TypeError: wait_ms must be an int\r\n",
 		TestMicroPython::run_script(R"python(
 import aurcor; aurcor.output_rgb([], wait_ms=10.0)
-)python")->output_.c_str());
-}
-
-static void wait_ms_below_min() {
-	TEST_ASSERT_EQUAL_STRING(
-		"Traceback (most recent call last):\r\n"
-		"  File \"<stdin>\", line 2, in <module>\r\n"
-		"ValueError: wait_ms out of range\r\n",
-		TestMicroPython::run_script(R"python(
-import aurcor; aurcor.output_rgb([], wait_ms=9)
 )python")->output_.c_str());
 }
 
@@ -705,11 +715,12 @@ int main(int argc, char *argv[]) {
 	RUN_TEST(profile_below_min);
 	RUN_TEST(profile_above_max);
 	RUN_TEST(fps_and_wait_ms);
+	RUN_TEST(fps_and_wait_us);
+	RUN_TEST(wait_ms_and_wait_us);
 	RUN_TEST(fps_not_int);
 	RUN_TEST(fps_below_min);
 	RUN_TEST(fps_above_max);
 	RUN_TEST(wait_ms_not_int);
-	RUN_TEST(wait_ms_below_min);
 	RUN_TEST(wait_ms_above_max);
 	RUN_TEST(repeat_not_bool);
 	RUN_TEST(reverse_not_bool);
