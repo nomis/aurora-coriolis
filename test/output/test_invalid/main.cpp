@@ -671,14 +671,6 @@ import aurcor; aurcor.output_exp_hsv(["a", "b", "c"])
 static void reverse_with_unsupported_objects() {
 	TEST_ASSERT_EQUAL_STRING(
 		"Traceback (most recent call last):\r\n"
-		"  File \"<stdin>\", line 2, in <module>\r\n"
-		"TypeError: object of type 'filter' has no len()\r\n",
-		TestMicroPython::run_script(R"python(
-import aurcor; aurcor.output_rgb(filter(None, [1, 2, 3, 4, 5]), reverse=True)
-)python")->output_.c_str());
-
-	TEST_ASSERT_EQUAL_STRING(
-		"Traceback (most recent call last):\r\n"
 		"  File \"<stdin>\", line 6, in <module>\r\n"
 		"TypeError: 'Test' object isn't subscriptable\r\n",
 		TestMicroPython::run_script(R"python(

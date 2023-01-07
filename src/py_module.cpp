@@ -289,6 +289,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 
 	mp_buffer_info_t bufinfo;
 	bool byte_array = false;
+	bool generator_reverse = false;
 
 	// Prevent use of unspecified array types so that they can be repurposed in the future
 	if (mp_get_buffer(values, &bufinfo, MP_BUFFER_READ)) {
@@ -327,6 +328,11 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		default:
 			mp_raise_TypeError(MP_ERROR_TEXT("unsupported array type"));
 			break;
+		}
+	} else if (mp_obj_len_maybe(values) == MP_OBJ_NULL) {
+		if (reverse && signed_rotate_length == 0) {
+			reverse = false;
+			generator_reverse = true;
 		}
 	}
 
@@ -419,24 +425,56 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		mp_obj_iter_buf_t iter_buf;
 		mp_obj_t iterable = mp_getiter(values, &iter_buf);
 
-		while (in_length > 0) {
-			mp_obj_t item = mp_iternext(iterable);
+		if (generator_reverse) {
+			out_bytes = max_bytes;
 
-			if (item == MP_OBJ_STOP_ITERATION)
-				break;
+			while (in_length > 0) {
+				mp_obj_t item = mp_iternext(iterable);
 
-			append_led(type, buffer, out_bytes, item);
-			out_bytes += BYTES_PER_LED;
-			in_length--;
+				if (item == MP_OBJ_STOP_ITERATION)
+					break;
+
+				out_bytes -= BYTES_PER_LED;
+				append_led(type, buffer, out_bytes, item);
+				in_length--;
+			}
+		} else {
+			while (in_length > 0) {
+				mp_obj_t item = mp_iternext(iterable);
+
+				if (item == MP_OBJ_STOP_ITERATION)
+					break;
+
+				append_led(type, buffer, out_bytes, item);
+				out_bytes += BYTES_PER_LED;
+				in_length--;
+			}
 		}
 	}
 
-	if (repeat && out_bytes > 0) {
-		while (out_bytes < max_bytes) {
-			size_t available_bytes = std::min(out_bytes, max_bytes - out_bytes);
+	if (generator_reverse) {
+		if (repeat && out_bytes > 0 && out_bytes < max_bytes) {
+			while (out_bytes > 0) {
+				size_t available_bytes = std::min(out_bytes, max_bytes - out_bytes);
+				assert(available_bytes > 0);
 
-			std::memcpy(&buffer[out_bytes], &buffer[0], available_bytes);
-			out_bytes += available_bytes;
+				std::memcpy(&buffer[out_bytes - available_bytes], &buffer[max_bytes - available_bytes], available_bytes);
+				out_bytes -= available_bytes;
+			}
+		}
+
+		if (out_bytes > 0)
+			std::memset(buffer, 0, out_bytes);
+
+		out_bytes = max_bytes;
+	} else {
+		if (repeat && out_bytes > 0) {
+			while (out_bytes < max_bytes) {
+				size_t available_bytes = std::min(out_bytes, max_bytes - out_bytes);
+
+				std::memcpy(&buffer[out_bytes], &buffer[0], available_bytes);
+				out_bytes += available_bytes;
+			}
 		}
 	}
 
