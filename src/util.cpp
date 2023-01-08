@@ -63,11 +63,15 @@ std::vector<std::string> list_filenames(const char *directory_name, const char *
 	auto dir = app::FS.open(directory_name);
 
 	if (dir && dir.isDirectory()) {
-		while (1) {
-			auto file = dir.openNextFile();
+		std::string path = dir.path();
+		if (path.empty() || path.back() != '/')
+			path.push_back('/');
 
-			if (file) {
-				std::string name = file.name();
+		while (1) {
+			auto file = dir.getNextFileName();
+
+			if (file.length() > path.length()) {
+				std::string name = file.c_str() + path.length();
 
 				if (name.length() > extension_len && name.find(extension, name.length() - extension_len) != std::string::npos) {
 					name.resize(name.length() - extension_len);
