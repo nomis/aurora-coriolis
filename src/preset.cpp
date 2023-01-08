@@ -340,9 +340,12 @@ Result Preset::load() {
 
 		case Result::NOT_FOUND:
 		case Result::OUT_OF_RANGE:
+			logger_.err(F("Preset file %s contains invalid data that has been ignored"), filename.c_str());
+			break;
+
 		case Result::PARSE_ERROR:
 		case Result::IO_ERROR:
-			logger_.err(F("Preset file %s contains invalid data that has been ignored"), filename.c_str());
+			logger_.err(F("Error reading preset file %s"), filename.c_str());
 			break;
 
 		case Result::OK:
