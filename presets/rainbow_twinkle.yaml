@@ -1,0 +1,10 @@
+desc: Rainbow Twinkle
+script: hue_scroll
+config:
+  repeat/float: 2
+  duration/s32: 60000
+  twinkle.enabled/bool: true
+  twinkle.mode/s32: 2
+  twinkle.number/s32: 10
+  twinkle.period/s32: 100
+  twinkle.duration/s32: 900

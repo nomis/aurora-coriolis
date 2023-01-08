@@ -17,25 +17,35 @@
 import aurcor
 import random
 
+MODE_LOWER_VALUE = const(0) # Start at maximum level, twinkling to minimum
+MODE_RAISE_VALUE = const(1) # Start at minimum level, twinkling to maximum
+MODE_RAISE_SATURATION_VALUE = const(2) # Start saturation at zero, twinkling to full; value as above
+MAX_MODE = const(2)
+
 def create_config(enabled=False):
 	return {
 		"twinkle.enabled": ("bool", enabled),
 		"twinkle.number": ("s32", 2), # Per 100 LEDs
 		"twinkle.period": ("s32", 250), # Start "number" LEDs twinkling every "period" milliseconds
 		"twinkle.duration": ("s32", 450), # Per LED twinkle duration in milliseconds
-		"twinkle.level": ("float", 0.2), # Lowest level for brightness multiplier
-		"twinkle.invert": ("bool", False), # Start at lowest level, twinkling to highest
+		"twinkle.level": ("float", 0.2), # Minimum level for brightness multiplier
+		"twinkle.mode": ("s32", MODE_LOWER_VALUE),
 	}
 
 def config_changed(config):
 	global is_enabled, length, active_count, max_count, positions, start_times
-	global level_minimum, level_range, invert, invert_off_value_multiplier
-	global interval_us, duration_us, last
+	global level_minimum, level_range, invert, inactive_value_multiplier
+	global twinkle_mode, interval_us, duration_us, last
 
 	is_enabled = config["twinkle.enabled"]
 
 	if not is_enabled:
 		return
+
+	if config["twinkle.mode"] < 0 or config["twinkle.mode"] > MAX_MODE:
+		config["twinkle.mode"] = 0
+
+	twinkle_mode = config["twinkle.mode"]
 
 	config["twinkle.number"] = max(0, min(100, config["twinkle.number"]))
 	config["twinkle.level"] = max(0.0, min(1.0, config["twinkle.level"]))
@@ -51,8 +61,7 @@ def config_changed(config):
 
 	level_minimum = config["twinkle.level"]
 	level_range = (1.0 - level_minimum)
-	invert = config["twinkle.invert"]
-	invert_off_value_multiplier = level_minimum / aurcor.MAX_VALUE
+	inactive_value_multiplier = level_minimum / aurcor.MAX_VALUE
 
 	interval_us = max(1, config["twinkle.period"] * 1000 // config["twinkle.number"])
 	duration_us = max(2, config["twinkle.duration"] * 1000)
@@ -115,35 +124,68 @@ def apply_hsv(values):
 	change(now)
 	stopped = []
 
-	for n in range(0, active_count):
-		elapsed_us = now - start_times[n]
-		if elapsed_us >= duration_us:
-			stopped.append(n)
-			continue
+	if twinkle_mode == MODE_LOWER_VALUE:
+		for n in range(0, active_count):
+			elapsed_us = now - start_times[n]
+			if elapsed_us >= duration_us:
+				stopped.append(n)
+				continue
 
-		pos = positions[n]
-		hue, saturation, value = values[pos]
+			pos = positions[n]
+			hue, saturation, value = values[pos]
 
-		if invert:
-			if elapsed_us < half_duration_us:
-				value = value / max_value * (level_minimum + level_range * ((elapsed_us + 1) / half_duration_us))
-			else:
-				value = value / max_value * (level_minimum + level_range * ((duration_us - elapsed_us) / half_duration_us))
-		else:
 			if elapsed_us < half_duration_us:
 				value = value / max_value * (level_minimum + level_range * ((half_duration_us - elapsed_us - 1) / half_duration_us))
 			else:
 				value = value / max_value * (level_minimum + level_range * ((elapsed_us - half_duration_us) / half_duration_us))
 
-		values[pos] = hue, saturation, value
+			values[pos] = hue, saturation, value
+	elif twinkle_mode == MODE_RAISE_VALUE:
+		for n in range(0, active_count):
+			elapsed_us = now - start_times[n]
+			if elapsed_us >= duration_us:
+				stopped.append(n)
+				continue
+
+			pos = positions[n]
+			hue, saturation, value = values[pos]
+
+			if elapsed_us < half_duration_us:
+				value = value / max_value * (level_minimum + level_range * ((elapsed_us + 1) / half_duration_us))
+			else:
+				value = value / max_value * (level_minimum + level_range * ((duration_us - elapsed_us) / half_duration_us))
+
+			values[pos] = hue, saturation, value
+	elif twinkle_mode == MODE_RAISE_SATURATION_VALUE:
+		for n in range(0, active_count):
+			elapsed_us = now - start_times[n]
+			if elapsed_us >= duration_us:
+				stopped.append(n)
+				continue
+
+			pos = positions[n]
+			hue, saturation, value = values[pos]
+
+			if elapsed_us < half_duration_us:
+				saturation = (elapsed_us + 1) / half_duration_us
+			else:
+				saturation = (duration_us - elapsed_us) / half_duration_us
+			value = value / max_value * (level_minimum + level_range * saturation)
+
+			values[pos] = hue, saturation, value
 
 	stop(stopped)
 
-	if invert:
+	if twinkle_mode == MODE_RAISE_VALUE:
 		for n in range(active_count, length):
 			pos = positions[n]
 			hue, saturation, value = values[pos]
-			values[pos] = hue, saturation, value * invert_off_value_multiplier
+			values[pos] = hue, saturation, value * inactive_value_multiplier
+	elif twinkle_mode == MODE_RAISE_SATURATION_VALUE:
+		for n in range(active_count, length):
+			pos = positions[n]
+			hue, _, value = values[pos]
+			values[pos] = hue, 0, value * inactive_value_multiplier
 
 	return values
 

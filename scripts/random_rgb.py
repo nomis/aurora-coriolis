@@ -91,8 +91,9 @@ while True:
 		colours_set = set(map(aurcor.rgb_to_hsv_tuple, config["colours"]))
 		colours_list = list(colours_set)
 
-		config["auto"] = max(0, min(MAX_AUTO, config["auto"]))
-		if config["count"] == 0 or config["count"] > aurcor.length():
+		if config["auto"] < 0 or config["auto"] > MAX_AUTO:
+			config["auto"] = 0
+		if config["count"] <= 0 or config["count"] > aurcor.length():
 			config["count"] = aurcor.length()
 
 		defaults = {}
