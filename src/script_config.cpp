@@ -46,6 +46,7 @@ extern "C" {
 #include <uuid/log.h>
 
 #include "app/util.h"
+#include "aurcor/led_profiles.h"
 #include "aurcor/micropython.h"
 #include "aurcor/preset.h"
 #include "aurcor/util.h"
@@ -72,6 +73,9 @@ inline ScriptConfig::Property::pointer_type ScriptConfig::Property::create(Scrip
 
 	case Type::FLOAT:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::FloatProperty(registered)};
+
+	case Type::PROFILE:
+		return ScriptConfig::Property::pointer_type{new ScriptConfig::ProfileProperty(registered)};
 
 	case Type::LIST_U16:
 		return ScriptConfig::Property::pointer_type{new ScriptConfig::ListU16Property(registered)};
@@ -113,6 +117,10 @@ void ScriptConfig::Property::Deleter::operator()(Property *property) {
 
 	case Type::FLOAT:
 		delete static_cast<ScriptConfig::FloatProperty*>(property);
+		break;
+
+	case Type::PROFILE:
+		delete static_cast<ScriptConfig::ProfileProperty*>(property);
 		break;
 
 	case Type::LIST_U16:
@@ -158,6 +166,9 @@ size_t ScriptConfig::Property::size(bool values) const {
 	case Type::FLOAT:
 		return as_float().size(values);
 
+	case Type::PROFILE:
+		return as_profile().size(values);
+
 	case Type::LIST_U16:
 		return as_u16_list().size(values);
 
@@ -189,6 +200,9 @@ bool ScriptConfig::Property::has_value(Property &property) {
 
 	case Type::FLOAT:
 		return property.as_float().has_value();
+
+	case Type::PROFILE:
+		return property.as_profile().has_value();
 
 	case Type::LIST_U16:
 		return property.as_u16_list().has_value();
@@ -224,6 +238,10 @@ bool ScriptConfig::Property::clear_default(Property &property) {
 	case Type::FLOAT:
 		property.as_float().clear_default();
 		return property.as_float().has_value();
+
+	case Type::PROFILE:
+		property.as_profile().clear_default();
+		return property.as_profile().has_value();
 
 	case Type::LIST_U16:
 		property.as_u16_list().clear_default();
@@ -264,6 +282,10 @@ bool ScriptConfig::Property::clear_value(Property &property) {
 		property.as_float().clear_value();
 		return property.as_float().registered();
 
+	case Type::PROFILE:
+		property.as_profile().clear_value();
+		return property.as_profile().registered();
+
 	case Type::LIST_U16:
 		property.as_u16_list().clear_value();
 		return property.as_u16_list().registered();
@@ -297,6 +319,8 @@ ScriptConfig::Type ScriptConfig::type_of(const std::string &type) {
 		return Type::RGB;
 	} else if (type == "float") {
 		return Type::FLOAT;
+	} else if (type == "profile") {
+		return Type::PROFILE;
 	} else if (type == "list_u16") {
 		return Type::LIST_U16;
 	} else if (type == "list_s32") {
@@ -501,6 +525,10 @@ void ScriptConfig::register_properties(mp_obj_t dict) {
 				property.as_float().set_default(mp_obj_get_float_to_f(default_value));
 				break;
 
+			case Type::PROFILE:
+				property.as_profile().set_default(static_cast<enum led_profile_id>(mp_obj_get_int(default_value)));
+				break;
+
 			case Type::LIST_U16:
 				convert_container_values(default_value, mp_obj_get_int_not_const, property.as_u16_list(), total_size);
 				break;
@@ -580,6 +608,14 @@ void ScriptConfig::populate_dict(mp_obj_t dict) {
 		case Type::FLOAT:
 			if (property.as_float().has_any()) {
 				elem->value = mp_obj_new_float_from_f(property.as_float().get_any());
+			} else {
+				elem->value = mp_const_none;
+			}
+			break;
+
+		case Type::PROFILE:
+			if (property.as_profile().has_any()) {
+				elem->value = mp_obj_new_int(property.as_profile().get_any());
 			} else {
 				elem->value = mp_const_none;
 			}
@@ -696,6 +732,7 @@ std::vector<std::string> ScriptConfig::container_values(const std::string &key) 
 		case Type::S32:
 		case Type::RGB:
 		case Type::FLOAT:
+		case Type::PROFILE:
 		case Type::INVALID:
 			break;
 		}
@@ -809,6 +846,23 @@ bool ScriptConfig::parse_float(ContainerOp op, const std::string &text, float &v
 		return false;
 
 	return std::isfinite(value);
+}
+
+bool ScriptConfig::parse_profile(ContainerOp op, const std::string &text, enum led_profile_id &value) {
+	switch (op) {
+	case ContainerOp::ADD:
+	case ContainerOp::DEL_VALUE:
+	case ContainerOp::SET_POSITION:
+		break;
+
+	case ContainerOp::DEL_POSITION:
+	case ContainerOp::MOVE_POSITION:
+	case ContainerOp::COPY_POSITION:
+	default:
+		return true;
+	}
+
+	return LEDProfiles::lc_id(text, value);
 }
 
 template <class T>
@@ -947,6 +1001,7 @@ Result ScriptConfig::modify(const std::string &key, const std::string &value,
 	case Type::S32:
 	case Type::RGB:
 	case Type::FLOAT:
+	case Type::PROFILE:
 	case Type::INVALID:
 	default:
 		return Result::OUT_OF_RANGE;
@@ -1014,6 +1069,21 @@ Result ScriptConfig::set(const std::string &key, const std::string &value) {
 
 			if (parse_float(ContainerOp::ADD, value, float_value)) {
 				property.as_float().set_value(float_value);
+			} else {
+				return Result::OUT_OF_RANGE;
+			}
+		}
+		break;
+
+	case Type::PROFILE:
+		if (value.empty()) {
+			if (!Property::clear_value(property))
+				properties_.erase(it);
+		} else {
+			enum led_profile_id profile_value;
+
+			if (parse_profile(ContainerOp::ADD, value, profile_value)) {
+				property.as_profile().set_value(profile_value);
 			} else {
 				return Result::OUT_OF_RANGE;
 			}
@@ -1096,9 +1166,9 @@ void ScriptConfig::print_container_full(Shell &shell, const std::string &key,
 }
 
 bool ScriptConfig::print(Shell &shell, const std::string *filter_key) const {
-	static const char *print_header1 = " %s Type  Default     Value";
-	static const char *print_header2 = " %s ----- ----------- -----------";
-	static const char *print_row = "%c%-*s %-5s %11s %11s";
+	static const char *print_header1 = " %s Type    Default     Value";
+	static const char *print_header2 = " %s ------- ----------- -----------";
+	static const char *print_row = "%c%-*s %-7s %11s %11s";
 	size_t max_key_length = 4;
 	std::vector<std::string> keys = filtered_keys(filter_key, max_key_length);
 	bool print_header = !filter_key;
@@ -1112,6 +1182,7 @@ bool ScriptConfig::print(Shell &shell, const std::string *filter_key) const {
 			case Type::S32:
 			case Type::RGB:
 			case Type::FLOAT:
+			case Type::PROFILE:
 				print_header = true;
 				break;
 
@@ -1191,6 +1262,19 @@ bool ScriptConfig::print(Shell &shell, const std::string *filter_key) const {
 
 				if (prop.has_value())
 					std::snprintf(value_str.data(), value_str.size(), "%11g", prop.get_value());
+				break;
+			}
+
+		case Type::PROFILE: {
+				auto prop = property.as_profile();
+
+				type = "profile";
+
+				if (prop.has_default())
+					std::snprintf(default_str.data(), default_str.size(), "%11s", LEDProfiles::lc_name(prop.get_default()));
+
+				if (prop.has_value())
+					std::snprintf(value_str.data(), value_str.size(), "%11s", LEDProfiles::lc_name(prop.get_value()));
 				break;
 			}
 
@@ -1498,6 +1582,25 @@ Result ScriptConfig::load(cbor::Reader &reader) {
 				break;
 			}
 
+		case Type::PROFILE: {
+				std::string text;
+				enum led_profile_id value;
+
+				if (!app::read_text(reader, text)) {
+					if (VERBOSE)
+						logger_.trace(F("Parse error reading key \"%s\""), key.c_str());
+					return Result::PARSE_ERROR;
+				}
+
+				if (LEDProfiles::lc_id(text, value)) {
+					property.as_profile().set_value(value);
+				} else {
+					if (VERBOSE)
+						logger_.trace(F("Ignoring invalid value \"%s\" for key \"%s\""), text.c_str(), key.c_str());
+				}
+				break;
+			}
+
 		case Type::LIST_U16:
 			if (downgrade_result(result,
 					load_container_uint(reader, key, property,
@@ -1607,6 +1710,11 @@ void ScriptConfig::save(cbor::Writer &writer) {
 				count++;
 			break;
 
+		case Type::PROFILE:
+			if (property.as_profile().has_value())
+				count++;
+			break;
+
 		case Type::LIST_U16:
 			if (property.as_u16_list().has_value())
 				count++;
@@ -1661,6 +1769,13 @@ void ScriptConfig::save(cbor::Writer &writer) {
 			if (property.as_float().has_value()) {
 				write_key(writer, key, "float");
 				writer.writeFloat(property.as_float().get_value());
+			}
+			break;
+
+		case Type::PROFILE:
+			if (property.as_profile().has_value()) {
+				write_key(writer, key, "profile");
+				app::write_text(writer, LEDProfiles::lc_name(property.as_profile().get_value()));
 			}
 			break;
 

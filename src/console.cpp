@@ -385,6 +385,7 @@ static std::vector<std::string> preset_config_property_primitive_name_value_auto
 			types[ScriptConfig::Type::S32] = true;
 			types[ScriptConfig::Type::RGB] = true;
 			types[ScriptConfig::Type::FLOAT] = true;
+			types[ScriptConfig::Type::PROFILE] = true;
 
 			auto keys = aurcor_shell.preset().config_keys(types);
 			std::sort(keys.begin(), keys.end());
@@ -402,6 +403,9 @@ static std::vector<std::string> preset_config_property_primitive_name_value_auto
 			switch (type) {
 			case ScriptConfig::Type::BOOL:
 				return {"true", "false", "t", "f", "1", "0"};
+
+			case ScriptConfig::Type::PROFILE:
+				return profile_names_autocomplete(shell, current_arguments, next_argument);
 
 			case ScriptConfig::Type::S32:
 			case ScriptConfig::Type::RGB:
@@ -1307,6 +1311,7 @@ static void edit(Shell &shell, const std::vector<std::string> &arguments) {
 	case ScriptConfig::Type::S32:
 	case ScriptConfig::Type::RGB:
 	case ScriptConfig::Type::FLOAT:
+	case ScriptConfig::Type::PROFILE:
 		shell.printfln(F("Config property \"%s\" is not a list or a set"), name.c_str());
 		break;
 

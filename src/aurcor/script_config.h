@@ -38,6 +38,7 @@ extern "C" {
 #include <uuid/console.h>
 #include <uuid/log.h>
 
+#include "led_profiles.h"
 #include "util.h"
 
 #ifndef PSTR_ALIGN
@@ -57,6 +58,7 @@ public:
 		S32,
 		RGB,
 		FLOAT,
+		PROFILE,
 
 		LIST_U16,
 		LIST_S32,
@@ -74,6 +76,7 @@ public:
 	class BoolProperty;
 	class S32Property;
 	class FloatProperty;
+	class ProfileProperty;
 	class ListU16Property;
 	class ListS32Property;
 	class SetU16Property;
@@ -108,6 +111,7 @@ public:
 		inline BoolProperty& as_bool() { return static_cast<BoolProperty&>(*this); }
 		inline S32Property& as_s32() { return static_cast<S32Property&>(*this); }
 		inline FloatProperty& as_float() { return static_cast<FloatProperty&>(*this); }
+		inline ProfileProperty& as_profile() { return static_cast<ProfileProperty&>(*this); }
 		inline ListU16Property& as_u16_list() { return static_cast<ListU16Property&>(*this); }
 		inline ListS32Property& as_s32_list() { return static_cast<ListS32Property&>(*this); }
 		inline SetU16Property& as_u16_set() { return static_cast<SetU16Property&>(*this); }
@@ -116,6 +120,7 @@ public:
 		inline const BoolProperty& as_bool() const { return static_cast<const BoolProperty&>(*this); }
 		inline const S32Property& as_s32() const { return static_cast<const S32Property&>(*this); }
 		inline const FloatProperty& as_float() const { return static_cast<const FloatProperty&>(*this); }
+		inline const ProfileProperty& as_profile() const { return static_cast<const ProfileProperty&>(*this); }
 		inline const ListU16Property& as_u16_list() const { return static_cast<const ListU16Property&>(*this); }
 		inline const ListS32Property& as_s32_list() const { return static_cast<const ListS32Property&>(*this); }
 		inline const SetU16Property& as_u16_set() const { return static_cast<const SetU16Property&>(*this); }
@@ -229,6 +234,33 @@ public:
 	};
 
 	static_assert(sizeof(FloatProperty) <= 3 * sizeof(uintptr_t), "FloatProperty is minimum size");
+
+	class ProfileProperty: public Property {
+	public:
+		ProfileProperty(bool registered) : Property(Type::PROFILE, registered) {}
+
+		inline enum led_profile_id get_default() const { return default_; }
+		inline void set_default(enum led_profile_id value) { default_ = value; default_set(); }
+
+		inline enum led_profile_id get_value() const { return value_; }
+		inline void set_value(enum led_profile_id value) { value_ = value; value_set(); }
+
+		inline enum led_profile_id get_any() const { if (has_value()) { return get_value(); } else { return get_default(); } }
+
+		using Property::has_default;
+		using Property::clear_default;
+		using Property::has_value;
+		using Property::clear_value;
+		using Property::has_any;
+
+		size_t size(bool values) const { return rounded_sizeof<ProfileProperty>(); }
+
+	private:
+		enum led_profile_id default_;
+		enum led_profile_id value_;
+	};
+
+	static_assert(sizeof(ProfileProperty) <= 3 * sizeof(uintptr_t), "ProfileProperty is minimum size");
 
 	class ListU16Property: public Property {
 	public:
@@ -388,6 +420,7 @@ private:
 	static bool parse_s32(ContainerOp op, const std::string &text, int32_t &value);
 	static bool parse_rgb(ContainerOp op, const std::string &text, int32_t &value);
 	static bool parse_float(ContainerOp op, const std::string &text, float &value);
+	static bool parse_profile(ContainerOp op, const std::string &text, enum led_profile_id &value);
 
 	template <class T, class V>
 	static Result modify_container(T &container, V value, ContainerOp op, size_t index1, size_t index2);
