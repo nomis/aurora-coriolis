@@ -240,10 +240,24 @@ public:
 		ProfileProperty(bool registered) : Property(Type::PROFILE, registered) {}
 
 		inline enum led_profile_id get_default() const { return default_; }
-		inline void set_default(enum led_profile_id value) { default_ = value; default_set(); }
+		inline void set_default(enum led_profile_id value) {
+			if (LEDProfiles::valid_id(value)) {
+				default_ = value;
+				default_set();
+			} else {
+				clear_default();
+			}
+		}
 
 		inline enum led_profile_id get_value() const { return value_; }
-		inline void set_value(enum led_profile_id value) { value_ = value; value_set(); }
+		inline void set_value(enum led_profile_id value) {
+			if (LEDProfiles::valid_id(value)) {
+				value_ = value;
+				value_set();
+			} else {
+				clear_value();
+			}
+		}
 
 		inline enum led_profile_id get_any() const { if (has_value()) { return get_value(); } else { return get_default(); } }
 

@@ -244,8 +244,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 
 		mp_int_t value = mp_obj_get_int(parsed_args[ARG_profile].u_obj);
 
-		if (value < (mp_int_t)LEDProfiles::MIN_ID
-				|| value > (mp_int_t)LEDProfiles::MAX_ID)
+		if (!LEDProfiles::valid_id(static_cast<enum led_profile_id>(value)))
 			mp_raise_ValueError(MP_ERROR_TEXT("invalid profile"));
 
 		profile = (enum led_profile_id)value;

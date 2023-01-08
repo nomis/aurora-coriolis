@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,9 @@ public:
 	static std::vector<std::string> lc_names();
 	static const char* lc_name(enum led_profile_id id);
 	static bool lc_id(const std::string &name, enum led_profile_id &id);
+	static inline bool valid_id(enum led_profile_id id) {
+		return id >= MIN_ID && id <= MAX_ID;
+	}
 
 	LEDProfile& get(enum led_profile_id id);
 	Result load(enum led_profile_id id);
