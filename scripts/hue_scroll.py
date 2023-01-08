@@ -16,11 +16,15 @@
 
 import aurcor
 
-aurcor.register_config({
+import twinkle
+
+config = {
 	"repeat": ("float", 1),
 	"duration": ("s32", 25000),
 	"real_time": ("bool", False),
-})
+}
+config.update(twinkle.create_config())
+aurcor.register_config(config)
 
 def generate():
 	step = config["repeat"] / aurcor.length()
@@ -35,8 +39,8 @@ def generate():
 	else:
 		hue = 0
 
-	while True:
-		yield hue
+	for n in range(0, aurcor.length()):
+		yield [hue, aurcor.MAX_SATURATION, aurcor.MAX_VALUE]
 		hue += step
 
 config = {}
@@ -45,4 +49,10 @@ while True:
 	if aurcor.config(config):
 		if config["duration"] == 1:
 			config["duration"] = 2
-	aurcor.output_exp_hsv(generate())
+
+		twinkle.config_changed(config)
+
+	if twinkle.enabled():
+		aurcor.output_exp_hsv(twinkle.apply_hsv(list(generate())))
+	else:
+		aurcor.output_exp_hsv(list(generate()))

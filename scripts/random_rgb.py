@@ -19,6 +19,7 @@ import aurcor
 import random
 
 import sweep
+import twinkle
 
 FROM_SET = const(0)
 AUTO_TYPE1 = const(1)
@@ -32,6 +33,7 @@ config = {
 	"duration": ("s32", 10000),
 }
 config.update(sweep.create_config())
+config.update(twinkle.create_config())
 aurcor.register_config(config)
 
 def generate_from_set(without=None):
@@ -112,6 +114,7 @@ while True:
 		fill()
 
 		sweep.config_changed(config)
+		twinkle.config_changed(config)
 		aurcor.output_defaults(**sweep.apply_default_config(defaults))
 
 	change()
@@ -120,5 +123,7 @@ while True:
 			aurcor.output_hsv(sweep.apply_mask_hsv(buffer))
 		else:
 			sweep.sleep(update_us)
+	elif twinkle.enabled():
+		aurcor.output_hsv(twinkle.apply_hsv(buffer))
 	else:
 		aurcor.output_hsv(buffer)

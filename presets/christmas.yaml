@@ -4,4 +4,3 @@ config:
   colours/set_rgb:
   - 0xFF0000
   - 0x00FF00
-  duration/s32: 10000

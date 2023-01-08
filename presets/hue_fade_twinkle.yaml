@@ -1,0 +1,5 @@
+desc: Hue Fade (Twinkle)
+script: hue_fade
+config:
+  duration/s32: 30000
+  twinkle.enabled/bool: true

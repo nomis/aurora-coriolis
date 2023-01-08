@@ -1,0 +1,8 @@
+desc: White (Twinkle)
+script: static_rgb
+config:
+  colours/list_rgb:
+  - 0xFFFFFF
+  profile/profile: hdr
+  twinkle.enabled/bool: true
+  twinkle.invert/bool: true

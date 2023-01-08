@@ -1,0 +1,6 @@
+desc: Hue Scroll (2x, medium, twinkle)
+script: hue_scroll
+config:
+  repeat/float: 2.0
+  duration/s32: 12500
+  twinkle.enabled/bool: true

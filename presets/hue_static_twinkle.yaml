@@ -1,0 +1,5 @@
+desc: Hue Static (Twinkle)
+script: hue_scroll
+config:
+  duration/s32: 0
+  twinkle.enabled/bool: true

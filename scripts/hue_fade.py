@@ -16,6 +16,7 @@
 
 import aurcor
 
+import twinkle
 import sweep
 
 config = {
@@ -23,6 +24,7 @@ config = {
 	"real_time": ("bool", False),
 }
 config.update(sweep.create_config())
+config.update(twinkle.create_config())
 aurcor.register_config(config)
 
 while True:
@@ -35,6 +37,7 @@ while True:
 			update_us = 0
 
 		sweep.config_changed(config)
+		twinkle.config_changed(config)
 		aurcor.output_defaults(**sweep.apply_default_config())
 
 	if config["real_time"]:
@@ -49,5 +52,7 @@ while True:
 			aurcor.output_exp_hsv(sweep.apply_mask_hsv([[hue, aurcor.MAX_SATURATION, aurcor.MAX_VALUE]] * aurcor.length()))
 		else:
 			sweep.sleep(update_us)
+	elif twinkle.enabled():
+		aurcor.output_exp_hsv(twinkle.apply_hsv([[hue, aurcor.MAX_SATURATION, aurcor.MAX_VALUE]] * aurcor.length()))
 	else:
 		aurcor.output_exp_hsv([hue], repeat=True)

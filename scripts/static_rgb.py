@@ -17,9 +17,14 @@
 import aurcor
 
 import sweep
+import twinkle
 
-config = {"colours": ("list_rgb", [0])}
+config = {
+	"colours": ("list_rgb", [0]),
+	"profile": ("profile", aurcor.profiles.NORMAL),
+}
 config.update(sweep.create_config())
+config.update(twinkle.create_config())
 aurcor.register_config(config)
 
 def repeat_colours():
@@ -33,17 +38,20 @@ def repeat_colours():
 while True:
 	if aurcor.config(config):
 		sweep.config_changed(config)
+		twinkle.config_changed(config)
 
-		if sweep.enabled():
+		if sweep.enabled() or twinkle.enabled():
 			repeat_colours()
 			colours = list(map(aurcor.rgb_to_hsv_tuple, config["colours"]))
 
-		aurcor.output_defaults(**sweep.apply_default_config())
+		aurcor.output_defaults(**sweep.apply_default_config({"profile": config["profile"]}))
 
 	if sweep.enabled():
 		if sweep.refresh():
 			aurcor.output_hsv(sweep.apply_mask_hsv(colours))
 		else:
 			sweep.sleep()
+	elif twinkle.enabled():
+		aurcor.output_hsv(twinkle.apply_hsv(colours))
 	else:
 		aurcor.output_rgb(config["colours"], repeat=True)
