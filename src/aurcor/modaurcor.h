@@ -169,7 +169,7 @@ public:
 
 	static mp_obj_t rgb_to_hsv_tuple(size_t n_args, const mp_obj_t *args, bool exp);
 
-	PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset);
+	PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus, Preset &preset);
 
 	mp_obj_t length();
 	mp_obj_t default_fps();
@@ -237,7 +237,7 @@ private:
 	std::shared_ptr<LEDBus> bus_;
 	size_t bus_length_;
 	unsigned int bus_default_fps_;
-	std::shared_ptr<Preset> preset_;
+	Preset &preset_;
 
 	enum led_profile_id profile_{DEFAULT_PROFILE};
 	long wait_us_{DEFAULT_WAIT_US};

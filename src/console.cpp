@@ -1199,6 +1199,24 @@ static void show_script(Shell &shell) {
 	auto &preset = aurcor_shell.preset();
 
 	shell.printfln(F("Script:      %s"), preset.script().c_str());
+
+	auto scripts = preset.scripts_imported();
+
+	if (!scripts.empty()) {
+		bool first = true;
+
+		shell.print(F("Imported:    "));
+
+		std::sort(scripts.begin(), scripts.end());
+		for (auto &script : scripts) {
+			if (!first)
+				shell.print(", ");
+			shell.print(script.c_str());
+			first = false;
+		}
+
+		shell.println();
+	}
 };
 
 __attribute__((noinline))

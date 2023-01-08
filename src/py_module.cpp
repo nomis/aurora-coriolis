@@ -152,9 +152,9 @@ namespace aurcor {
 namespace micropython {
 
 PyModule::PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus,
-		std::shared_ptr<Preset> preset) : led_buffer_(led_buffer),
-		bus_(std::move(bus)), bus_length_(bus_->length()),
-		bus_default_fps_(bus_->default_fps()), preset_(std::move(preset)) {
+		Preset &preset) : led_buffer_(led_buffer), bus_(std::move(bus)),
+		bus_length_(bus_->length()), bus_default_fps_(bus_->default_fps()),
+		preset_(preset) {
 }
 
 inline PyModule& PyModule::current() {
@@ -170,12 +170,12 @@ mp_obj_t PyModule::default_fps() {
 }
 
 mp_obj_t PyModule::register_config(mp_obj_t dict) {
-	preset_->register_config(dict);
+	preset_.register_config(dict);
 	return MP_ROM_NONE;
 }
 
 mp_obj_t PyModule::config(mp_obj_t dict) {
-	bool ret = preset_->populate_config(dict);
+	bool ret = preset_.populate_config(dict);
 	size_t bus_length = bus_->length();
 	unsigned int bus_default_fps = bus_->default_fps();
 
@@ -488,7 +488,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 			mp_hal_delay_us(start_us - now_us);
 	}
 
-	bus_->write(buffer, out_bytes, preset_->reverse());
+	bus_->write(buffer, out_bytes, preset_.reverse());
 	bus_written_ = true;
 
 	if (!config_used_) {

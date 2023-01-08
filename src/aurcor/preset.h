@@ -23,6 +23,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 extern "C" {
@@ -108,6 +109,9 @@ public:
 	Result remove();
 
 	void restart_script();
+	void script_imported(const std::string &script);
+	std::vector<std::string> scripts_imported() const;
+	bool uses_scripts(const std::unordered_set<std::string> &scripts) const;
 	void detach();
 
 	void loop();
@@ -130,6 +134,7 @@ private:
 	App &app_;
 	std::shared_ptr<LEDBus> bus_;
 	std::shared_ptr<MicroPythonFile> mp_;
+	std::unordered_set<std::string> scripts_imported_;
 	bool running_{false};
 	uint64_t stop_time_ms_{0};
 

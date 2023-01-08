@@ -320,7 +320,7 @@ void App::refresh_files() {
 		auto &preset = *bus_preset.second;
 
 		if (refresh_presets_.find(preset.name()) == refresh_presets_.end()
-				&& refresh_scripts_.find(preset.script()) != refresh_scripts_.end()) {
+				&& preset.uses_scripts(refresh_scripts_)) {
 			logger_.trace(F("Restart script \"%s\" for \"%s\" on %s[%s]"),
 				preset.script().c_str(), preset.name().c_str(),
 				bus.type(), bus.name());

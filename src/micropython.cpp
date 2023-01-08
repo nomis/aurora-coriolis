@@ -67,6 +67,7 @@ extern "C" {
 #include "aurcor/memory_pool.h"
 #include "aurcor/mp_print.h"
 #include "aurcor/mp_reader.h"
+#include "aurcor/preset.h"
 #include "aurcor/util.h"
 
 #ifndef PSTR_ALIGN
@@ -104,7 +105,8 @@ MicroPython::MicroPython(const std::string &name,
 		heap_(std::move(heaps_->allocate())),
 		pystack_(std::move(pystacks_->allocate())),
 		ledbuf_(std::move(ledbufs_->allocate())),
-		modaurcor_(ledbuf_.get(), std::move(bus), std::move(preset)) {
+		preset_(std::move(preset)),
+		modaurcor_(ledbuf_.get(), std::move(bus), *preset_) {
 	system_exit_exc_.base.type = &mp_type_SystemExit;
 	system_exit_exc_.traceback_alloc = 0;
 	system_exit_exc_.traceback_len = 0;
@@ -673,8 +675,38 @@ extern "C" ::mp_import_stat_t mp_import_stat(const char *path) {
 }
 
 extern "C" void mp_reader_new_file(::mp_reader_t *reader, const char *filename) {
-    *reader = aurcor::micropython::Reader::from_file(
-		aurcor::MicroPython::script_filename(filename).c_str());
+	return MicroPython::current().mp_reader_new_file(reader, filename);
+}
+
+void aurcor::MicroPython::mp_reader_new_file(::mp_reader_t *reader, const char *filename) {
+	micropython_nlr_begin();
+
+	auto script_name = app::normalise_filename(filename);
+	auto path = aurcor::MicroPython::script_filename(filename);
+
+	if (script_name.length() > aurcor::MicroPython::FILENAME_EXT_LEN
+			&& script_name.rfind(aurcor::MicroPython::FILENAME_EXT,
+				script_name.length() - aurcor::MicroPython::FILENAME_EXT_LEN) != std::string::npos) {
+		if (script_name[0] != '/') {
+			script_name.resize(script_name.length() - aurcor::MicroPython::FILENAME_EXT_LEN);
+		} else {
+			script_name = "";
+		}
+	} else {
+		script_name = "";
+	}
+
+	micropython_nlr_try();
+
+	if (script_name.empty())
+		mp_raise_OSError(MP_ENOENT);
+
+    *reader = aurcor::micropython::Reader::from_file(path.c_str());
+
+	preset_->script_imported(script_name);
+
+	micropython_nlr_finally();
+	micropython_nlr_end();
 }
 
 extern "C" int mp_hal_stdin_rx_chr(void) {

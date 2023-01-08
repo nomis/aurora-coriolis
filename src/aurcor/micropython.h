@@ -107,6 +107,7 @@ public:
 
 	static constexpr const char *DIRECTORY_NAME = "/scripts";
 	static constexpr const char *FILENAME_EXT = ".mpy";
+	static constexpr size_t FILENAME_EXT_LEN = std::char_traits<char>::length(FILENAME_EXT);
 
 	static void setup(size_t pool_count);
 	static std::string script_filename(const char *path);
@@ -162,6 +163,9 @@ protected:
 	friend void ::mp_hal_stdout_tx_strn(const char *str, size_t len);
 	virtual void mp_hal_stdout_tx_strn(const uint8_t *str, size_t len);
 
+	friend void ::mp_reader_new_file(::mp_reader_t *reader, const char *filename);
+	void mp_reader_new_file(::mp_reader_t *reader, const char *filename);
+
 	virtual uuid::log::Level modulogging_effective_level();
 	virtual std::unique_ptr<aurcor::micropython::Print> modulogging_print(uuid::log::Level level);
 
@@ -213,6 +217,7 @@ private:
 
 	std::mutex atomic_section_mutex_;
 
+	std::shared_ptr<Preset> preset_;
 	micropython::PyModule modaurcor_;
 	micropython::ULogging modulogging_;
 };

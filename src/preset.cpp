@@ -540,6 +540,7 @@ void Preset::loop() {
 			script_.c_str(), bus_->type(), bus_->name());
 	}
 
+	scripts_imported_.clear();
 	mp_ = std::make_shared<MicroPythonFile>(script_, bus_, shared_from_this());
 	app_.attach(bus_, mp_);
 
@@ -572,6 +573,38 @@ void Preset::restart_script() {
 
 	stop_time_ms_ = 0;
 	running_ = false;
+}
+
+void Preset::script_imported(const std::string &script) {
+	std::unique_lock data_lock{data_mutex_};
+	if (script != script_)
+		scripts_imported_.insert(script);
+}
+
+std::vector<std::string> Preset::scripts_imported() const {
+	std::shared_lock data_lock{data_mutex_};
+	return {scripts_imported_.begin(), scripts_imported_.end()};
+}
+
+bool Preset::uses_scripts(const std::unordered_set<std::string> &scripts) const {
+	std::shared_lock data_lock{data_mutex_};
+
+	if (scripts.find(script_) != scripts.end())
+		return true;
+
+	if (scripts.size() >= scripts_imported_.size()) {
+		for (auto &script : scripts_imported_) {
+			if (scripts.find(script) != scripts.end())
+				return true;
+		}
+	} else {
+		for (auto &script : scripts) {
+			if (scripts_imported_.find(script) != scripts_imported_.end())
+				return true;
+		}
+	}
+
+	return false;
 }
 
 /*
