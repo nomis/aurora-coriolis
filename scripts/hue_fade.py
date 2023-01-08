@@ -25,12 +25,14 @@ config = {
 config.update(sweep.create_config())
 aurcor.register_config(config)
 
-last_hue = None
 while True:
 	if aurcor.config(config):
 		config["duration"] = max(2, config["duration"])
 
-		interval_us = max(1, round((config["duration"] * 1000) / aurcor.EXP_HUE_RANGE))
+		if aurcor.default_fps():
+			update_us = 1000000 // aurcor.default_fps()
+		else:
+			update_us = 0
 
 		sweep.config_changed(config)
 		aurcor.output_defaults(**sweep.apply_default_config())
@@ -43,11 +45,9 @@ while True:
 	hue = aurcor.EXP_HUE_RANGE * (next_output_ms % config["duration"]) // config["duration"]
 
 	if sweep.enabled():
-		if sweep.refresh() or hue != last_hue:
+		if sweep.refresh():
 			aurcor.output_exp_hsv(sweep.apply_mask_hsv([[hue, aurcor.MAX_SATURATION, aurcor.MAX_VALUE]] * aurcor.length()))
 		else:
-			sweep.sleep(interval_us)
+			sweep.sleep(update_us)
 	else:
 		aurcor.output_exp_hsv([hue], repeat=True)
-
-	last_hue = hue

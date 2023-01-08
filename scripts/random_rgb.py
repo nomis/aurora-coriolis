@@ -83,9 +83,6 @@ def change():
 	if now - last >= interval_us:
 		replace(min((now - last) // interval_us * config["count"], len(buffer)))
 		last = now
-		return True
-
-	return False
 
 while True:
 	if aurcor.config(config):
@@ -108,16 +105,20 @@ while True:
 			defaults["profile"] = aurcor.profiles.NORMAL
 
 		interval_us = max(1, config["count"] * config["duration"] * 1000 // aurcor.length())
+		if aurcor.default_fps():
+			update_us = 1000000 // aurcor.default_fps()
+		else:
+			update_us = 0
 		fill()
 
 		sweep.config_changed(config)
 		aurcor.output_defaults(**sweep.apply_default_config(defaults))
 
-	changed = change()
+	change()
 	if sweep.enabled():
-		if sweep.refresh() or changed:
+		if sweep.refresh():
 			aurcor.output_hsv(sweep.apply_mask_hsv(buffer))
 		else:
-			sweep.sleep(interval_us)
+			sweep.sleep(update_us)
 	else:
 		aurcor.output_hsv(buffer)
