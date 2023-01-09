@@ -177,13 +177,11 @@ def apply_hsv(values):
 	stop(stopped)
 
 	if twinkle_mode == MODE_RAISE_VALUE:
-		for n in range(active_count, length):
-			pos = positions[n]
+		for pos in positions[active_count:]:
 			hue, saturation, value = values[pos]
 			values[pos] = hue, saturation, value * inactive_value_multiplier
 	elif twinkle_mode == MODE_RAISE_SATURATION_VALUE:
-		for n in range(active_count, length):
-			pos = positions[n]
+		for pos in positions[active_count:]:
 			hue, _, value = values[pos]
 			values[pos] = hue, 0, value * inactive_value_multiplier
 

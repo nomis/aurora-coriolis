@@ -5,4 +5,4 @@ config:
   - 0xFFFFFF
   profile/profile: hdr
   twinkle.enabled/bool: true
-  twinkle.invert/bool: true
+  twinkle.mode/s32: 1
