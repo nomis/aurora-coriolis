@@ -113,9 +113,11 @@ void Download::run() {
 
 		changed_ = std::make_unique<Refresh>();
 
+		uint64_t start = current_time_us();
 		auto urls = client_.list_urls(url_, [&types] (const std::string &path) -> bool {
 			return types.find(path) != types.end();
 		});
+		download_time_ += current_time_us() - start;
 
 		for (auto &url : urls) {
 			auto type = types.find(url);
@@ -125,7 +127,7 @@ void Download::run() {
 			}
 		}
 
-		logger_.notice("Download complete");
+		logger_.notice("Download complete (http=%" PRIu64 "ms, filesystem=%" PRIu64 "ms)", download_time_ / 1000, update_time_ / 1000);
 
 		app_.refresh_files(std::move(changed_));
 		done_ = true;
@@ -146,9 +148,11 @@ std::string Download::filename_without_extension(const std::string &filename, co
 void Download::download_buses(const std::string &path) {
 	logger_.debug("Download bus config");
 
+	uint64_t start = current_time_us();
 	auto urls = client_.list_urls(url_ + path, [this] (const std::string &path) -> bool {
 		return !!app_.bus(filename_without_extension(path, LEDBusConfig::FILENAME_EXT));
 	});
+	download_time_ += current_time_us() - start;
 
 	for (auto &url : urls) {
 		logger_.trace("Download bus config: %s", url.c_str());
@@ -160,10 +164,12 @@ void Download::download_buses(const std::string &path) {
 void Download::download_presets(const std::string &path) {
 	logger_.debug("Download presets");
 
+	uint64_t start = current_time_us();
 	auto urls = client_.list_urls(url_ + path, [] (const std::string &path) -> bool {
 		auto name = filename_without_extension(path, Preset::FILENAME_EXT);
 		return allowed_file_name(name) && name.length() < Preset::MAX_NAME_LENGTH;
 	});
+	download_time_ += current_time_us() - start;
 
 	for (auto &url : urls) {
 		logger_.trace("Download preset: %s", url.c_str());
@@ -192,12 +198,14 @@ bool Download::bus_and_profile_from_filename(const std::string &path,
 void Download::download_profiles(const std::string &path) {
 	logger_.debug("Download bus profiles");
 
+	uint64_t start = current_time_us();
 	auto urls = client_.list_urls(url_ + path, [this] (const std::string &path) -> bool {
 		std::string bus_name;
 		enum led_profile_id profile_id;
 
 		return bus_and_profile_from_filename(path, bus_name, profile_id);
 	});
+	download_time_ += current_time_us() - start;
 
 	for (auto &url : urls) {
 		logger_.trace("Download bus profile: %s", url.c_str());
@@ -214,10 +222,12 @@ void Download::download_profiles(const std::string &path) {
 void Download::download_scripts(const std::string &path) {
 	logger_.debug("Download scripts");
 
+	uint64_t start = current_time_us();
 	auto urls = client_.list_urls(url_ + path, [] (const std::string &path) -> bool {
 		auto name = filename_without_extension(path, MicroPython::FILENAME_EXT);
 		return allowed_file_name(name) && name.length() < MicroPythonFile::MAX_NAME_LENGTH;
 	});
+	download_time_ += current_time_us() - start;
 
 	for (auto &url : urls) {
 		logger_.trace("Download script: %s", url.c_str());
@@ -251,12 +261,16 @@ ssize_t Download::download_to_buffer(const std::string &url) {
 }
 
 bool Download::update_file(const std::string &filename, const std::string &url) {
+	uint64_t start = current_time_us();
 	ssize_t len = download_to_buffer(url);
 	if (len < 0)
 		return false;
+	download_time_ += current_time_us() - start;
 
 	std::unique_lock lock{App::file_mutex()};
 	bool changed = false;
+
+	start = current_time_us();
 
 	if (len > 0) {
 		auto file = FS.open(filename.c_str());
@@ -308,6 +322,7 @@ bool Download::update_file(const std::string &filename, const std::string &url) 
 		}
 	}
 
+	update_time_ += current_time_us() - start;
 
 	return changed;
 }

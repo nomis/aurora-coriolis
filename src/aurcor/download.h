@@ -70,6 +70,8 @@ private:
 	std::thread thread_;
 	std::unique_ptr<MemoryBlock> buffer_;
 	WebClient client_;
+	uint64_t download_time_{0};
+	uint64_t update_time_{0};
 	std::unique_ptr<Refresh> changed_;
 	std::atomic<bool> done_{false};
 };
