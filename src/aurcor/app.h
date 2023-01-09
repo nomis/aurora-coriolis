@@ -31,6 +31,7 @@
 
 #include "../app/app.h"
 #include "led_profiles.h"
+#include "refresh.h"
 
 namespace aurcor {
 
@@ -42,6 +43,7 @@ class Preset;
 class App: public app::App {
 public:
 	App();
+	~App();
 	void init() override;
 	void start() override;
 	void loop() override;
@@ -61,10 +63,7 @@ public:
 	void restart_script(const std::shared_ptr<LEDBus> &bus);
 
 	bool download(const std::string &url);
-	void refresh_files(const std::unordered_set<std::string> &buses,
-		const std::unordered_set<std::string> &presets,
-		const std::unordered_set<std::pair<std::string,enum led_profile_id>,BusLEDProfileHash> &profiles,
-		const std::unordered_set<std::string> &scripts);
+	void refresh_files(std::unique_ptr<Refresh> &&refresh);
 
 private:
 	App(App&&) = delete;
@@ -81,14 +80,10 @@ private:
 	std::unordered_map<std::string,std::shared_ptr<LEDBus>> buses_;
 	std::unordered_map<std::shared_ptr<LEDBus>,std::shared_ptr<MicroPython>> mps_;
 	std::unordered_map<std::shared_ptr<LEDBus>,std::shared_ptr<Preset>> presets_;
-	std::shared_ptr<Download> download_;
+	std::unique_ptr<Download> download_;
 
 	std::mutex refresh_mutex_;
-	bool refresh_{false};
-	std::unordered_set<std::string> refresh_buses_;
-	std::unordered_set<std::string> refresh_presets_;
-	std::unordered_set<std::pair<std::string,enum led_profile_id>,BusLEDProfileHash> refresh_profiles_;
-	std::unordered_set<std::string> refresh_scripts_;
+	std::unique_ptr<Refresh> refresh_;
 };
 
 } // namespace aurcor

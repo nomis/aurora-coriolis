@@ -31,6 +31,7 @@
 #include "aurcor/led_bus.h"
 #include "aurcor/micropython.h"
 #include "aurcor/preset.h"
+#include "aurcor/refresh.h"
 #include "aurcor/uart_led_bus.h"
 #include "aurcor/web_client.h"
 
@@ -39,7 +40,9 @@ namespace aurcor {
 std::shared_mutex App::file_mutex_;
 
 App::App() {
+}
 
+App::~App() {
 }
 
 void App::init() {
@@ -260,27 +263,15 @@ bool App::download(const std::string &url) {
 	if (download_)
 		return false;
 
-	download_ = std::make_shared<Download>(*this, url);
+	download_ = std::make_unique<Download>(*this, url);
 	if (!download_->start())
 		download_.reset();
 	return true;
 }
 
-void App::refresh_files(const std::unordered_set<std::string> &buses,
-		const std::unordered_set<std::string> &presets,
-		const std::unordered_set<std::pair<std::string,enum led_profile_id>,BusLEDProfileHash> &profiles,
-		const std::unordered_set<std::string> &scripts) {
+void App::refresh_files(std::unique_ptr<Refresh> &&refresh) {
 	std::lock_guard lock{refresh_mutex_};
-
-	refresh_buses_ = buses;
-	refresh_presets_ = presets;
-	refresh_profiles_ = profiles;
-	refresh_scripts_ = scripts;
-
-	refresh_ = !refresh_buses_.empty()
-		|| !refresh_presets_.empty()
-		|| !refresh_profiles_.empty()
-		|| !refresh_scripts_.empty();
+	refresh_ = std::move(refresh);
 }
 
 void App::refresh_files() {
@@ -289,7 +280,7 @@ void App::refresh_files() {
 	if (!refresh_)
 		return;
 
-	for (auto &bus_name : refresh_buses_) {
+	for (auto &bus_name : refresh_->buses) {
 		auto it = buses_.find(bus_name);
 
 		if (it != buses_.end()) {
@@ -300,7 +291,7 @@ void App::refresh_files() {
 		}
 	}
 
-	for (auto &entry : refresh_profiles_) {
+	for (auto &entry : refresh_->profiles) {
 		auto it = buses_.find(entry.first);
 
 		if (it != buses_.end()) {
@@ -319,8 +310,8 @@ void App::refresh_files() {
 		auto &bus = *bus_preset.first;
 		auto &preset = *bus_preset.second;
 
-		if (refresh_presets_.find(preset.name()) == refresh_presets_.end()
-				&& preset.uses_scripts(refresh_scripts_)) {
+		if (refresh_->presets.find(preset.name()) == refresh_->presets.end()
+				&& preset.uses_scripts(refresh_->scripts)) {
 			logger_.trace(F("Restart script \"%s\" for \"%s\" on %s[%s]"),
 				preset.script().c_str(), preset.name().c_str(),
 				bus.type(), bus.name());
@@ -328,12 +319,10 @@ void App::refresh_files() {
 		}
 	}
 
-	refresh_presets(refresh_presets_);
+	refresh_presets(refresh_->presets);
 
-	refresh_buses_ = {};
-	refresh_presets_ = {};
-	refresh_profiles_ = {};
-	refresh_scripts_ = {};
+	refresh_.reset();
+	logger_.notice("Refresh complete");
 }
 
 } // namespace aurcor

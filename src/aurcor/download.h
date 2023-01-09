@@ -33,7 +33,9 @@
 
 namespace aurcor {
 
-class Download: public std::enable_shared_from_this<Download> {
+class Refresh;
+
+class Download {
 public:
 	static constexpr size_t MAX_FILE_SIZE = 64 * 1024;
 	static constexpr size_t TASK_STACK_SIZE = 4 * 1024;
@@ -68,10 +70,7 @@ private:
 	std::thread thread_;
 	std::unique_ptr<MemoryBlock> buffer_;
 	WebClient client_;
-	std::unordered_set<std::string> changed_buses_;
-	std::unordered_set<std::string> changed_presets_;
-	std::unordered_set<std::pair<std::string,enum led_profile_id>,BusLEDProfileHash> changed_profiles_;
-	std::unordered_set<std::string> changed_scripts_;
+	std::unique_ptr<Refresh> changed_;
 	std::atomic<bool> done_{false};
 };
 

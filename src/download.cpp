@@ -39,6 +39,7 @@
 #include "aurcor/memory_pool.h"
 #include "aurcor/micropython.h"
 #include "aurcor/preset.h"
+#include "aurcor/refresh.h"
 #include "aurcor/util.h"
 #include "aurcor/web_client.h"
 
@@ -92,41 +93,46 @@ bool Download::finished() {
 }
 
 void Download::run() {
-	buffer_ = buffers_->allocate();
+	try {
+		buffer_ = buffers_->allocate();
 
-	if (!buffer_) {
-		logger_.err("No file buffer available for download");
-		done_ = true;
-		return;
-	}
-
-	logger_.debug("Downloading from %s", url_.c_str());
-
-	std::unordered_map<std::string,std::function<void(const std::string &path)>> types{
-		{"buses/", std::bind(&Download::download_buses, this, std::placeholders::_1)},
-		{"profiles/", std::bind(&Download::download_profiles, this, std::placeholders::_1)},
-		{"scripts/", std::bind(&Download::download_scripts, this, std::placeholders::_1)},
-		{"presets/", std::bind(&Download::download_presets, this, std::placeholders::_1)},
-	};
-
-	yield();
-	auto urls = client_.list_urls(url_, [&types] (const std::string &path) -> bool {
-		return types.find(path) != types.end();
-	});
-
-	for (auto &url : urls) {
-		auto type = types.find(url);
-
-		if (type != types.end()) {
-			yield();
-			type->second(url);
+		if (!buffer_) {
+			logger_.err("No file buffer available for download");
+			done_ = true;
+			return;
 		}
+
+		logger_.notice("Downloading from %s", url_.c_str());
+
+		std::unordered_map<std::string,std::function<void(const std::string &path)>> types{
+			{"buses/", std::bind(&Download::download_buses, this, std::placeholders::_1)},
+			{"profiles/", std::bind(&Download::download_profiles, this, std::placeholders::_1)},
+			{"scripts/", std::bind(&Download::download_scripts, this, std::placeholders::_1)},
+			{"presets/", std::bind(&Download::download_presets, this, std::placeholders::_1)},
+		};
+
+		changed_ = std::make_unique<Refresh>();
+
+		auto urls = client_.list_urls(url_, [&types] (const std::string &path) -> bool {
+			return types.find(path) != types.end();
+		});
+
+		for (auto &url : urls) {
+			auto type = types.find(url);
+
+			if (type != types.end()) {
+				type->second(url);
+			}
+		}
+
+		logger_.notice("Download complete");
+
+		app_.refresh_files(std::move(changed_));
+		done_ = true;
+	} catch (...) {
+		done_ = true;
+		logger_.emerg(F("Exception in download thread"));
 	}
-
-	logger_.debug("Download complete");
-
-	app_.refresh_files(changed_buses_, changed_presets_, changed_profiles_, changed_scripts_);
-	done_ = true;
 }
 
 std::string Download::filename_without_extension(const std::string &filename, const std::string &extension) {
@@ -147,7 +153,7 @@ void Download::download_buses(const std::string &path) {
 	for (auto &url : urls) {
 		logger_.trace("Download bus config: %s", url.c_str());
 		if (update_file(std::string{LEDBusConfig::DIRECTORY_NAME} + "/" + url, url_ + path + url))
-			changed_buses_.insert(filename_without_extension(url, LEDBusConfig::FILENAME_EXT));
+			changed_->buses.insert(filename_without_extension(url, LEDBusConfig::FILENAME_EXT));
 	}
 }
 
@@ -162,7 +168,7 @@ void Download::download_presets(const std::string &path) {
 	for (auto &url : urls) {
 		logger_.trace("Download preset: %s", url.c_str());
 		if (update_file(std::string{Preset::DIRECTORY_NAME} + "/" + url, url_ + path + url))
-			changed_presets_.insert(filename_without_extension(url, Preset::FILENAME_EXT));
+			changed_->presets.insert(filename_without_extension(url, Preset::FILENAME_EXT));
 	}
 }
 
@@ -200,7 +206,7 @@ void Download::download_profiles(const std::string &path) {
 			enum led_profile_id profile_id;
 
 			if (bus_and_profile_from_filename(url, bus_name, profile_id))
-				changed_profiles_.insert({bus_name, profile_id});
+				changed_->profiles.insert({bus_name, profile_id});
 		}
 	}
 }
@@ -216,12 +222,11 @@ void Download::download_scripts(const std::string &path) {
 	for (auto &url : urls) {
 		logger_.trace("Download script: %s", url.c_str());
 		if (update_file(std::string{MicroPython::DIRECTORY_NAME} + "/" + url, url_ + path + url))
-			changed_scripts_.insert(filename_without_extension(url, MicroPython::FILENAME_EXT));
+			changed_->scripts.insert(filename_without_extension(url, MicroPython::FILENAME_EXT));
 	}
 }
 
 ssize_t Download::download_to_buffer(const std::string &url) {
-	yield();
 	if (!client_.open(url))
 		return -1;
 
@@ -303,8 +308,6 @@ bool Download::update_file(const std::string &filename, const std::string &url) 
 		}
 	}
 
-	lock.unlock();
-	yield();
 
 	return changed;
 }
