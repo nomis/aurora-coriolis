@@ -148,93 +148,97 @@ bool MicroPython::start() {
 }
 
 void MicroPython::running_thread() {
-	std::lock_guard lock{active_};
+	try {
+		std::lock_guard lock{active_};
 
-	if (!running_)
-		return;
+		if (!running_)
+			return;
 
-	self_ = this;
+		self_ = this;
 
-	logger_.trace(F("[%s] MicroPython initialising"), name_.c_str());
+		logger_.trace(F("[%s] MicroPython initialising"), name_.c_str());
 
-	if (mp_state_init()) {
-		logger_.alert(F("[%s] MicroPython failed in mp_state_init()"), name_.c_str());
-		goto done;
-	}
-
-	if (!::setjmp(abort_)) {
-		where_ = "mp_stack_ctrl_init";
-		mp_stack_ctrl_init();
-	} else {
-		goto done;
-	}
-
-	if (!::setjmp(abort_)) {
-		where_ = "mp_stack_set_limit";
-		mp_stack_set_limit(TASK_STACK_LIMIT);
-	} else {
-		goto done;
-	}
-
-	if (!::setjmp(abort_)) {
-		where_ = "gc_init";
-		gc_init(heap_->begin(), heap_->end());
-	} else {
-		goto done;
-	}
-
-	if (!::setjmp(abort_)) {
-		where_ = "mp_pystack_init";
-		mp_pystack_init(pystack_->begin(), pystack_->end());
-	} else {
-		goto done;
-	}
-
-	if (!::setjmp(abort_)) {
-		where_ = "mp_init";
-		mp_init();
-
-		{
-			std::lock_guard lock{state_mutex_};
-			state_copy();
-		}
-
-		if (running_ && !::setjmp(abort_)) {
-			logger_.trace(F("[%s] MicroPython running"), name_.c_str());
-
-			where_ = "main";
-			main();
-
-			logger_.trace(F("[%s] MicroPython shutdown"), name_.c_str());
-		}
-
-		{
-			std::lock_guard lock{state_mutex_};
-			state_reset();
+		if (mp_state_init()) {
+			logger_.alert(F("[%s] MicroPython failed in mp_state_init()"), name_.c_str());
+			goto done;
 		}
 
 		if (!::setjmp(abort_)) {
-			where_ = "gc_sweep_all";
-			gc_sweep_all();
+			where_ = "mp_stack_ctrl_init";
+			mp_stack_ctrl_init();
+		} else {
+			goto done;
 		}
 
 		if (!::setjmp(abort_)) {
-			where_ = "mp_deinit";
-			mp_deinit();
+			where_ = "mp_stack_set_limit";
+			mp_stack_set_limit(TASK_STACK_LIMIT);
+		} else {
+			goto done;
 		}
-	} else {
+
 		if (!::setjmp(abort_)) {
-			where_ = "gc_sweep_all";
-			gc_sweep_all();
+			where_ = "gc_init";
+			gc_init(heap_->begin(), heap_->end());
+		} else {
+			goto done;
 		}
+
+		if (!::setjmp(abort_)) {
+			where_ = "mp_pystack_init";
+			mp_pystack_init(pystack_->begin(), pystack_->end());
+		} else {
+			goto done;
+		}
+
+		if (!::setjmp(abort_)) {
+			where_ = "mp_init";
+			mp_init();
+
+			{
+				std::lock_guard lock{state_mutex_};
+				state_copy();
+			}
+
+			if (running_ && !::setjmp(abort_)) {
+				logger_.trace(F("[%s] MicroPython running"), name_.c_str());
+
+				where_ = "main";
+				main();
+
+				logger_.trace(F("[%s] MicroPython shutdown"), name_.c_str());
+			}
+
+			{
+				std::lock_guard lock{state_mutex_};
+				state_reset();
+			}
+
+			if (!::setjmp(abort_)) {
+				where_ = "gc_sweep_all";
+				gc_sweep_all();
+			}
+
+			if (!::setjmp(abort_)) {
+				where_ = "mp_deinit";
+				mp_deinit();
+			}
+		} else {
+			if (!::setjmp(abort_)) {
+				where_ = "gc_sweep_all";
+				gc_sweep_all();
+			}
+		}
+
+	done:
+		mp_state_free();
+
+		logger_.trace(F("[%s] MicroPython finished"), name_.c_str());
+		self_ = nullptr;
+		running_ = false;
+	} catch (...) {
+		logger_.emerg(F("[%s] Exception in MicroPython thread near %s()"), name_.c_str(), where_);
 	}
-
-done:
-	mp_state_free();
-
-	logger_.trace(F("[%s] MicroPython finished"), name_.c_str());
-	self_ = nullptr;
-	running_ = false;
 }
 
 void MicroPython::state_copy() {

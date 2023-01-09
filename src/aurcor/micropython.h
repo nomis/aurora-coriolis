@@ -204,7 +204,7 @@ private:
 	std::atomic<bool> running_{false};
 	bool stopping_{false};
 	bool stopped_{false};
-	const char *where_;
+	const char *where_{nullptr};
 	jmp_buf abort_;
 	bool in_nlr_fail_{false};
 
