@@ -20,6 +20,8 @@
 
 #include <algorithm>
 #include <memory>
+#include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <vector>
 
@@ -103,6 +105,49 @@ void App::start() {
 	WebClient::init();
 #endif
 	Download::init();
+
+	preset_descriptions();
+}
+
+std::pair<std::shared_lock<std::shared_mutex>,const string_ptr_unordered_map&> App::preset_descriptions() {
+	std::shared_lock read_lock{cached_presets_mutex_};
+
+	if (!cached_presets_) {
+		read_lock.unlock();
+
+		std::unique_lock write_lock{cached_presets_mutex_};
+
+		if (!cached_presets_) {
+			cached_presets_ = std::make_unique<PresetDescriptionCache>(*this);
+			cached_presets_->init();
+		}
+
+		write_lock.unlock();
+		read_lock.lock();
+	}
+
+	return {std::move(read_lock), cached_presets_->descriptions()};
+}
+
+void App::add_preset_description(const Preset &preset) {
+	std::unique_lock lock{cached_presets_mutex_};
+
+	if (cached_presets_)
+		cached_presets_->add(preset);
+}
+
+void App::add_preset_description(const std::string &name) {
+	std::unique_lock lock{cached_presets_mutex_};
+
+	if (cached_presets_)
+		cached_presets_->add(name);
+}
+
+void App::remove_preset_description(const std::string &name) {
+	std::unique_lock lock{cached_presets_mutex_};
+
+	if (cached_presets_)
+		cached_presets_->remove(name);
 }
 
 void App::loop() {

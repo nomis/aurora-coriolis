@@ -19,6 +19,7 @@
 #include "aurcor/preset.h"
 
 #include <bitset>
+#include <memory>
 #include <mutex>
 #include <shared_mutex>
 #include <string>
@@ -452,6 +453,7 @@ Result Preset::save() {
 		return Result::IO_ERROR;
 	} else {
 		modified_ = false;
+		app_.add_preset_description(*this);
 		return Result::OK;
 	}
 }
@@ -481,16 +483,19 @@ Result Preset::rename(const Preset &destination) {
 
 	auto filename_from = make_filename();
 	auto filename_to = destination.make_filename();
+	std::unique_lock file_lock{App::file_mutex()};
 
 	if (FS.exists(filename_from.c_str())) {
 		if (FS.exists(filename_to.c_str())) {
 			logger_.notice(F("Deleting preset file %s"), filename_to.c_str());
-			FS.remove(filename_to.c_str());
+			if (FS.remove(filename_to.c_str()))
+				app_.remove_preset_description(name_);
 		}
 
 		logger_.notice(F("Renaming preset file from %s to %s"), filename_from.c_str(), filename_to.c_str());
 		if (FS.rename(filename_from.c_str(), filename_to.c_str())) {
 			name_ = destination.name_;
+			app_.add_preset_description(name_);
 			return Result::OK;
 		} else {
 			return Result::IO_ERROR;
@@ -507,11 +512,13 @@ Result Preset::remove() {
 		return Result::NOT_FOUND;
 
 	auto filename = make_filename();
+	std::unique_lock file_lock{App::file_mutex()};
 
 	if (FS.exists(filename.c_str())) {
 		logger_.notice(F("Deleting preset file %s"), filename.c_str());
 		if (FS.remove(filename.c_str())) {
 			modified_ = true;
+			app_.remove_preset_description(name_);
 			return Result::OK;
 		} else {
 			return Result::IO_ERROR;

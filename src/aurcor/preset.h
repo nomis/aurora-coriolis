@@ -151,4 +151,23 @@ private:
 	bool config_changed_{true};
 };
 
+class PresetDescriptionCache {
+public:
+	PresetDescriptionCache(App &app);
+	~PresetDescriptionCache() = default;
+
+	void init();
+	void add(const Preset &preset);
+	void add(const std::string &name);
+	void remove(const std::string &name);
+
+	inline const string_ptr_unordered_map& descriptions() const { return descriptions_; }
+
+private:
+	static uuid::log::Logger logger_;
+
+	App &app_;
+	string_ptr_unordered_map descriptions_;
+};
+
 } // namespace aurcor

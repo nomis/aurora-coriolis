@@ -39,6 +39,7 @@ class Download;
 class LEDBus;
 class MicroPython;
 class Preset;
+class PresetDescriptionCache;
 
 class App: public app::App {
 public:
@@ -65,6 +66,11 @@ public:
 	bool download(const std::string &url);
 	void refresh_files(std::unique_ptr<Refresh> &&refresh);
 
+	std::pair<std::shared_lock<std::shared_mutex>,const string_ptr_unordered_map&> preset_descriptions();
+	void add_preset_description(const Preset &preset);
+	void add_preset_description(const std::string &name);
+	void remove_preset_description(const std::string &name);
+
 private:
 	App(App&&) = delete;
 	App(const App&) = delete;
@@ -81,6 +87,9 @@ private:
 	std::unordered_map<std::shared_ptr<LEDBus>,std::shared_ptr<MicroPython>> mps_;
 	std::unordered_map<std::shared_ptr<LEDBus>,std::shared_ptr<Preset>> presets_;
 	std::unique_ptr<Download> download_;
+
+	std::shared_mutex cached_presets_mutex_;
+	std::unique_ptr<PresetDescriptionCache> cached_presets_;
 
 	std::mutex refresh_mutex_;
 	std::unique_ptr<Refresh> refresh_;
