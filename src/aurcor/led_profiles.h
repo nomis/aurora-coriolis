@@ -52,6 +52,8 @@ LED_PROFILES
 
 namespace aurcor {
 
+class LEDBus;
+
 class LEDProfiles {
 public:
 	static constexpr size_t MIN_ID = 0;
@@ -85,8 +87,8 @@ private:
 
 class BusLEDProfileHash {
 public:
-	std::size_t operator() (const std::pair<std::string,enum led_profile_id> &pair) const {
-		return std::hash<std::string>()(pair.first) + pair.second;
+	std::size_t operator() (const std::pair<std::shared_ptr<LEDBus>,enum led_profile_id> &pair) const {
+		return std::hash<std::shared_ptr<LEDBus>>()(pair.first) + pair.second;
 	}
 };
 

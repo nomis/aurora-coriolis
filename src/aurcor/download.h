@@ -33,6 +33,7 @@
 
 namespace aurcor {
 
+class LEDBus;
 class Refresh;
 
 class Download {
@@ -59,7 +60,7 @@ private:
 	void download_scripts(const std::string &path);
 
 	bool bus_and_profile_from_filename(const std::string &path,
-		std::string &bus_name, enum led_profile_id &profile_id);
+		std::shared_ptr<LEDBus> &bus_name, enum led_profile_id &profile_id);
 	ssize_t download_to_buffer(const std::string &url);
 	bool update_file(const std::string &filename, const std::string &url);
 

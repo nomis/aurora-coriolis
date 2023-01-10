@@ -157,7 +157,7 @@ void Download::download_buses(const std::string &path) {
 	for (auto &url : urls) {
 		logger_.trace("Download bus config: %s", url.c_str());
 		if (update_file(std::string{LEDBusConfig::DIRECTORY_NAME} + "/" + url, url_ + path + url))
-			changed_->buses.insert(filename_without_extension(url, LEDBusConfig::FILENAME_EXT));
+			changed_->buses.insert(app_.bus(filename_without_extension(url, LEDBusConfig::FILENAME_EXT)));
 	}
 }
 
@@ -179,17 +179,18 @@ void Download::download_presets(const std::string &path) {
 }
 
 bool Download::bus_and_profile_from_filename(const std::string &path,
-		std::string &bus_name, enum led_profile_id &profile_id) {
+		std::shared_ptr<LEDBus> &bus, enum led_profile_id &profile_id) {
 	auto filename = filename_without_extension(path, LEDProfile::FILENAME_EXT);
 	auto pos = filename.find('.', 1);
 
 	if (pos == std::string::npos)
 		return false;
 
-	bus_name = filename.substr(0, pos);
+	auto bus_name = filename.substr(0, pos);
 	auto profile_name = filename.substr(pos + 1);
 
-	if (!app_.bus(bus_name))
+	bus = app_.bus(bus_name);
+	if (!bus)
 		return false;
 
 	return LEDProfiles::lc_id(profile_name, profile_id);
@@ -200,21 +201,21 @@ void Download::download_profiles(const std::string &path) {
 
 	uint64_t start = current_time_us();
 	auto urls = client_.list_urls(url_ + path, [this] (const std::string &path) -> bool {
-		std::string bus_name;
+		std::shared_ptr<LEDBus> bus;
 		enum led_profile_id profile_id;
 
-		return bus_and_profile_from_filename(path, bus_name, profile_id);
+		return bus_and_profile_from_filename(path, bus, profile_id);
 	});
 	download_time_ += current_time_us() - start;
 
 	for (auto &url : urls) {
 		logger_.trace("Download bus profile: %s", url.c_str());
 		if (update_file(std::string{LEDProfile::DIRECTORY_NAME} + "/" + url, url_ + path + url)) {
-			std::string bus_name;
+			std::shared_ptr<LEDBus> bus;
 			enum led_profile_id profile_id;
 
-			if (bus_and_profile_from_filename(url, bus_name, profile_id))
-				changed_->profiles.insert({bus_name, profile_id});
+			if (bus_and_profile_from_filename(url, bus, profile_id))
+				changed_->profiles.insert({bus, profile_id});
 		}
 	}
 }

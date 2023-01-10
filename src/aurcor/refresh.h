@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -26,10 +27,12 @@
 
 namespace aurcor {
 
+class LEDBus;
+
 struct Refresh {
-	std::unordered_set<std::string> buses;
+	std::unordered_set<std::shared_ptr<LEDBus>> buses;
 	std::unordered_set<std::string> presets;
-	std::unordered_set<std::pair<std::string,enum led_profile_id>,BusLEDProfileHash> profiles;
+	std::unordered_set<std::pair<std::shared_ptr<LEDBus>,enum led_profile_id>,BusLEDProfileHash> profiles;
 	std::unordered_set<std::string> scripts;
 };
 

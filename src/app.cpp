@@ -325,40 +325,32 @@ void App::refresh_files() {
 	if (!refresh_)
 		return;
 
-	for (auto &bus_name : refresh_->buses) {
-		auto it = buses_.find(bus_name);
-
-		if (it != buses_.end()) {
-			auto &bus = *it->second;
-
-			logger_.trace(F("Reload config on %s[%s]"), bus.type(), bus.name());
-			bus.reload_config();
-		}
+	for (auto &bus : refresh_->buses) {
+		logger_.trace(F("Reload config on %s[%s]"), bus->type(), bus->name());
+		bus->reload_config();
 	}
 
 	for (auto &entry : refresh_->profiles) {
-		auto it = buses_.find(entry.first);
+		auto &bus = *entry.first;
+		auto profile = entry.second;
 
-		if (it != buses_.end()) {
-			auto &bus = *it->second;
-
-			if (bus.profile_loaded(entry.second)
-					&& !bus.profile(entry.second).modified()) {
-				logger_.trace(F("Reload profile \"%s\" on %s[%s]"),
-					LEDProfiles::lc_name(entry.second), bus.type(), bus.name());
-				bus.load_profile(entry.second);
-			}
+		if (bus.profile_loaded(profile)
+				&& !bus.profile(profile).modified()) {
+			logger_.trace(F("Reload profile \"%s\" on %s[%s]"),
+				LEDProfiles::lc_name(profile), bus.type(), bus.name());
+			bus.load_profile(profile);
 		}
 	}
 
 	for (auto &bus_preset : presets_) {
 		auto &bus = *bus_preset.first;
 		auto &preset = *bus_preset.second;
+		auto present_name = preset.name();
 
-		if (refresh_->presets.find(preset.name()) == refresh_->presets.end()
+		if (refresh_->presets.find(present_name) == refresh_->presets.end()
 				&& preset.uses_scripts(refresh_->scripts)) {
 			logger_.trace(F("Restart script \"%s\" for \"%s\" on %s[%s]"),
-				preset.script().c_str(), preset.name().c_str(),
+				preset.script().c_str(), present_name.c_str(),
 				bus.type(), bus.name());
 			preset.restart_script();
 		}
