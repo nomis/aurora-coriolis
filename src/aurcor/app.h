@@ -57,6 +57,7 @@ public:
 	bool detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<MicroPython> &mp = nullptr, bool clear = false);
 	void start(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Preset> &preset);
 	std::shared_ptr<std::shared_ptr<Preset>> edit(const std::shared_ptr<LEDBus> &bus);
+	bool unsaved_preset(const std::shared_ptr<LEDBus> &bus);
 	void refresh(const std::string &preset_name);
 	void renamed(const std::string &preset_from_name, const std::string &preset_to_name);
 	inline void deleted(const std::string &preset_from_name) { renamed(preset_from_name, ""); }

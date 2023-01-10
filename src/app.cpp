@@ -234,6 +234,18 @@ std::shared_ptr<std::shared_ptr<Preset>> App::edit(const std::shared_ptr<LEDBus>
 	return nullptr;
 }
 
+bool App::unsaved_preset(const std::shared_ptr<LEDBus> &bus) {
+	auto it = presets_.find(bus);
+
+	if (it != presets_.end()) {
+		auto &preset = *it->second;
+
+		return preset.modified() || preset.editing();
+	}
+
+	return false;
+}
+
 void App::refresh(const std::string &preset_name) {
 	refresh_presets({preset_name});
 }

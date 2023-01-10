@@ -696,6 +696,13 @@ static void mpy(Shell &shell, const std::vector<std::string> &arguments) {
 			} else {
 				auto &app = to_app(shell);
 
+				if (!shell.has_any_flags(CommandFlags::ADMIN)) {
+					if (app.unsaved_preset(bus)) {
+						shell.printfln(F("Access denied: current preset is unsaved"));
+						return true;
+					}
+				}
+
 				app.stop(bus);
 
 				if (app.detach(bus)) {
@@ -860,6 +867,13 @@ static void start(Shell &shell, const std::vector<std::string> &arguments) {
 			return;
 		}
 
+		if (!shell.has_any_flags(CommandFlags::ADMIN)) {
+			if (app.unsaved_preset(bus)) {
+				shell.printfln(F("Access denied: current preset is unsaved"));
+				return;
+			}
+		}
+
 		if (load_preset(shell, *preset)) {
 			app.start(bus, preset);
 
@@ -879,6 +893,13 @@ static void stop(Shell &shell, const std::vector<std::string> &arguments) {
 	auto bus = lookup_bus_or_default(shell, arguments, 0);
 
 	if (bus) {
+		if (!shell.has_any_flags(CommandFlags::ADMIN)) {
+			if (app.unsaved_preset(bus)) {
+				shell.printfln(F("Access denied: current preset is unsaved"));
+				return;
+			}
+		}
+
 		app.stop(bus);
 
 		shell.block_with([bus] (Shell &shell, bool stop) mutable -> bool {
@@ -1066,6 +1087,13 @@ static void start(Shell &shell, const std::vector<std::string> &arguments) {
 		return;
 	}
 
+	if (!shell.has_any_flags(CommandFlags::ADMIN)) {
+		if (app.unsaved_preset(bus)) {
+			shell.printfln(F("Access denied: current preset is unsaved"));
+			return;
+		}
+	}
+
 	if (load_preset(shell, *preset)) {
 		app.start(bus, preset);
 
@@ -1081,6 +1109,13 @@ static void start(Shell &shell, const std::vector<std::string> &arguments) {
 static void stop(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &app = to_app(shell);
 	auto &bus = to_shell(shell).bus();
+
+	if (!shell.has_any_flags(CommandFlags::ADMIN)) {
+		if (app.unsaved_preset(bus)) {
+			shell.printfln(F("Access denied: current preset is unsaved"));
+			return;
+		}
+	}
 
 	app.stop(bus);
 
@@ -1763,7 +1798,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::main, user, {F("mpy")}, {F("[bus]")}, main::mpy, bus_names_autocomplete);
 	commands->add_command(context::main, admin, {F("mv")}, {F("<preset>"), F("<preset>")}, main::mv, preset_names_autocomplete);
 	commands->add_command(context::main, user, {F("profile")}, {F("[bus]"), F("<profile>")}, main::profile, bus_profile_names_autocomplete);
-	commands->add_command(context::main, user, {F("run")}, {F("[bus]"), F("<script>")}, main::run, bus_script_names_autocomplete);
+	commands->add_command(context::main, admin, {F("run")}, {F("[bus]"), F("<script>")}, main::run, bus_script_names_autocomplete);
 	commands->add_command(context::main, admin, {F("rm")}, {F("<preset>")}, main::rm, preset_names_autocomplete);
 	commands->add_command(context::main, admin, {F("set"), F("default"), F("bus")}, {F("[bus]")}, main::set_default_bus, bus_names_autocomplete);
 	commands->add_command(context::main, admin, {F("set"), F("download"), F("url")}, {F("[url]")}, main::set_download_url);
@@ -1780,7 +1815,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus, user, {F("profile")}, {F("<profile>")}, bus::profile, profile_names_autocomplete);
 	commands->add_command(context::bus, user, {F("reset"), F("time")}, {F("[microseconds]")}, bus::reset_time, reset_times_autocomplete);
 	commands->add_command(context::bus, admin, {F("reverse")}, bus::reverse);
-	commands->add_command(context::bus, user, {F("run")}, {F("<script>")}, bus::run, script_names_autocomplete);
+	commands->add_command(context::bus, admin, {F("run")}, {F("<script>")}, bus::run, script_names_autocomplete);
 	commands->add_command(context::bus, user, {F("start")}, {F("<preset>"), F("[default]")}, bus::start, preset_names_default_autocomplete);
 	commands->add_command(context::bus, user, {F("stop")}, bus::stop);
 	commands->add_command(context::bus, user, {F("show")}, bus::show);
