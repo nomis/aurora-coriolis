@@ -50,7 +50,7 @@ bool MemoryPool::resize(size_t count) {
 	std::lock_guard lock{mutex_};
 
 	while (capacity_ < count) {
-		MemoryAllocation data{reinterpret_cast<uint8_t*>(::heap_caps_malloc(size_, caps_)), ::free};
+		MemoryAllocation data{reinterpret_cast<uint8_t*>(::heap_caps_malloc(size_, caps_))};
 
 		if (!data) {
 			logger_.emerg(F("Unable to allocate block with size %u caps 0x%08x (%u of %u)"),

@@ -29,7 +29,12 @@
 
 namespace aurcor {
 
-using MemoryAllocation = std::unique_ptr<uint8_t, decltype(::free)*>;
+class MemoryDeleter {
+public:
+	void operator()(uint8_t *data) { ::free(data); }
+};
+
+using MemoryAllocation = std::unique_ptr<uint8_t, MemoryDeleter>;
 
 class MemoryPool;
 
