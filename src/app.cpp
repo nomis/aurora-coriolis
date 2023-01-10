@@ -109,7 +109,7 @@ void App::start() {
 	preset_descriptions();
 }
 
-std::pair<std::shared_lock<std::shared_mutex>,const string_ptr_unordered_map&> App::preset_descriptions() {
+std::pair<const string_ptr_unordered_map&,std::shared_lock<std::shared_mutex>> App::preset_descriptions() {
 	std::shared_lock read_lock{cached_presets_mutex_};
 
 	if (!cached_presets_) {
@@ -126,7 +126,7 @@ std::pair<std::shared_lock<std::shared_mutex>,const string_ptr_unordered_map&> A
 		read_lock.lock();
 	}
 
-	return {std::move(read_lock), cached_presets_->descriptions()};
+	return {cached_presets_->descriptions(), std::move(read_lock)};
 }
 
 void App::add_preset_description(const Preset &preset) {

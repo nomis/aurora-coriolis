@@ -111,7 +111,7 @@ struct hash_string_ptr {
 	}
 };
 
-struct compare_string_ptrs {
+struct equal_string_ptrs {
 	bool operator()(const string_ptr &a, const string_ptr &b) const {
 		if (!a) {
 			return !b;
@@ -123,7 +123,7 @@ struct compare_string_ptrs {
 	}
 };
 
-using string_ptr_unordered_map = std::unordered_map<string_ptr,string_ptr,hash_string_ptr,compare_string_ptrs>;
+using string_ptr_unordered_map = std::unordered_map<string_ptr,string_ptr,hash_string_ptr,equal_string_ptrs>;
 
 namespace container {
 

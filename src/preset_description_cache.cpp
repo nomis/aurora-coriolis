@@ -78,7 +78,8 @@ void PresetDescriptionCache::add(const std::string &name) {
 }
 
 void PresetDescriptionCache::remove(const std::string &name) {
-	auto it = descriptions_.find(spiram_strdup(name));
+	auto name_ref = name.c_str();
+	auto it = descriptions_.find(reinterpret_cast<const string_ptr&>(name_ref));
 
 	if (it != descriptions_.end()) {
 		descriptions_.erase(it);
