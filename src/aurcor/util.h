@@ -24,13 +24,10 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <cstring>
 #include <iterator>
 #include <limits>
-#include <memory>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 extern "C" {
@@ -99,31 +96,6 @@ template <class T>
 static constexpr size_t rounded_sizeof() {
 	return (sizeof(T) + (alignof(T) - 1)) / alignof(T) * alignof(T);
 }
-
-
-using string_ptr = std::unique_ptr<const char>;
-
-string_ptr spiram_strdup(const std::string &string);
-
-struct hash_string_ptr {
-	size_t operator()(const string_ptr &key) const {
-		return std::hash<std::string_view>{}(key.get());
-	}
-};
-
-struct equal_string_ptrs {
-	bool operator()(const string_ptr &a, const string_ptr &b) const {
-		if (!a) {
-			return !b;
-		} else if (!b) {
-			return !a;
-		} else {
-			return !std::strcmp(a.get(), b.get());
-		}
-	}
-};
-
-using string_ptr_unordered_map = std::unordered_map<string_ptr,string_ptr,hash_string_ptr,equal_string_ptrs>;
 
 namespace container {
 

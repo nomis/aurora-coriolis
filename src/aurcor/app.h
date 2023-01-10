@@ -66,7 +66,7 @@ public:
 	bool download(const std::string &url);
 	void refresh_files(std::unique_ptr<Refresh> &&refresh);
 
-	std::pair<const string_ptr_unordered_map&,std::shared_lock<std::shared_mutex>> preset_descriptions();
+	std::pair<const std::unordered_map<std::string,std::string>&,std::shared_lock<std::shared_mutex>> preset_descriptions();
 	void add_preset_description(const Preset &preset);
 	void add_preset_description(const std::string &name);
 	void remove_preset_description(const std::string &name);

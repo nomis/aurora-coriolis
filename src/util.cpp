@@ -18,8 +18,6 @@
 
 #include "aurcor/util.h"
 
-#include <Arduino.h>
-
 #include <cstring>
 #include <shared_mutex>
 #include <string>
@@ -86,15 +84,6 @@ std::vector<std::string> list_filenames(const char *directory_name, const char *
 	}
 
 	return names;
-}
-
-string_ptr spiram_strdup(const std::string &string) {
-	std::unique_ptr<char> value{static_cast<char*>(::heap_caps_malloc(string.length() + 1, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT))};
-
-	if (value)
-		std::memcpy(value.get(), string.c_str(), string.length() + 1);
-
-	return value;
 }
 
 } // namespace aurcor

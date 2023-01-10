@@ -36,14 +36,9 @@ namespace aurcor {
 uuid::log::Logger PresetDescriptionCache::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::DAEMON};
 
 PresetDescriptionCache::PresetDescriptionCache(App &app) : app_(app) {
-}
-
-void PresetDescriptionCache::init() {
 	std::shared_lock file_lock{App::file_mutex()};
 
 	logger_.trace(F("Creating preset description cache"));
-
-	descriptions_.clear();
 
 	uint64_t start = current_time_us();
 
@@ -51,7 +46,7 @@ void PresetDescriptionCache::init() {
 		auto preset = std::make_shared<Preset>(app_, nullptr, name);
 
 		if (preset->load() == Result::OK)
-			descriptions_.emplace(spiram_strdup(name), spiram_strdup(preset->description()));
+			descriptions_.emplace(std::move(name), preset->description());
 
 		yield();
 	}
@@ -61,7 +56,7 @@ void PresetDescriptionCache::init() {
 }
 
 void PresetDescriptionCache::add(const Preset &preset) {
-	auto res = descriptions_.insert_or_assign(spiram_strdup(preset.name()), spiram_strdup(preset.description()));
+	auto res = descriptions_.insert_or_assign(preset.name(), preset.description());
 
 	if (res.second) {
 		logger_.trace(F("Added description of preset %s to cache"), preset.name().c_str());
@@ -78,8 +73,7 @@ void PresetDescriptionCache::add(const std::string &name) {
 }
 
 void PresetDescriptionCache::remove(const std::string &name) {
-	auto name_ref = name.c_str();
-	auto it = descriptions_.find(reinterpret_cast<const string_ptr&>(name_ref));
+	auto it = descriptions_.find(name);
 
 	if (it != descriptions_.end()) {
 		descriptions_.erase(it);

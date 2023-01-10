@@ -23,6 +23,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -156,18 +157,17 @@ public:
 	PresetDescriptionCache(App &app);
 	~PresetDescriptionCache() = default;
 
-	void init();
 	void add(const Preset &preset);
 	void add(const std::string &name);
 	void remove(const std::string &name);
 
-	inline const string_ptr_unordered_map& descriptions() const { return descriptions_; }
+	inline const std::unordered_map<std::string,std::string>& descriptions() const { return descriptions_; }
 
 private:
 	static uuid::log::Logger logger_;
 
 	App &app_;
-	string_ptr_unordered_map descriptions_;
+	std::unordered_map<std::string,std::string> descriptions_;
 };
 
 } // namespace aurcor

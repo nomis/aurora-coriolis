@@ -23,6 +23,8 @@
 #include <mutex>
 #include <shared_mutex>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <uuid/common.h>
@@ -106,7 +108,7 @@ void App::start() {
 	preset_descriptions();
 }
 
-std::pair<const string_ptr_unordered_map&,std::shared_lock<std::shared_mutex>> App::preset_descriptions() {
+std::pair<const std::unordered_map<std::string,std::string>&,std::shared_lock<std::shared_mutex>> App::preset_descriptions() {
 	std::shared_lock read_lock{cached_presets_mutex_};
 
 	if (!cached_presets_) {
@@ -114,10 +116,8 @@ std::pair<const string_ptr_unordered_map&,std::shared_lock<std::shared_mutex>> A
 
 		std::unique_lock write_lock{cached_presets_mutex_};
 
-		if (!cached_presets_) {
+		if (!cached_presets_)
 			cached_presets_ = std::make_unique<PresetDescriptionCache>(*this);
-			cached_presets_->init();
-		}
 
 		write_lock.unlock();
 		read_lock.lock();
