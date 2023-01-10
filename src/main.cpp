@@ -23,6 +23,10 @@
 static aurcor::App application;
 
 void setup() {
+#ifndef ENV_NATIVE
+	heap_caps_malloc_extmem_enable(0);
+#endif
+
 	try {
 		application.start();
 	} catch (...) {

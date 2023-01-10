@@ -71,9 +71,6 @@ void App::init() {
 #endif
 
 	MicroPython::setup(buses_.size());
-#ifndef ENV_NATIVE
-	heap_caps_malloc_extmem_enable(64);
-#endif
 
 	for (auto &entry : buses_) {
 		auto &bus = entry.second;
