@@ -62,8 +62,8 @@ void App::init() {
 	 * Usable: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 16 17 21 33 34 35 36 37 38 39 40
 	 * Null: 18 41 42 43 44
 	 */
-	add(std::make_shared<UARTLEDBus>(0, "led0", 41, 39));
-	add(std::make_shared<UARTLEDBus>(1, "led1", 42, 40));
+	add(std::make_shared<UARTLEDBus>(1, "led0", 41, 39));
+	add(std::make_shared<UARTLEDBus>(0, "led1", 42, 40));
 	add(std::make_shared<NullLEDBus>("null0"));
 #else
 	add(std::make_shared<NullLEDBus>("led0"));
