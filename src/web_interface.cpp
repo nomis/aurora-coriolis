@@ -89,7 +89,7 @@ bool WebInterface::list_presets(WebServer::Request &req) {
 }
 
 bool WebInterface::set_preset(WebServer::Request &req) {
-	if (req.get_header("Content-Type") == "application/x-www-form-urlencoded") {
+	if (req.get_header("Content-Type") != "application/x-www-form-urlencoded") {
 		req.set_status(400);
 		return true;
 	}
