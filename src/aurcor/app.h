@@ -40,6 +40,7 @@ class LEDBus;
 class MicroPython;
 class Preset;
 class PresetDescriptionCache;
+class WebInterface;
 
 class App: public app::App {
 public:
@@ -50,6 +51,8 @@ public:
 	void loop() override;
 
 	static inline std::shared_mutex& file_mutex() { return file_mutex_; }
+
+	inline const std::string& immutable_id() const { return app_hash(); }
 
 	std::vector<std::string> bus_names() const;
 	std::shared_ptr<LEDBus> bus(const std::string &name);
@@ -72,6 +75,8 @@ public:
 	void add_preset_description(const std::string &name);
 	void remove_preset_description(const std::string &name);
 
+	std::string current_preset_name(std::shared_ptr<LEDBus> bus);
+
 private:
 	App(App&&) = delete;
 	App(const App&) = delete;
@@ -86,8 +91,12 @@ private:
 
 	std::unordered_map<std::string,std::shared_ptr<LEDBus>> buses_;
 	std::unordered_map<std::shared_ptr<LEDBus>,std::shared_ptr<MicroPython>> mps_;
+
+	std::mutex presets_map_mutex_; // Only used to protect WebInterface
 	std::unordered_map<std::shared_ptr<LEDBus>,std::shared_ptr<Preset>> presets_;
+
 	std::unique_ptr<Download> download_;
+	std::unique_ptr<WebInterface> web_interface_;
 
 	std::shared_mutex cached_presets_mutex_;
 	std::unique_ptr<PresetDescriptionCache> cached_presets_;

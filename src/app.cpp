@@ -38,6 +38,7 @@
 #include "aurcor/refresh.h"
 #include "aurcor/uart_led_bus.h"
 #include "aurcor/web_client.h"
+#include "aurcor/web_interface.h"
 
 namespace aurcor {
 
@@ -106,6 +107,8 @@ void App::start() {
 	Download::init();
 
 	preset_descriptions();
+
+	web_interface_ = std::make_unique<WebInterface>(*this);
 }
 
 std::pair<const std::unordered_map<std::string,std::string>&,std::shared_lock<std::shared_mutex>> App::preset_descriptions() {
@@ -145,6 +148,16 @@ void App::remove_preset_description(const std::string &name) {
 
 	if (cached_presets_)
 		cached_presets_->remove(name);
+}
+
+std::string App::current_preset_name(std::shared_ptr<LEDBus> bus) {
+	std::lock_guard lock{presets_map_mutex_};
+	auto it = presets_.find(bus);
+
+	if (it == presets_.end())
+		return "";
+
+	return it->second->name();
 }
 
 void App::loop() {
@@ -214,13 +227,19 @@ bool App::detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Micro
 }
 
 void App::start(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Preset> &preset) {
+	std::unique_lock lock{presets_map_mutex_, std::defer_lock};
+
 	logger_.trace(F("Start preset \"%s\" on %s[%s]"),
 		preset->name().c_str(), bus->type(), bus->name());
 
 	auto it = presets_.find(bus);
 	if (it != presets_.end()) {
 		it->second->detach();
+
+		lock.lock();
 		presets_.erase(it);
+	} else {
+		lock.lock();
 	}
 
 	presets_.emplace(bus, preset);
@@ -296,6 +315,8 @@ void App::stop(const std::shared_ptr<LEDBus> &bus) {
 		logger_.trace(F("Stop preset \"%s\" on %s[%s]"),
 			preset.name().c_str(), bus->type(), bus->name());
 		preset.detach();
+
+		std::lock_guard lock{presets_map_mutex_};
 		presets_.erase(it);
 	}
 }

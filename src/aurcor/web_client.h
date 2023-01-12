@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,7 +67,9 @@ private:
 	};
 #endif
 
+#ifdef ENV_NATIVE
 	static size_t curl_append(char *ptr, size_t size, size_t nmemb, void *userdata);
+#endif
 
 	static uuid::log::Logger logger_;
 
