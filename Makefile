@@ -31,10 +31,13 @@ data:
 fs: \
 	$(patsubst %.py,data/%.mpy,$(wildcard scripts/*.py)) \
 	$(patsubst %.json,data/%.cbor,$(wildcard buses/*.json)) \
+	$(patsubst %.toml,data/%.cbor,$(wildcard buses/*.toml)) \
 	$(patsubst %.yaml,data/%.cbor,$(wildcard buses/*.yaml)) \
 	$(patsubst %.json,data/%.cbor,$(wildcard presets/*.json)) \
+	$(patsubst %.toml,data/%.cbor,$(wildcard presets/*.toml)) \
 	$(patsubst %.yaml,data/%.cbor,$(wildcard presets/*.yaml)) \
 	$(patsubst %.json,data/%.cbor,$(wildcard profiles/*.json)) \
+	$(patsubst %.toml,data/%.cbor,$(wildcard profiles/*.toml)) \
 	$(patsubst %.yaml,data/%.cbor,$(wildcard profiles/*.yaml))
 
 cleanfs:
@@ -58,6 +61,9 @@ data/buses: | data
 data/buses/%.cbor: buses/%.yaml | data/buses pipenv
 	$(PYTHON) $(PIPENV)/yaml2cbor.py $< $@
 
+data/buses/%.cbor: buses/%.toml | data/buses pipenv
+	$(PYTHON) $(PIPENV)/toml2cbor.py $< $@
+
 data/buses/%.cbor: buses/%.json | data/buses pipenv
 	$(PYTHON) $(PIPENV)/json2cbor.py $< $@
 
@@ -67,6 +73,9 @@ data/profiles: | data
 data/profiles/%.cbor: profiles/%.yaml | data/profiles pipenv
 	$(PYTHON) $(PIPENV)/yaml2cbor.py $< $@
 
+data/profiles/%.cbor: profiles/%.toml | data/profiles pipenv
+	$(PYTHON) $(PIPENV)/toml2cbor.py $< $@
+
 data/profiles/%.cbor: profiles/%.json | data/profiles pipenv
 	$(PYTHON) $(PIPENV)/json2cbor.py $< $@
 
@@ -75,6 +84,9 @@ data/presets: | data
 
 data/presets/%.cbor: presets/%.yaml | data/presets pipenv
 	$(PYTHON) $(PIPENV)/yaml2cbor.py $< $@
+
+data/presets/%.cbor: presets/%.toml | data/presets pipenv
+	$(PYTHON) $(PIPENV)/toml2cbor.py $< $@
 
 data/presets/%.cbor: presets/%.json | data/presets pipenv
 	$(PYTHON) $(PIPENV)/json2cbor.py $< $@

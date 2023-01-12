@@ -2,7 +2,7 @@ desc: Christmas (Twinkle)
 script: random_rgb
 config:
   colours/set_rgb:
-  - 0xFF0000
-  - 0x00FF00
+  - 0xFF0000 # Red
+  - 0x00FF00 # Green
   duration/s32: 60000
   twinkle.enabled/bool: true
