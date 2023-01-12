@@ -58,7 +58,8 @@ public:
 
 		void set_status(unsigned int status);
 		void set_type(const char *type);
-		void add_header(const char *name, std::string value);
+		void add_header(const char *name, const char *value);
+		void add_header(const char *name, const std::string &value);
 
 	private:
 #ifdef ENV_NATIVE
@@ -71,7 +72,7 @@ public:
 		esp_err_t send_err_{ESP_OK};
 		std::vector<char> buffer_;
 		size_t buffer_len_{0};
-		std::vector<std::string> resp_headers_;
+		std::vector<std::unique_ptr<char>> resp_headers_;
 		bool status_{false};
 		bool sent_{false};
 #endif

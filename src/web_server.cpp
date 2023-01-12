@@ -335,10 +335,18 @@ void WebServer::Request::set_type(const char *type) {
 #endif
 }
 
-void WebServer::Request::add_header(const char *name, std::string value) {
+void WebServer::Request::add_header(const char *name, const char *value) {
 #ifdef ENV_NATIVE
 #else
-	httpd_resp_set_hdr(req_, name, resp_headers_.emplace_back(std::move(value)).c_str());
+	httpd_resp_set_hdr(req_, name, value);
+#endif
+}
+
+void WebServer::Request::add_header(const char *name, const std::string &value) {
+#ifdef ENV_NATIVE
+#else
+	resp_headers_.emplace_back(strdup(value.c_str()));
+	add_header(name, resp_headers_.back().get());
 #endif
 }
 
