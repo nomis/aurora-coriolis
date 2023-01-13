@@ -209,7 +209,7 @@ esp_err_t WebServer::StaticContentURIHandler::handler_function(httpd_req_t *req)
 
 		while (header[0] != nullptr) {
 			httpd_resp_set_hdr(req, header[0], header[1]);
-			header++;
+			header += 2;
 		}
 	}
 
