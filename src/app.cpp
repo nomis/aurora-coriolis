@@ -170,6 +170,10 @@ void App::loop() {
 
 	for (auto &preset : presets_)
 		preset.second->loop();
+
+	std::unique_lock write_lock{cached_presets_mutex_};
+	if (cached_presets_)
+		cached_presets_->loop();
 }
 
 void App::add(const std::shared_ptr<LEDBus> &&bus) {

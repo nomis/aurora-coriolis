@@ -19,7 +19,8 @@
 #include "aurcor/preset.h"
 
 #include <memory>
-#include <shared_mutex>
+#include <string>
+#include <vector>
 
 #include <uuid/log.h>
 
@@ -36,23 +37,35 @@ namespace aurcor {
 uuid::log::Logger PresetDescriptionCache::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::DAEMON};
 
 PresetDescriptionCache::PresetDescriptionCache(App &app) : app_(app) {
-	std::shared_lock file_lock{App::file_mutex()};
-
 	logger_.trace(F("Creating preset description cache"));
 
-	uint64_t start = current_time_us();
+	start_ = current_time_us();
+	presets_ = std::make_unique<std::vector<std::string>>(Preset::names());
 
-	for (auto &name : Preset::names()) {
+	for (auto &name : *presets_)
+		descriptions_.emplace(name, "");
+}
+
+void PresetDescriptionCache::loop() {
+	if (!presets_)
+		return;
+
+	if (!presets_->empty()) {
+		auto &name = presets_->back();
 		auto preset = std::make_shared<Preset>(app_, nullptr, name);
 
 		if (preset->load() == Result::OK)
-			descriptions_.emplace(std::move(name), preset->description());
+			descriptions_.insert_or_assign(name, preset->description());
 
-		yield();
+		presets_->pop_back();
 	}
 
-	logger_.trace(F("Created preset description cache (%zu entries in %" PRIu64 "ms)"),
-		descriptions_.size(), (current_time_us() - start) / 1000);
+	if (presets_->empty()) {
+		presets_.reset();
+
+		logger_.trace(F("Created preset description cache (%zu entries in %" PRIu64 "ms)"),
+			descriptions_.size(), (current_time_us() - start_) / 1000);
+	}
 }
 
 void PresetDescriptionCache::add(const Preset &preset) {

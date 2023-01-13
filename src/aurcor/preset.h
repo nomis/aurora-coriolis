@@ -157,6 +157,8 @@ public:
 	PresetDescriptionCache(App &app);
 	~PresetDescriptionCache() = default;
 
+	void loop();
+
 	void add(const Preset &preset);
 	void add(const std::string &name);
 	void remove(const std::string &name);
@@ -167,6 +169,8 @@ private:
 	static uuid::log::Logger logger_;
 
 	App &app_;
+	uint64_t start_;
+	std::unique_ptr<std::vector<std::string>> presets_;
 	std::unordered_map<std::string,std::string> descriptions_;
 };
 
