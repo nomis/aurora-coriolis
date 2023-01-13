@@ -21,6 +21,10 @@
 #include <Arduino.h>
 
 #ifdef ENV_NATIVE
+# include <sys/types.h>
+# include <sys/select.h>
+# include <sys/socket.h>
+# include <microhttpd.h>
 #else
 # include <esp_http_server.h>
 #endif
@@ -43,6 +47,19 @@ uuid::log::Logger WebServer::logger_{FPSTR(__pstr__logger_name), uuid::log::Faci
 
 WebServer::WebServer(uint16_t port) {
 #ifdef ENV_NATIVE
+	struct MHD_Daemon *daemon;
+
+	daemon = MHD_start_daemon(MHD_USE_INTERNAL_POLLING_THREAD, port, nullptr,
+		nullptr, &handle_connection, this, MHD_OPTION_NOTIFY_COMPLETED,
+		&cleanup_connection, nullptr, MHD_OPTION_END);
+
+	if (daemon) {
+		daemon_ = std::unique_ptr<struct MHD_Daemon,MHD_DaemonDeleter>{daemon};
+		logger_.debug("Started HTTP server: http://0.0.0.0:%u",
+			MHD_get_daemon_info(daemon_.get(), MHD_DAEMON_INFO_BIND_PORT)->port);
+	} else {
+		logger_.crit("Failed to start HTTP server");
+	}
 #else
 	httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 	httpd_handle_t server = nullptr;
@@ -54,8 +71,8 @@ WebServer::WebServer(uint16_t port) {
 	err = httpd_start(&server, &config);
 
 	if (err == ESP_OK) {
-		logger_.debug("Started HTTP server");
 		handle_ = std::unique_ptr<void,HandleDeleter>{server};
+		logger_.debug("Started HTTP server");
 	} else {
 		logger_.crit("Failed to start HTTP server: %d", err);
 	}
@@ -75,55 +92,76 @@ WebServer::~WebServer() {
 
 bool WebServer::add_get_handler(const std::string &uri, get_function handler) {
 #ifdef ENV_NATIVE
+	if (!daemon_)
+		return false;
 #else
 	if (!handle_)
 		return false;
+#endif
 
 	uri_handlers_.push_back(std::make_unique<GetURIHandler>(uri, std::move(handler)));
+
+#ifdef ENV_NATIVE
+	return true;
+#else
 	if (uri_handlers_.back()->server_register(handle_.get()))
 		return true;
 
 	logger_.crit("Failed to register GET handler for URI %s", uri.c_str());
 
 	uri_handlers_.pop_back();
-#endif
 	return false;
+#endif
 }
 
 bool WebServer::add_post_handler(const std::string &uri, get_function handler) {
 #ifdef ENV_NATIVE
+	if (!daemon_)
+		return false;
 #else
 	if (!handle_)
 		return false;
+#endif
 
 	uri_handlers_.push_back(std::make_unique<PostURIHandler>(uri, std::move(handler)));
+
+#ifdef ENV_NATIVE
+	return true;
+#else
 	if (uri_handlers_.back()->server_register(handle_.get()))
 		return true;
 
 	logger_.crit("Failed to register POST handler for URI %s", uri.c_str());
 
 	uri_handlers_.pop_back();
-#endif
 	return false;
+#endif
 }
 
 bool WebServer::add_static_content(const std::string &uri, const char *content_type,
 		const char * const headers[][2], const char *data, size_t len) {
 #ifdef ENV_NATIVE
+	if (!daemon_)
+		return false;
 #else
 	if (!handle_)
 		return false;
+#endif
 
 	uri_handlers_.push_back(std::make_unique<StaticContentURIHandler>(uri,
 		content_type, headers, data, len));
+
+#ifdef ENV_NATIVE
+	return true;
+#else
 	if (uri_handlers_.back()->server_register(handle_.get()))
 		return true;
 
 	logger_.crit("Failed to register GET handler for URI %s", uri.c_str());
 
 	uri_handlers_.pop_back();
-#endif
 	return false;
+#endif
 }
 
 WebServer::URIHandler::URIHandler(const std::string &uri) : uri_(uri) {
@@ -165,6 +203,50 @@ WebServer::StaticContentURIHandler::StaticContentURIHandler(const std::string &u
 }
 
 #ifdef ENV_NATIVE
+std::string WebServer::GetURIHandler::method() {
+	return "GET";
+}
+
+int WebServer::GetURIHandler::handle_connection(Request &req) {
+	if (function_(req)) {
+		return req.finish();
+	} else {
+		return MHD_NO;
+	}
+}
+
+std::string WebServer::PostURIHandler::method() {
+	return "POST";
+}
+
+int WebServer::PostURIHandler::handle_connection(Request &req) {
+	if (function_(req)) {
+		return req.finish();
+	} else {
+		return MHD_NO;
+	}
+}
+
+std::string WebServer::StaticContentURIHandler::method() {
+	return "GET";
+}
+
+int WebServer::StaticContentURIHandler::handle_connection(Request &req) {
+	req.set_status(200);
+	req.set_type(content_type_);
+
+	if (headers_ != nullptr) {
+		const char * const *header = headers_[0];
+
+		while (header[0] != nullptr) {
+			req.add_header(header[0], header[1]);
+			header += 2;
+		}
+	}
+
+	req.write(reinterpret_cast<const uint8_t*>(data_), length_);
+	return req.finish();
+}
 #else
 httpd_method_t WebServer::GetURIHandler::method() {
 	return HTTP_GET;
@@ -218,6 +300,9 @@ esp_err_t WebServer::StaticContentURIHandler::handler_function(httpd_req_t *req)
 #endif
 
 #ifdef ENV_NATIVE
+WebServer::Request::Request(struct MHD_Connection *connection, const char *url)
+		: connection_(connection), url_(url) {
+}
 #else
 WebServer::Request::Request(httpd_req_t *req) : req_(req),
 	content_len_(req_->content_len), buffer_(1436 - 7) {
@@ -225,6 +310,64 @@ WebServer::Request::Request(httpd_req_t *req) : req_(req),
 #endif
 
 #ifdef ENV_NATIVE
+void WebServer::Request::upload(const char *data, size_t len) {
+	upload_data_.resize(upload_data_.size() + len);
+	std::memcpy(&upload_data_[upload_data_.size() - len], data, len);
+}
+
+int WebServer::Request::available() {
+	return upload_data_.size();
+}
+
+int WebServer::Request::read() {
+	char buffer;
+
+	if (readBytes(&buffer, 1) == 1) {
+		return buffer;
+	} else {
+		return -1;
+	}
+}
+
+int WebServer::Request::peek() {
+	return -1;
+}
+
+size_t WebServer::Request::readBytes(char *buffer, size_t length) {
+	length = std::min(length, upload_data_.size());
+	if (length > 0) {
+		std::memcpy(buffer, upload_data_.data(), length);
+		upload_data_.erase(upload_data_.begin(), std::next(upload_data_.begin(), length));
+	}
+	return length;
+}
+
+size_t WebServer::Request::write(uint8_t c) {
+	buffer_.push_back(c);
+	return 1;
+}
+
+size_t WebServer::Request::write(const uint8_t *buffer, size_t size) {
+	buffer_.resize(buffer_.size() + size);
+	std::memcpy(&buffer_[buffer_.size() - size], buffer, size);
+	return size;
+}
+
+int WebServer::Request::finish() {
+	if (status_ == 0)
+		status_ = buffer_.empty() ? 204 : 200;
+
+	auto response = wrap_response(MHD_create_response_from_buffer(
+			buffer_.size(), reinterpret_cast<void*>(buffer_.data()),
+			MHD_RESPMEM_MUST_COPY));
+	auto ret = MHD_queue_response(connection_, status_, response.get());
+
+	MHD_add_response_header(response.get(), MHD_HTTP_HEADER_CONTENT_TYPE, content_type_);
+	for (auto &header : resp_headers_)
+		MHD_add_response_header(response.get(), header.first.c_str(), header.second.c_str());
+
+	return ret;
+}
 #else
 int WebServer::Request::available() {
 	return content_len_;
@@ -310,6 +453,7 @@ const char* WebServer::Request::uri() const {
 
 void WebServer::Request::set_status(unsigned int status) {
 #ifdef ENV_NATIVE
+	status_ = status;
 #else
 	if (status == 200) {
 		httpd_resp_set_status(req_, HTTPD_200);
@@ -330,6 +474,7 @@ void WebServer::Request::set_status(unsigned int status) {
 
 void WebServer::Request::set_type(const char *type) {
 #ifdef ENV_NATIVE
+	content_type_ = type;
 #else
 	httpd_resp_set_type(req_, type);
 #endif
@@ -337,6 +482,7 @@ void WebServer::Request::set_type(const char *type) {
 
 void WebServer::Request::add_header(const char *name, const char *value) {
 #ifdef ENV_NATIVE
+	resp_headers_.emplace(name, value);
 #else
 	httpd_resp_set_hdr(req_, name, value);
 #endif
@@ -344,6 +490,7 @@ void WebServer::Request::add_header(const char *name, const char *value) {
 
 void WebServer::Request::add_header(const char *name, const std::string &value) {
 #ifdef ENV_NATIVE
+	resp_headers_.emplace(name, value);
 #else
 	resp_headers_.emplace_back(strdup(value.c_str()));
 	add_header(name, resp_headers_.back().get());
@@ -352,7 +499,7 @@ void WebServer::Request::add_header(const char *name, const std::string &value) 
 
 std::string WebServer::Request::get_header(const char *name) {
 #ifdef ENV_NATIVE
-	return "";
+	return MHD_lookup_connection_value(connection_, MHD_HEADER_KIND, name);
 #else
 	size_t len = httpd_req_get_hdr_value_len(req_, name);
 
@@ -367,5 +514,58 @@ std::string WebServer::Request::get_header(const char *name) {
 	return buffer.data();
 #endif
 }
+
+#ifdef ENV_NATIVE
+int WebServer::handle_connection(void *cls,
+		struct MHD_Connection *connection, const char *url, const char *method,
+		const char *version, const char *upload_data, size_t *upload_data_size,
+		void **con_cls) {
+	WebServer *server = reinterpret_cast<WebServer*>(cls);
+	return server->handle_connection(connection, url, method, upload_data,
+		upload_data_size, reinterpret_cast<Request**>(con_cls));
+}
+
+void WebServer::cleanup_connection(void *cls, struct MHD_Connection *connection,
+		void **con_cls, enum MHD_RequestTerminationCode toe) {
+	Request *req = reinterpret_cast<Request*>(*con_cls);
+	if (req) {
+		delete req;
+		*con_cls = nullptr;
+	}
+}
+
+int WebServer::handle_connection(struct MHD_Connection *connection,
+		const char *url, const char *method, const char *upload_data,
+		size_t *upload_data_size, Request **req) {
+	for (auto &uri_handler : uri_handlers_) {
+		if (uri_handler->method() != method)
+			continue;
+
+		if (uri_handler->uri() != url)
+			continue;
+
+		if (*req) {
+			if (upload_data && *upload_data_size) {
+				(**req).upload(upload_data, *upload_data_size);
+				*upload_data_size = 0;
+				return MHD_YES;
+			} else {
+				return uri_handler->handle_connection(**req);
+			}
+		} else {
+			*req = new Request{connection, url};
+			return MHD_YES;
+		}
+	}
+
+	const char *message = "404 Not Found";
+	auto response = wrap_response(MHD_create_response_from_buffer(strlen(message),
+			(void*)message, MHD_RESPMEM_PERSISTENT));
+	auto ret = MHD_queue_response(connection, MHD_HTTP_NOT_FOUND, response.get());
+
+	MHD_add_response_header(response.get(), MHD_HTTP_HEADER_CONTENT_TYPE, "text/plain");
+	return ret;
+}
+#endif
 
 } // namespace aurcor

@@ -21,6 +21,10 @@
 #include <Arduino.h>
 
 #ifdef ENV_NATIVE
+# include <sys/types.h>
+# include <sys/select.h>
+# include <sys/socket.h>
+# include <microhttpd.h>
 #else
 # include <esp_http_server.h>
 #endif
@@ -37,10 +41,17 @@ namespace aurcor {
 
 class WebServer {
 public:
+#ifdef ENV_NATIVE
+	static constexpr uint16_t DEFAULT_PORT = 0;
+#else
+	static constexpr uint16_t DEFAULT_PORT = 80;
+#endif
+
 	class Request: public Stream {
 		friend WebServer;
 	public:
 #ifdef ENV_NATIVE
+		Request(struct MHD_Connection *connection, const char *url);
 #else
 		Request(httpd_req_t *req);
 #endif
@@ -63,6 +74,16 @@ public:
 
 	private:
 #ifdef ENV_NATIVE
+		void upload(const char *data, size_t len);
+		int finish();
+
+		struct MHD_Connection *connection_;
+		const char *url_;
+		std::vector<char> upload_data_;
+		std::vector<char> buffer_;
+		unsigned int status_{0};
+		const char *content_type_;
+		std::unordered_map<std::string,std::string> resp_headers_;
 #else
 		void send();
 		void finish();
@@ -81,7 +102,7 @@ public:
 	using get_function = std::function<bool(Request &req)>;
 	using post_function = std::function<bool(Request &req)>;
 
-	WebServer(uint16_t port = 80);
+	WebServer(uint16_t port = DEFAULT_PORT);
 	~WebServer();
 
 	bool add_get_handler(const std::string &uri, get_function handler);
@@ -91,6 +112,19 @@ public:
 
 private:
 #ifdef ENV_NATIVE
+	class MHD_DaemonDeleter {
+	public:
+		void operator()(struct MHD_Daemon *daemon) {
+			MHD_stop_daemon(daemon);
+		}
+	};
+
+	class MHD_ResponseDeleter {
+	public:
+		void operator()(struct MHD_Response *response) {
+			MHD_destroy_response(response);
+		}
+	};
 #else
 	class HandleDeleter {
 	public:
@@ -105,6 +139,9 @@ private:
 		virtual ~URIHandler() = default;
 
 #ifdef ENV_NATIVE
+		virtual std::string method() = 0;
+		inline const std::string& uri() const { return uri_; }
+		virtual int handle_connection(Request &req) = 0;
 #else
 		virtual httpd_method_t method() = 0;
 		bool server_register(httpd_handle_t server);
@@ -114,8 +151,7 @@ private:
 	protected:
 		URIHandler(const std::string &uri);
 
-#ifdef ENV_NATIVE
-#else
+#ifndef ENV_NATIVE
 		virtual esp_err_t handler_function(httpd_req_t *req) = 0;
 #endif
 
@@ -127,9 +163,13 @@ private:
 	public:
 		GetURIHandler(const std::string &uri, get_function handler);
 
-	protected:
 #ifdef ENV_NATIVE
-#else
+		std::string method() override;
+		int handle_connection(Request &req) override;
+#endif
+
+	protected:
+#ifndef ENV_NATIVE
 		httpd_method_t method() override;
 		esp_err_t handler_function(httpd_req_t *req) override;
 #endif
@@ -142,9 +182,13 @@ private:
 	public:
 		PostURIHandler(const std::string &uri, post_function handler);
 
-	protected:
 #ifdef ENV_NATIVE
-#else
+		std::string method() override;
+		int handle_connection(Request &req) override;
+#endif
+
+	protected:
+#ifndef ENV_NATIVE
 		httpd_method_t method() override;
 		esp_err_t handler_function(httpd_req_t *req) override;
 #endif
@@ -158,9 +202,13 @@ private:
 		StaticContentURIHandler(const std::string &uri, const char *content_type,
 			const char * const headers[][2], const char *data, size_t length);
 
-	protected:
 #ifdef ENV_NATIVE
-#else
+		std::string method() override;
+		int handle_connection(Request &req) override;
+#endif
+
+	protected:
+#ifndef ENV_NATIVE
 		httpd_method_t method() override;
 		esp_err_t handler_function(httpd_req_t *req) override;
 #endif
@@ -172,9 +220,29 @@ private:
 		size_t length_;
 	};
 
+#ifdef ENV_NATIVE
+	static inline std::unique_ptr<struct MHD_Response,MHD_ResponseDeleter>
+			wrap_response(struct MHD_Response *response) {
+		return std::unique_ptr<struct MHD_Response,MHD_ResponseDeleter>(response);
+	}
+
+	static int handle_connection(void *cls,
+		struct MHD_Connection *connection, const char *url, const char *method,
+		const char *version, const char *upload_data, size_t *upload_data_size,
+		void **con_cls);
+
+	static void cleanup_connection(void *cls, struct MHD_Connection *connection,
+		void **con_cls, enum MHD_RequestTerminationCode toe);
+#endif
+
 	static uuid::log::Logger logger_;
 
 #ifdef ENV_NATIVE
+	int handle_connection(struct MHD_Connection *connection, const char *url,
+		const char *method, const char *upload_data, size_t *upload_data_size,
+		Request **req);
+
+	std::unique_ptr<struct MHD_Daemon,MHD_DaemonDeleter> daemon_;
 #else
 	std::unique_ptr<void,HandleDeleter> handle_;
 #endif
