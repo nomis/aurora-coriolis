@@ -18,9 +18,15 @@
 
 #include "aurcor/web_interface.h"
 
+#include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "app/config.h"
 #include "aurcor/app.h"
 #include "aurcor/led_bus.h"
+#include "aurcor/preset.h"
 #include "aurcor/web_server.h"
 
 #ifndef PSTR_ALIGN
@@ -102,14 +108,107 @@ bool WebInterface::set_preset(WebServer::Request &req) {
 	}
 
 	std::vector<char> buffer(len);
+	bool success = false;
 
 	req.readBytes(buffer.data(), buffer.size());
 
-	req.set_status(303);
-	req.set_type("text/plain");
-	req.add_header("Location", "/");
+	const std::string_view name_prefix{"name="};
+	std::string_view text{buffer.data(), buffer.size()};
+	auto params = parse_form(text);
+	std::string_view preset_name;
+	const char *error = "";
+
+	auto it = params.find("name");
+	if (it != params.end())
+		preset_name = it->second;
+
+	if (preset_name.empty()) {
+		error = "No preset specified";
+	} else {
+		app::Config config;
+
+		if (config.default_bus().empty()) {
+			error = "No default bus";
+		} else {
+			auto bus = app_.bus(config.default_bus());
+			auto preset = std::make_shared<Preset>(app_, bus);
+
+			if (!preset->name(preset_name)) {
+				error = "Invalid preset name";
+			} else {
+				auto result = preset->load();
+
+				switch (result) {
+				case Result::OK:
+					if (!app_.start(bus, preset, false)) {
+						error = "Access denied: current preset is unsaved";
+					} else {
+						success = true;
+					}
+					break;
+
+				case Result::NOT_FOUND:
+					error = "Preset not found";
+					break;
+
+				case Result::FULL:
+				case Result::OUT_OF_RANGE:
+					error = "Preset too large or invalid";
+					break;
+
+				case Result::PARSE_ERROR:
+				case Result::IO_ERROR:
+				default:
+					error = "Failed to load preset";
+					break;
+				}
+			}
+		}
+	}
+
 	req.add_header("Cache-Control", "no-cache");
+	if (success) {
+		req.set_status(303);
+		req.set_type("text/plain");
+		req.add_header("Location", "/");
+	} else {
+		req.set_status(200);
+		req.set_type("text/html");
+		req.printf(
+			"<!DOCTYPE html><html><head>"
+			"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+			"<meta http-equiv=\"refresh\" content=\"2;URL=/\">"
+			"</head><body><p>%s</p></body></html>", error);
+	}
 	return true;
+}
+
+std::unordered_map<std::string_view,std::string_view>
+		WebInterface::parse_form(std::string_view text) {
+	std::unordered_map<std::string_view,std::string_view> params;
+
+	while (text.length() > 0) {
+		std::string_view value;
+		auto amp_pos = text.find('&');
+
+		if (amp_pos != std::string_view::npos) {
+			value = text.substr(0, amp_pos);
+			text.remove_prefix(amp_pos + 1);
+		} else {
+			value = text;
+			text = {};
+		}
+
+		auto eq_pos = value.find('=');
+
+		if (eq_pos != std::string_view::npos) {
+			params.emplace(value.substr(0, eq_pos), value.substr(eq_pos + 1));
+		} else {
+			params.emplace(value, "");
+		}
+	}
+
+	return params;
 }
 
 } // namespace aurcor

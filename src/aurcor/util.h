@@ -28,6 +28,7 @@
 #include <limits>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 extern "C" {
@@ -88,7 +89,7 @@ static inline bool str_begins_case_insensitive(const std::string &str, const cha
 	return !::strncasecmp(str.c_str(), find, std::char_traits<char>::length(find));
 }
 
-bool allowed_file_name(const std::string &name, bool key = false);
+bool allowed_file_name(const std::string_view &name, bool key = false);
 bool allowed_text(const std::string &text);
 std::vector<std::string> list_filenames(const char *directory_name, const char *extension);
 

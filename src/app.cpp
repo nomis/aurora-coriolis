@@ -230,8 +230,12 @@ bool App::detach(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Micro
 	return true;
 }
 
-void App::start(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Preset> &preset) {
+bool App::start(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Preset> &preset,
+		bool overwrite) {
 	std::unique_lock lock{presets_map_mutex_, std::defer_lock};
+
+	if (!overwrite && unsaved_preset(bus))
+		return false;
 
 	logger_.trace(F("Start preset \"%s\" on %s[%s]"),
 		preset->name().c_str(), bus->type(), bus->name());
@@ -247,6 +251,7 @@ void App::start(const std::shared_ptr<LEDBus> &bus, const std::shared_ptr<Preset
 	}
 
 	presets_.emplace(bus, preset);
+	return true;
 }
 
 std::shared_ptr<std::shared_ptr<Preset>> App::edit(const std::shared_ptr<LEDBus> &bus) {

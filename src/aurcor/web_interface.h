@@ -34,10 +34,12 @@ public:
 	WebInterface(App &app);
 
 private:
-	static uuid::log::Logger logger_;
+	static std::unordered_map<std::string_view,std::string_view> parse_form(std::string_view text);
 
 	bool list_presets(WebServer::Request &req);
 	bool set_preset(WebServer::Request &req);
+
+	static uuid::log::Logger logger_;
 
 	App &app_;
 	WebServer server_;

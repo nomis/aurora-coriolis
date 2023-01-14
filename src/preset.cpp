@@ -23,6 +23,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <string>
+#include <string_view>
 
 #include <CBOR.h>
 #include <CBOR_parsing.h>
@@ -69,12 +70,12 @@ std::string Preset::name(bool allow_unnamed) const {
 	}
 }
 
-bool Preset::name(std::string name) {
+bool Preset::name(std::string_view name) {
 	if (!allowed_file_name(name))
 		return false;
 
 	if (name.length() > MAX_NAME_LENGTH)
-		name.resize(MAX_NAME_LENGTH);
+		name = name.substr(0, MAX_NAME_LENGTH);
 
 	std::unique_lock data_lock{data_mutex_};
 

@@ -21,6 +21,7 @@
 #include <cstring>
 #include <shared_mutex>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "app/fs.h"
@@ -28,7 +29,7 @@
 
 namespace aurcor {
 
-bool allowed_file_name(const std::string &name, bool key) {
+bool allowed_file_name(const std::string_view &name, bool key) {
 	for (auto c : name) {
 		if (c >= 'a' && c <= 'z')
 			continue;

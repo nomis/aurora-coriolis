@@ -23,6 +23,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -61,7 +62,7 @@ public:
 	static std::vector<std::string> names();
 
 	std::string name(bool allow_unnamed = false) const;
-	bool name(std::string name);
+	bool name(std::string_view name);
 
 	std::string description() const;
 	bool description(std::string description);
