@@ -453,6 +453,7 @@ Result Preset::save() {
 		return Result::IO_ERROR;
 	} else {
 		modified_ = false;
+		file_lock.unlock();
 		app_.add_preset_description(*this);
 		return Result::OK;
 	}
@@ -495,6 +496,7 @@ Result Preset::rename(const Preset &destination) {
 		logger_.notice(F("Renaming preset file from %s to %s"), filename_from.c_str(), filename_to.c_str());
 		if (FS.rename(filename_from.c_str(), filename_to.c_str())) {
 			name_ = destination.name_;
+			file_lock.unlock();
 			app_.add_preset_description(name_);
 			return Result::OK;
 		} else {
