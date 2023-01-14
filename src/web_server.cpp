@@ -29,6 +29,7 @@
 # include <esp_http_server.h>
 #endif
 
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <memory>
@@ -48,6 +49,10 @@ uuid::log::Logger WebServer::logger_{FPSTR(__pstr__logger_name), uuid::log::Faci
 WebServer::WebServer(uint16_t port) {
 #ifdef ENV_NATIVE
 	struct MHD_Daemon *daemon;
+	const char *port_env = std::getenv("HTTPD_PORT");
+
+	if (port_env)
+		port = std::strtol(port_env, nullptr, 0);
 
 	daemon = MHD_start_daemon(MHD_USE_INTERNAL_POLLING_THREAD, port, nullptr,
 		nullptr, &handle_connection, this, MHD_OPTION_NOTIFY_COMPLETED,
@@ -55,7 +60,7 @@ WebServer::WebServer(uint16_t port) {
 
 	if (daemon) {
 		daemon_ = std::unique_ptr<struct MHD_Daemon,MHD_DaemonDeleter>{daemon};
-		logger_.debug("Started HTTP server: http://0.0.0.0:%u",
+		logger_.debug("Started HTTP server: http://localhost:%u",
 			MHD_get_daemon_info(daemon_.get(), MHD_DAEMON_INFO_BIND_PORT)->port);
 	} else {
 		logger_.crit("Failed to start HTTP server");
