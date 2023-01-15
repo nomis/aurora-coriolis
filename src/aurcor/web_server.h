@@ -108,7 +108,7 @@ public:
 	bool add_get_handler(const std::string &uri, get_function handler);
 	bool add_post_handler(const std::string &uri, post_function handler);
 	bool add_static_content(const std::string &uri, const char *content_type,
-		const char * const headers[][2], const char *data, size_t len);
+		const char * const headers[][2], const std::string_view data);
 
 private:
 #ifdef ENV_NATIVE
@@ -200,7 +200,7 @@ private:
 	class StaticContentURIHandler: public URIHandler {
 	public:
 		StaticContentURIHandler(const std::string &uri, const char *content_type,
-			const char * const headers[][2], const char *data, size_t length);
+			const char * const headers[][2], const std::string_view data);
 
 #ifdef ENV_NATIVE
 		std::string method() override;
@@ -216,8 +216,7 @@ private:
 	private:
 		const char *content_type_;
 		const char * const (*headers_)[2];
-		const char *data_;
-		size_t length_;
+		const std::string_view data_;
 	};
 
 #ifdef ENV_NATIVE

@@ -1,4 +1,4 @@
-.PHONY: all clean upload fs uploadfs cleanfs pipenv
+.PHONY: all clean upload fs uploadfs cleanfs htdocs src_htdocs pipenv
 .DELETE_ON_ERROR:
 
 # Don't emit native code because the ESP32 can't execute it from SPIRAM
@@ -16,6 +16,7 @@ clean: cleanfs
 	+$(MAKE) -C $(PIPENV) -L clean
 	rm -rf lib/micropython/port/build
 	rm -rf .pio/*
+	rm -f src/htdocs/*.br.h
 	+$(MAKE) -C micropython/mpy-cross clean
 	+$(MAKE) -C src/app/pio/certs -L clean
 
@@ -24,6 +25,9 @@ upload:
 
 uploadfs: fs
 	platformio run -t uploadfs
+
+htdocs: \
+	$(patsubst %.xml,src/%.xml.br.h,$(wildcard htdocs/*.xml))
 
 data:
 	mkdir -p data
@@ -90,3 +94,9 @@ data/presets/%.cbor: presets/%.toml | data/presets pipenv
 
 data/presets/%.cbor: presets/%.json | data/presets pipenv
 	$(PYTHON) $(PIPENV)/json2cbor.py $< $@
+
+src_htdocs:
+	mkdir -p src/htdocs
+
+src/htdocs/%.br.h: htdocs/% pipenv/brotli-compress-embed.py | src_htdocs pipenv
+	$(PYTHON) $(PIPENV)/brotli-compress-embed.py $< $@

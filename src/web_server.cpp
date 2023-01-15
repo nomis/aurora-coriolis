@@ -144,7 +144,7 @@ bool WebServer::add_post_handler(const std::string &uri, get_function handler) {
 }
 
 bool WebServer::add_static_content(const std::string &uri, const char *content_type,
-		const char * const headers[][2], const char *data, size_t len) {
+		const char * const headers[][2], const std::string_view data) {
 #ifdef ENV_NATIVE
 	if (!daemon_)
 		return false;
@@ -154,7 +154,7 @@ bool WebServer::add_static_content(const std::string &uri, const char *content_t
 #endif
 
 	uri_handlers_.push_back(std::make_unique<StaticContentURIHandler>(uri,
-		content_type, headers, data, len));
+		content_type, headers, data));
 
 #ifdef ENV_NATIVE
 	return true;
@@ -201,10 +201,10 @@ WebServer::PostURIHandler::PostURIHandler(const std::string &uri, post_function 
 }
 
 WebServer::StaticContentURIHandler::StaticContentURIHandler(const std::string &uri,
-		const char *content_type, const char * const headers[][2], const char *data,
-		size_t length)
+		const char *content_type, const char * const headers[][2],
+		const std::string_view data)
 		: URIHandler(uri), content_type_(content_type), headers_(headers),
-		data_(data), length_(length) {
+		data_(data) {
 }
 
 #ifdef ENV_NATIVE
@@ -249,7 +249,7 @@ int WebServer::StaticContentURIHandler::handle_connection(Request &req) {
 		}
 	}
 
-	req.write(reinterpret_cast<const uint8_t*>(data_), length_);
+	req.write(reinterpret_cast<const uint8_t*>(data_.begin()), data_.length());
 	return req.finish();
 }
 #else
@@ -300,7 +300,7 @@ esp_err_t WebServer::StaticContentURIHandler::handler_function(httpd_req_t *req)
 		}
 	}
 
-	return httpd_resp_send(req, data_, length_);
+	return httpd_resp_send(req, data_.begin(), data_.length());
 }
 #endif
 
