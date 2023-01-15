@@ -22,6 +22,8 @@
 #include <limits>
 #include <mutex>
 #include <shared_mutex>
+#include <string>
+#include <string_view>
 #include <utility>
 
 #include <CBOR.h>
@@ -114,7 +116,7 @@ std::string LEDBusConfig::default_preset() const {
 	return default_preset_;
 }
 
-void LEDBusConfig::default_preset(std::string value) {
+void LEDBusConfig::default_preset(std::string_view value) {
 	std::unique_lock data_lock{data_mutex_};
 	if (default_preset_ != value) {
 		default_preset_ = value;

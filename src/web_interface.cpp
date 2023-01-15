@@ -27,6 +27,7 @@
 #include "aurcor/app.h"
 #include "aurcor/led_bus.h"
 #include "aurcor/preset.h"
+#include "aurcor/util.h"
 #include "aurcor/web_server.h"
 
 #ifndef PSTR_ALIGN
@@ -108,7 +109,6 @@ bool WebInterface::set_preset(WebServer::Request &req) {
 	}
 
 	std::vector<char> buffer(len);
-	bool success = false;
 
 	req.readBytes(buffer.data(), buffer.size());
 
@@ -116,58 +116,70 @@ bool WebInterface::set_preset(WebServer::Request &req) {
 	std::string_view text{buffer.data(), buffer.size()};
 	auto params = parse_form(text);
 	std::string_view preset_name;
-	const char *error = "";
+	bool start_preset = true;
+	bool set_default = false;
+	const char *message = nullptr;
 
 	auto it = params.find("name");
 	if (it != params.end())
 		preset_name = it->second;
 
+	it = params.find("start");
+	if (it != params.end())
+		start_preset = !it->second.empty() && it->second != "0";
+
+	it = params.find("default");
+	if (it != params.end())
+		set_default = !it->second.empty() && it->second != "0";
+
 	if (preset_name.empty()) {
-		error = "No preset specified";
+		message = "No preset specified";
 	} else {
 		app::Config config;
 
 		if (config.default_bus().empty()) {
-			error = "No default bus";
+			message = "No default bus";
 		} else {
 			auto bus = app_.bus(config.default_bus());
 			auto preset = std::make_shared<Preset>(app_, bus);
 
 			if (!preset->name(preset_name)) {
-				error = "Invalid preset name";
+				message = "Invalid preset name";
 			} else {
 				auto result = preset->load();
 
 				switch (result) {
 				case Result::OK:
-					if (!app_.start(bus, preset, false)) {
-						error = "Access denied: current preset is unsaved";
-					} else {
-						success = true;
-					}
+					if (start_preset && !app_.start(bus, preset, false))
+						message = "Access denied: current preset is unsaved";
 					break;
 
 				case Result::NOT_FOUND:
-					error = "Preset not found";
+					message = "Preset not found";
 					break;
 
 				case Result::FULL:
 				case Result::OUT_OF_RANGE:
-					error = "Preset too large or invalid";
+					message = "Preset too large or invalid";
 					break;
 
 				case Result::PARSE_ERROR:
 				case Result::IO_ERROR:
 				default:
-					error = "Failed to load preset";
+					message = "Failed to load preset";
 					break;
 				}
+			}
+
+			if (set_default && !message) {
+				bus->default_preset(preset_name);
+				message = "Updated default preset";
 			}
 		}
 	}
 
 	req.add_header("Cache-Control", "no-cache");
-	if (success) {
+	if (!message) {
 		req.set_status(303);
 		req.set_type("text/plain");
 		req.add_header("Location", "/");
@@ -178,7 +190,7 @@ bool WebInterface::set_preset(WebServer::Request &req) {
 			"<!DOCTYPE html><html><head>"
 			"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
 			"<meta http-equiv=\"refresh\" content=\"2;URL=/\">"
-			"</head><body><p>%s</p></body></html>", error);
+			"</head><body><p>%s</p></body></html>", message);
 	}
 	return true;
 }

@@ -22,6 +22,8 @@
 #include <map>
 #include <mutex>
 #include <shared_mutex>
+#include <string>
+#include <string_view>
 
 #include <CBOR.h>
 #include <CBOR_parsing.h>
@@ -55,7 +57,7 @@ public:
 	void reverse(bool value);
 
 	std::string default_preset() const;
-	void default_preset(std::string value);
+	void default_preset(std::string_view value);
 
 	unsigned int default_fps() const;
 	void default_fps(unsigned int value);

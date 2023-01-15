@@ -26,6 +26,8 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include <uuid/log.h>
@@ -58,7 +60,7 @@ public:
 	inline bool reverse() const { return config_.reverse(); }
 	inline void reverse(bool value) { config_.reverse(value); }
 	inline std::string default_preset() const { return config_.default_preset(); }
-	inline void default_preset(std::string value) { config_.default_preset(value); }
+	inline void default_preset(std::string_view value) { config_.default_preset(value); }
 	inline unsigned int default_fps() const { return config_.default_fps(); }
 	inline void default_fps(unsigned int value) { config_.default_fps(value); }
 	inline void reload_config() { config_.reload(); }
