@@ -1,4 +1,4 @@
-desc: Single Random 1 (slow)
+desc: Single Random 2 (slow)
 script: random_rgb
 config:
   auto/s32: 2
