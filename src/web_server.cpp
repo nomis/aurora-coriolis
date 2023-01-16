@@ -55,8 +55,10 @@ WebServer::WebServer(uint16_t port) {
 		port = std::strtol(port_env, nullptr, 0);
 
 	daemon = MHD_start_daemon(MHD_USE_INTERNAL_POLLING_THREAD, port, nullptr,
-		nullptr, &handle_connection, this, MHD_OPTION_NOTIFY_COMPLETED,
-		&cleanup_connection, nullptr, MHD_OPTION_END);
+		nullptr, &handle_connection, this,
+		MHD_OPTION_NOTIFY_COMPLETED, &cleanup_connection, nullptr,
+		MHD_OPTION_URI_LOG_CALLBACK, &log_connection, nullptr,
+		MHD_OPTION_END);
 
 	if (daemon) {
 		daemon_ = std::unique_ptr<struct MHD_Daemon,MHD_DaemonDeleter>{daemon};
@@ -315,6 +317,15 @@ WebServer::Request::Request(httpd_req_t *req) : req_(req),
 #endif
 
 #ifdef ENV_NATIVE
+bool WebServer::Request::first() {
+	if (first_) {
+		first_ = false;
+		return true;
+	} else {
+		return false;
+	}
+}
+
 void WebServer::Request::upload(const char *data, size_t len) {
 	upload_data_.resize(upload_data_.size() + len);
 	std::memcpy(&upload_data_[upload_data_.size() - len], data, len);
@@ -521,6 +532,11 @@ std::string WebServer::Request::get_header(const char *name) {
 }
 
 #ifdef ENV_NATIVE
+void* WebServer::log_connection(void *cls, const char *uri,
+		struct MHD_Connection *connection) {
+	return new Request{connection, uri};
+}
+
 int WebServer::handle_connection(void *cls,
 		struct MHD_Connection *connection, const char *url, const char *method,
 		const char *version, const char *upload_data, size_t *upload_data_size,
@@ -550,7 +566,9 @@ int WebServer::handle_connection(struct MHD_Connection *connection,
 			continue;
 
 		if (*req) {
-			if (upload_data && *upload_data_size) {
+			if ((**req).first()) {
+				return MHD_YES;
+			} else if (upload_data && *upload_data_size) {
 				(**req).upload(upload_data, *upload_data_size);
 				*upload_data_size = 0;
 				return MHD_YES;
@@ -558,8 +576,7 @@ int WebServer::handle_connection(struct MHD_Connection *connection,
 				return uri_handler->handle_connection(**req);
 			}
 		} else {
-			*req = new Request{connection, url};
-			return MHD_YES;
+			return MHD_NO;
 		}
 	}
 

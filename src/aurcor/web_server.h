@@ -74,11 +74,13 @@ public:
 
 	private:
 #ifdef ENV_NATIVE
+		bool first();
 		void upload(const char *data, size_t len);
 		int finish();
 
 		struct MHD_Connection *connection_;
-		const char *url_;
+		const std::string url_;
+		bool first_{true};
 		std::vector<char> upload_data_;
 		std::vector<char> buffer_;
 		unsigned int status_{0};
@@ -224,6 +226,9 @@ private:
 			wrap_response(struct MHD_Response *response) {
 		return std::unique_ptr<struct MHD_Response,MHD_ResponseDeleter>(response);
 	}
+
+	static void* log_connection(void *cls, const char *uri,
+		struct MHD_Connection *connection);
 
 	static int handle_connection(void *cls,
 		struct MHD_Connection *connection, const char *url, const char *method,
