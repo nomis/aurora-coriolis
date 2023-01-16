@@ -64,7 +64,7 @@ public:
 		size_t write(uint8_t c) override;
 		size_t write(const uint8_t *buffer, size_t size) override;
 
-		const char* uri() const;
+		const std::string_view uri() const;
 		std::string get_header(const char *name);
 
 		void set_status(unsigned int status);

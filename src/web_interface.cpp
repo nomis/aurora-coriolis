@@ -77,7 +77,8 @@ bool WebInterface::list_presets(WebServer::Request &req) {
 	req.printf(
 			"<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
 			"<?xml-stylesheet type=\"text/xsl\" href=\"/%s/list_presets.xml\"?>"
-			"<l>", app_.immutable_id().c_str()
+			"<l%s>", app_.immutable_id().c_str(),
+			(req.uri() == "/?default") ? " f=\"d\"" : ""
 	);
 
 	auto presets = app_.preset_descriptions();

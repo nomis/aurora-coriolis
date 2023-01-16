@@ -448,9 +448,9 @@ void WebServer::Request::finish() {
 }
 #endif
 
-const char* WebServer::Request::uri() const {
+const std::string_view WebServer::Request::uri() const {
 #ifdef ENV_NATIVE
-	return nullptr;
+	return url_;
 #else
 	return req_->uri;
 #endif
