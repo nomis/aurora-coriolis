@@ -192,6 +192,7 @@ bool WebInterface::set_preset(WebServer::Request &req) {
 			"<!DOCTYPE html><html><head>"
 			"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
 			"<meta http-equiv=\"refresh\" content=\"2;URL=/\">"
+			"<link rel=\"icon\" href=\"data:,\"/>"
 			"</head><body><p>%s</p></body></html>", message);
 	}
 	return true;

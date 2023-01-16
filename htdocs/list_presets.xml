@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
+	Copyright 2023  Simon Arlott
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+	<xsl:output method="html" version="5.0" encoding="UTF-8" indent="yes"/>
+
+	<xsl:template match="/l">
+		<html>
+			<head>
+				<meta name="viewport" content="width=device-width, initial-scale=1"/>
+				<style type="text/css">
+					html, body, form {
+						margin: 0;
+						padding: 0;
+					}
+					input.preset {
+						margin: 0;
+						padding: 1em 0 1em 0;
+						width: 100%;
+						border: none;
+						border-bottom: 2px solid #FFFFFF;
+						font-weight: bold;
+						color: #000000;
+						background-color: hsl(223, 100%, 80%);
+						cursor: pointer;
+					}
+					input.preset:hover {
+						text-decoration: dotted underline;
+					}
+					input.running {
+						background-color: hsl(23, 100%, 65%);
+						text-decoration: solid underline;
+					}
+					input:active {
+						background-color: hsl(331, 70%, 55%);
+						text-decoration: wavy underline;
+					}
+				</style>
+				<script type="application/javascript">
+					Element.prototype.documentOffsetTop = function () {
+						return this.offsetTop + (this.offsetParent ? this.offsetParent.documentOffsetTop() : 0);
+					};
+					window.onload = function() {
+						var selected = document.getElementById("selected");
+						if (selected) {
+							var top = selected.documentOffsetTop() - (window.innerHeight / 2);
+							window.scrollTo(0, top);
+						}
+					};
+				</script>
+				<link rel="icon" href="data:,"/>
+			</head>
+			<body>
+				<xsl:apply-templates select="/l/p" mode="html">
+					<xsl:sort select="@d"/>
+					<xsl:sort select="@n"/>
+				</xsl:apply-templates>
+			</body>
+		</html>
+	</xsl:template>
+
+	<xsl:template match="/l/p" mode="html">
+		<form method="POST" action="/preset">
+			<xsl:if test="contains(/l/@f, 'd')">
+				<input type="hidden" name="default" value="1"/>
+			</xsl:if>
+			<input type="hidden" name="name">
+				<xsl:attribute name="value"><xsl:value-of select="@n"/></xsl:attribute>
+			</input>
+			<input type="submit">
+				<xsl:attribute name="value">
+					<xsl:choose>
+						<xsl:when test="@d = ''">
+							<xsl:text>"</xsl:text><xsl:value-of select="@n"/><xsl:text>"</xsl:text>
+						</xsl:when>
+						<xsl:otherwise><xsl:value-of select="@d"/></xsl:otherwise>
+					</xsl:choose>
+				</xsl:attribute>
+				<xsl:if test="contains(@f, 'r')">
+					<xsl:attribute name="id">selected</xsl:attribute>
+				</xsl:if>
+				<xsl:attribute name="class">
+					<xsl:text>preset</xsl:text>
+					<xsl:if test="contains(@f, 'r')"> running</xsl:if>
+					<xsl:if test="contains(@f, 'd')"> default</xsl:if>
+				</xsl:attribute>
+			</input>
+		</form>
+	</xsl:template>
+</xsl:stylesheet>
