@@ -156,7 +156,7 @@ void Download::download_buses(const std::string &path) {
 
 	for (auto &url : urls) {
 		logger_.trace("Download bus config: %s", url.c_str());
-		if (update_file(std::string{LEDBusConfig::DIRECTORY_NAME} + "/" + url, url_ + path + url))
+		if (update_file(std::string{LEDBusConfig::DIRECTORY_NAME} + "/" + url, url_ + path + url) == Update::MODIFIED)
 			changed_->buses.insert(app_.bus(filename_without_extension(url, LEDBusConfig::FILENAME_EXT)));
 	}
 }
@@ -172,9 +172,24 @@ void Download::download_presets(const std::string &path) {
 	download_time_ += current_time_us() - start;
 
 	for (auto &url : urls) {
+		auto name = filename_without_extension(url, Preset::FILENAME_EXT);
+
 		logger_.trace("Download preset: %s", url.c_str());
-		if (update_file(std::string{Preset::DIRECTORY_NAME} + "/" + url, url_ + path + url))
-			changed_->presets.insert(filename_without_extension(url, Preset::FILENAME_EXT));
+
+		switch (update_file(std::string{Preset::DIRECTORY_NAME} + "/" + url, url_ + path + url)) {
+		case Update::MODIFIED:
+			changed_->presets.insert(name);
+			break;
+
+		case Update::DELETED:
+			app_.remove_preset_description(name);
+			break;
+
+		case Update::NO_CHANGE:
+		case Update::FAILED:
+		default:
+			break;
+		}
 	}
 }
 
@@ -210,7 +225,7 @@ void Download::download_profiles(const std::string &path) {
 
 	for (auto &url : urls) {
 		logger_.trace("Download bus profile: %s", url.c_str());
-		if (update_file(std::string{LEDProfile::DIRECTORY_NAME} + "/" + url, url_ + path + url)) {
+		if (update_file(std::string{LEDProfile::DIRECTORY_NAME} + "/" + url, url_ + path + url) == Update::MODIFIED) {
 			std::shared_ptr<LEDBus> bus;
 			enum led_profile_id profile_id;
 
@@ -232,7 +247,7 @@ void Download::download_scripts(const std::string &path) {
 
 	for (auto &url : urls) {
 		logger_.trace("Download script: %s", url.c_str());
-		if (update_file(std::string{MicroPython::DIRECTORY_NAME} + "/" + url, url_ + path + url))
+		if (update_file(std::string{MicroPython::DIRECTORY_NAME} + "/" + url, url_ + path + url) == Update::MODIFIED)
 			changed_->scripts.insert(filename_without_extension(url, MicroPython::FILENAME_EXT));
 	}
 }
@@ -261,15 +276,16 @@ ssize_t Download::download_to_buffer(const std::string &url) {
 	return len;
 }
 
-bool Download::update_file(const std::string &filename, const std::string &url) {
+Download::Update Download::update_file(const std::string &filename, const std::string &url) {
 	uint64_t start = current_time_us();
 	ssize_t len = download_to_buffer(url);
 	if (len < 0)
-		return false;
+		return Update::FAILED;
 	download_time_ += current_time_us() - start;
 
 	std::unique_lock lock{App::file_mutex()};
 	bool changed = false;
+	bool deleted = false;
 
 	start = current_time_us();
 
@@ -308,8 +324,10 @@ bool Download::update_file(const std::string &filename, const std::string &url) 
 	}
 
 	if (len == 0) {
-		if (FS.remove(filename.c_str()))
+		if (FS.remove(filename.c_str())) {
 			logger_.info("Deleted %s", filename.c_str());
+			deleted = true;
+		}
 	} else if (changed) {
 		auto file = FS.open(filename.c_str(), "w", true);
 		size_t written = file.write(buffer_->begin(), len);
@@ -325,7 +343,13 @@ bool Download::update_file(const std::string &filename, const std::string &url) 
 
 	update_time_ += current_time_us() - start;
 
-	return changed;
+	if (deleted) {
+		return Update::DELETED;
+	} else if (changed) {
+		return Update::MODIFIED;
+	} else {
+		return Update::NO_CHANGE;
+	}
 }
 
 } // namespace aurcor

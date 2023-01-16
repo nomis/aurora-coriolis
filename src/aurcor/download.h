@@ -51,6 +51,13 @@ public:
 	static std::shared_ptr<MemoryPool> buffers_;
 
 private:
+	enum class Update {
+		NO_CHANGE,
+		MODIFIED,
+		DELETED,
+		FAILED,
+	};
+
 	static std::string filename_without_extension(const std::string &path, const std::string &extension);
 
 	void run();
@@ -62,7 +69,7 @@ private:
 	bool bus_and_profile_from_filename(const std::string &path,
 		std::shared_ptr<LEDBus> &bus_name, enum led_profile_id &profile_id);
 	ssize_t download_to_buffer(const std::string &url);
-	bool update_file(const std::string &filename, const std::string &url);
+	Update update_file(const std::string &filename, const std::string &url);
 
 	static uuid::log::Logger logger_;
 

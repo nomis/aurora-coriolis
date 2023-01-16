@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include <uuid/log.h>
@@ -63,8 +64,14 @@ void PresetDescriptionCache::loop() {
 	if (presets_->empty()) {
 		presets_.reset();
 
-		logger_.trace(F("Created preset description cache (%zu entries in %" PRIu64 "ms)"),
-			descriptions_.size(), (current_time_us() - start_) / 1000);
+		if (refresh_ == 0) {
+			logger_.trace(F("Created preset description cache (%zu entries in %" PRIu64 "ms)"),
+				descriptions_.size(), (current_time_us() - start_) / 1000);
+		} else {
+			logger_.trace(F("Updated preset description cache (%zu entries in %" PRIu64 "ms)"),
+				refresh_, (current_time_us() - start_) / 1000);
+			refresh_ = 0;
+		}
 	}
 }
 
@@ -83,6 +90,18 @@ void PresetDescriptionCache::add(const std::string &name) {
 
 	if (preset->load() == Result::OK)
 		add(*preset);
+}
+
+void PresetDescriptionCache::refresh(const std::unordered_set<std::string> &names) {
+	if (!names.empty()) {
+		if (presets_) {
+			presets_->insert(presets_->end(), names.begin(), names.end());
+		} else {
+			start_ = current_time_us();
+			presets_ = std::make_unique<std::vector<std::string>>(names.begin(), names.end());
+			refresh_ = names.size();
+		}
+	}
 }
 
 void PresetDescriptionCache::remove(const std::string &name) {

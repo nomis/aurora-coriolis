@@ -397,6 +397,13 @@ void App::refresh_files() {
 
 	refresh_presets(refresh_->presets);
 
+	{
+		std::unique_lock cache_lock{cached_presets_mutex_};
+
+		if (cached_presets_)
+			cached_presets_->refresh(refresh_->presets);
+	}
+
 	refresh_.reset();
 	logger_.notice("Refresh complete");
 }

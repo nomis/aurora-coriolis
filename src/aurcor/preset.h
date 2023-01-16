@@ -162,6 +162,7 @@ public:
 
 	void add(const Preset &preset);
 	void add(const std::string &name);
+	void refresh(const std::unordered_set<std::string> &names);
 	void remove(const std::string &name);
 
 	inline const std::unordered_map<std::string,std::string>& descriptions() const { return descriptions_; }
@@ -173,6 +174,7 @@ private:
 	uint64_t start_;
 	std::unique_ptr<std::vector<std::string>> presets_;
 	std::unordered_map<std::string,std::string> descriptions_;
+	size_t refresh_{0};
 };
 
 } // namespace aurcor
