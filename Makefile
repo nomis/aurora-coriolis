@@ -16,7 +16,7 @@ clean: cleanfs
 	+$(MAKE) -C $(PIPENV) -L clean
 	rm -rf lib/micropython/port/build
 	rm -rf .pio/*
-	rm -f src/htdocs/*.br.h
+	rm -f src/htdocs/*.gz.h
 	+$(MAKE) -C micropython/mpy-cross clean
 	+$(MAKE) -C src/app/pio/certs -L clean
 
@@ -27,7 +27,7 @@ uploadfs: fs
 	platformio run -t uploadfs
 
 htdocs: \
-	$(patsubst %.xml,src/%.xml.br.h,$(wildcard htdocs/*.xml))
+	$(patsubst %.xml,src/%.xml.gz.h,$(wildcard htdocs/*.xml))
 
 data:
 	mkdir -p data
@@ -98,5 +98,5 @@ data/presets/%.cbor: presets/%.json | data/presets pipenv
 src_htdocs:
 	mkdir -p src/htdocs
 
-src/htdocs/%.br.h: htdocs/% pipenv/brotli-compress-embed.py | src_htdocs pipenv
-	$(PYTHON) $(PIPENV)/brotli-compress-embed.py $< $@
+src/htdocs/%.gz.h: htdocs/% pipenv/gzip-embed.py | src_htdocs pipenv
+	$(PYTHON) $(PIPENV)/gzip-embed.py $< $@

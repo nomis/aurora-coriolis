@@ -29,7 +29,7 @@
 #include "aurcor/preset.h"
 #include "aurcor/util.h"
 #include "aurcor/web_server.h"
-#include "htdocs/list_presets.xml.br.h"
+#include "htdocs/list_presets.xml.gz.h"
 
 #ifndef PSTR_ALIGN
 # define PSTR_ALIGN 4
@@ -41,8 +41,8 @@ namespace aurcor {
 
 uuid::log::Logger WebInterface::logger_{FPSTR(__pstr__logger_name), uuid::log::Facility::DAEMON};
 
-static const char * const brotli_immutable_headers[][2] = {
-	{ "Content-Encoding", "br" },
+static const char * const gzip_immutable_headers[][2] = {
+	{ "Content-Encoding", "gzip" },
 	{ "Cache-Control", "public, immutable, max-age=31536000" },
 	{ nullptr, nullptr }
 };
@@ -53,7 +53,7 @@ WebInterface::WebInterface(App &app) : app_(app) {
 	server_.add_get_handler("/", std::bind(&WebInterface::list_presets, this, _1));
 	server_.add_post_handler("/preset", std::bind(&WebInterface::set_preset, this, _1));
 	server_.add_static_content("/" + app_.immutable_id() + "/list_presets.xml",
-		"application/xslt+xml", brotli_immutable_headers, htdocs_list_presets_xml_br);
+		"application/xslt+xml", gzip_immutable_headers, htdocs_list_presets_xml_gz);
 }
 
 bool WebInterface::list_presets(WebServer::Request &req) {
