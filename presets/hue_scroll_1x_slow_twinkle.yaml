@@ -1,4 +1,4 @@
-desc: Hue Scroll (1x, slow, twinkle)
+desc: Hue Scroll (Twinkle, 1x, slow)
 script: hue_scroll
 config:
   repeat/float: 1.0
