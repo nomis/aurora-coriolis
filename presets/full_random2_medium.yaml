@@ -1,4 +1,4 @@
-desc: Full Random 1 (medium)
+desc: Full Random 2 (medium)
 script: random_rgb
 config:
   auto/s32: 2
