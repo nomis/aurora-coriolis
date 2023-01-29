@@ -72,6 +72,7 @@ bool Download::start() {
 #ifndef ENV_NATIVE
 		auto cfg = esp_pthread_get_default_config();
 		cfg.stack_size = TASK_STACK_SIZE;
+		cfg.pin_to_core = ARDUINO_RUNNING_CORE;
 		cfg.prio = uxTaskPriorityGet(nullptr);
 		esp_pthread_set_cfg(&cfg);
 #endif

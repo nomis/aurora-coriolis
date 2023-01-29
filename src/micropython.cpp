@@ -133,6 +133,7 @@ bool MicroPython::start() {
 #ifndef ENV_NATIVE
 		auto cfg = esp_pthread_get_default_config();
 		cfg.stack_size = TASK_STACK_SIZE;
+		cfg.pin_to_core = ARDUINO_RUNNING_CORE;
 		cfg.prio = uxTaskPriorityGet(nullptr);
 		esp_pthread_set_cfg(&cfg);
 #endif
@@ -590,11 +591,15 @@ void aurcor::MicroPython::nlr_jump_fail(void *val) {
 #if defined(ARDUINO_ARCH_ESP32)
 	if (ADDRESS_IN_IRAM0(address)
 			|| ADDRESS_IN_IRAM0_CACHE(address)
+# if defined(ARDUINO_LOLIN_S2_MINI)
 			|| ADDRESS_IN_IRAM1(address)
 			|| ADDRESS_IN_DROM0(address)
+# endif
 			|| ADDRESS_IN_DRAM0(address)
 			|| ADDRESS_IN_DRAM0_CACHE(address)
+# if defined(ARDUINO_LOLIN_S2_MINI)
 			|| ADDRESS_IN_DRAM1(address)
+# endif
 			|| (val >= heap_->begin() && val < heap_->end())
 			|| (val >= pystack_->begin() && val < pystack_->end()))
 		valid = true;
