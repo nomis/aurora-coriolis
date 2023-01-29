@@ -83,8 +83,8 @@ UARTLEDBus::UARTLEDBus(unsigned int uart_num, const char *name,
 	uart_set_pin(uart_num, tx_pin, rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 
 	if (ok_) {
-		logger_.debug(F("[%S] Configured UART%u on pins RX/%d TX/%d with TX FIFO threshold %zu/%zu"),
-			name, uart_num, rx_pin, tx_pin, TX_FIFO_THRESHOLD, TX_FIFO_SIZE);
+		logger_.debug(F("[%S] Configured UART%u on pins RX/%d TX/%d with TX FIFO threshold %zu/%zu on CPU%d"),
+			name, uart_num, rx_pin, tx_pin, TX_FIFO_THRESHOLD, TX_FIFO_SIZE, esp_intr_get_cpu(interrupt_));
 	} else {
 		logger_.emerg(F("[%S] Failed to set up interrupt handler for UART%u"), name, uart_num);
 	}

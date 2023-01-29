@@ -72,7 +72,6 @@ WebServer::WebServer(uint16_t port) {
 	httpd_handle_t server = nullptr;
 	esp_err_t err;
 
-	config.core_id = ARDUINO_RUNNING_CORE;
 	config.task_priority = uxTaskPriorityGet(nullptr);
 	config.server_port = port;
 

@@ -17,6 +17,10 @@
  */
 
 #include <Arduino.h>
+#ifndef ENV_NATIVE
+# include <esp_idf_version.h>
+# include <esp_task_wdt.h>
+#endif
 
 #include "aurcor/app.h"
 
@@ -25,6 +29,25 @@ static aurcor::App application;
 void setup() {
 #ifndef ENV_NATIVE
 	heap_caps_malloc_extmem_enable(0);
+
+	/* Disable the idle task watchdog because it won't have time to run
+	 * if a MicroPython script is busy all the time.
+	 */
+# if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)
+	esp_task_wdt_config_t wdt_config = {
+		.timeout_ms = CONFIG_ESP_TASK_WDT_TIMEOUT_S * 1000,
+		.idle_core_mask = 0,
+		.trigger_panic = CONFIG_ESP_TASK_WDT_PANIC ? true : false,
+	};
+	esp_task_wdt_reconfigure(&wdt_config);
+# else
+#  ifdef CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0
+	esp_task_wdt_delete(xTaskGetIdleTaskHandleForCPU(0));
+#  endif
+#  ifdef CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1
+	esp_task_wdt_delete(xTaskGetIdleTaskHandleForCPU(1));
+#  endif
+# endif
 #endif
 
 	try {
