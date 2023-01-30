@@ -89,7 +89,7 @@ __thread MicroPython *MicroPython::self_{nullptr};
 std::shared_ptr<MemoryPool> MicroPython::heaps_ = std::make_shared<MemoryPool>(
 	MicroPython::HEAP_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 std::shared_ptr<MemoryPool> MicroPython::pystacks_ = std::make_shared<MemoryPool>(
-	MicroPython::PYSTACK_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+	MicroPython::PYSTACK_SIZE, MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
 std::shared_ptr<MemoryPool> MicroPython::ledbufs_ = std::make_shared<MemoryPool>(
 	LEDBus::MAX_BYTES, MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
 
