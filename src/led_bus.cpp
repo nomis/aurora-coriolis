@@ -108,14 +108,18 @@ ByteBufferLEDBus::ByteBufferLEDBus(const char *name) : LEDBus(name) {
 void ByteBufferLEDBus::start(const uint8_t *data, size_t size, bool reverse_order) {
 	const size_t max_bytes = length() * BYTES_PER_LED;
 
+	size /= BYTES_PER_LED;
+	size *= BYTES_PER_LED;
 	size = std::min(max_bytes, size);
 
-	if (reverse_order) {
-		for (size_t out_bytes = size - BYTES_PER_LED, in_bytes = 0; in_bytes < size;
-				out_bytes -= BYTES_PER_LED, in_bytes += BYTES_PER_LED)
-			std::memcpy(&buffer_[out_bytes], &data[in_bytes], BYTES_PER_LED);
-	} else {
-		std::memcpy(&buffer_[0], data, size);
+	if (size > 0) {
+		if (reverse_order) {
+			for (size_t out_bytes = size - BYTES_PER_LED, in_bytes = 0; in_bytes < size;
+					out_bytes -= BYTES_PER_LED, in_bytes += BYTES_PER_LED)
+				std::memcpy(&buffer_[out_bytes], &data[in_bytes], BYTES_PER_LED);
+		} else {
+			std::memcpy(&buffer_[0], data, size);
+		}
 	}
 
 	if (size < max_bytes) {

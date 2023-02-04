@@ -40,7 +40,7 @@ public:
 
 	constexpr UARTPatternTable() {
 		for (size_t i = 0; i <= UINT8_MAX; i++) {
-			// Writes to the UART FIFO are effectively little-endian
+			// The LEDs are big-endian but the UART FIFO consists of little-endian bytes and little-endian bits
 			values[i] =
 				  (data[(i >> 6) & 3]      )
 				| (data[(i >> 4) & 3] <<  8)
@@ -54,8 +54,22 @@ public:
 	}
 
 private:
+	/*
+	 * The UART runs inverted with 6-bit bytes, no parity and 1 stop bit.
+	 *
+	 * Start bit   Stop bit
+	 *      ↓          ↓
+	 * 00 = 1 000  100 0
+	 * 01 = 1 000  111 0
+	 * 10 = 1 110  100 0
+	 * 11 = 1 110  111 0
+	 *        ↑↑↑  ↑↑↑
+	 *   Little-endian data
+	 *
+	 * When idle it will be at 0.
+	 */
 	static inline constexpr std::array<uint8_t,WORDS_PER_BYTE> data{
-		0b00110111, 0b00000111, 0b00110100, 0b00000100
+		0b110111, 0b000111, 0b110100, 0b000100
 	};
 
 	std::array<uint32_t,UINT8_MAX + 1> values{};

@@ -18,6 +18,10 @@
 
 #include "aurcor/app.h"
 
+#ifndef ENV_NATIVE
+# include <driver/spi_master.h>
+#endif
+
 #include <algorithm>
 #include <memory>
 #include <mutex>
@@ -36,6 +40,7 @@
 #include "aurcor/micropython.h"
 #include "aurcor/preset.h"
 #include "aurcor/refresh.h"
+#include "aurcor/spi_led_bus.h"
 #include "aurcor/uart_led_bus.h"
 #include "aurcor/web_client.h"
 #include "aurcor/web_interface.h"

@@ -83,8 +83,9 @@ UARTLEDBus::UARTLEDBus(unsigned int uart_num, const char *name,
 	uart_set_pin(uart_num, tx_pin, rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 
 	if (ok_) {
-		logger_.debug(F("[%S] Configured UART%u on pins RX/%d TX/%d with TX FIFO threshold %zu/%zu on CPU%d"),
-			name, uart_num, rx_pin, tx_pin, TX_FIFO_THRESHOLD, TX_FIFO_SIZE, esp_intr_get_cpu(interrupt_));
+		logger_.debug(F("[%S] Configured UART%u on pins RX/%d TX/%d at %ubps with TX FIFO threshold %zu/%zu on CPU%d"),
+			name, uart_num, rx_pin, tx_pin, uart_ll_get_baudrate(&hw_),
+			TX_FIFO_THRESHOLD, TX_FIFO_SIZE, esp_intr_get_cpu(interrupt_));
 	} else {
 		logger_.emerg(F("[%S] Failed to set up interrupt handler for UART%u"), name, uart_num);
 	}
@@ -100,19 +101,19 @@ UARTLEDBus::~UARTLEDBus() {
 }
 
 void UARTLEDBus::transmit() {
-	uint64_t now;
+	if (!ok_) {
+		bytes_ = 0;
+		finish();
+		return;
+	}
 
-	while ((now = current_time_us()) < next_tx_start_us_) {
+	next_tx_delay_us_ = reset_time_us() + std::min(TX_FIFO_MAX_US, TX_BYTE_US * bytes_) + 1U;
+
+	while (current_time_us() < next_tx_start_us_) {
 		asm volatile ("nop");
 	}
 
-	if (ok_) {
-		next_tx_delay_us_ = reset_time_us() + std::min(TX_FIFO_MAX_US, TX_BYTE_US * bytes_) + 1U;
-		uart_ll_ena_intr_mask(&hw_, UART_INTR_TXFIFO_EMPTY);
-	} else {
-		bytes_ = 0;
-		finish();
-	}
+	uart_ll_ena_intr_mask(&hw_, UART_INTR_TXFIFO_EMPTY);
 }
 
 IRAM_ATTR void UARTLEDBus::interrupt_handler(void *arg) {
