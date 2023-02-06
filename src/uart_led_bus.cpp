@@ -36,7 +36,7 @@ namespace aurcor {
 
 namespace ledbus {
 
-static IRAM_ATTR constexpr const UARTPatternTable uart_pattern_table{};
+DRAM_ATTR const UARTPatternTable uart_pattern_table{};
 
 } // namespace ledbus
 
@@ -78,9 +78,10 @@ UARTLEDBus::UARTLEDBus(unsigned int uart_num, const char *name,
 
 	uart_ll_clr_intsts_mask(&hw_, UART_LL_INTR_MASK);
 
+	uart_set_pin(uart_num, tx_pin, rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+
 	ok_ = esp_intr_alloc(periph_.irq, ESP_INTR_FLAG_LEVEL1, interrupt_handler,
 		this, &interrupt_) == ESP_OK;
-	uart_set_pin(uart_num, tx_pin, rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 
 	if (ok_) {
 		logger_.debug(F("[%S] Configured UART%u on pins RX/%d TX/%d at %ubps with TX FIFO threshold %zu/%zu on CPU%d"),

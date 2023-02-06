@@ -20,6 +20,7 @@
 
 #ifndef ENV_NATIVE
 # include <driver/spi_master.h>
+# include <soc/uhci_struct.h>
 #endif
 
 #include <algorithm>
@@ -41,6 +42,7 @@
 #include "aurcor/preset.h"
 #include "aurcor/refresh.h"
 #include "aurcor/spi_led_bus.h"
+#include "aurcor/uart_dma_led_bus.h"
 #include "aurcor/uart_led_bus.h"
 #include "aurcor/web_client.h"
 #include "aurcor/web_interface.h"
@@ -68,8 +70,10 @@ void App::init() {
 	 * Usable: 1 2 4 5 6 7 8 9 10 11 12 13 14 16 17 18 21 39 40 41 42
 	 * Null: 3 45 46 47 48
 	 */
-	add(std::make_shared<UARTLEDBus>(1, "led0", 45, 42));
+	add(std::make_shared<UARTDMALEDBus>(1, &UHCI0, "led0", 45, 42));
 	add(std::make_shared<UARTLEDBus>(2, "led1", 46, 41));
+	//add(std::make_shared<SPILEDBus>(SPI2_HOST, "led2", 40));
+	//add(std::make_shared<SPILEDBus>(SPI3_HOST, "led3", 39));
 	add(std::make_shared<NullLEDBus>("null0"));
 #elif defined(ARDUINO_LOLIN_S2_MINI)
 	/*
@@ -81,8 +85,10 @@ void App::init() {
 	 * Usable: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 16 17 21 33 34 35 36 37 38 39 40
 	 * Null: 18 41 42 43 44 45 46
 	 */
-	add(std::make_shared<UARTLEDBus>(1, "led0", 45, 39));
-	add(std::make_shared<UARTLEDBus>(0, "led1", 46, 40));
+	add(std::make_shared<UARTDMALEDBus>(1, &UHCI0, "led0", 45, 39));
+	add(std::make_shared<UARTLEDBus>(0, "led1", 46, 37));
+	//add(std::make_shared<SPILEDBus>(SPI2_HOST, "led2", 35));
+	//add(std::make_shared<SPILEDBus>(SPI3_HOST, "led3", 33));
 	add(std::make_shared<NullLEDBus>("null0"));
 #else
 	add(std::make_shared<NullLEDBus>("led0"));

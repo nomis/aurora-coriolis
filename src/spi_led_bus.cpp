@@ -33,7 +33,7 @@ namespace aurcor {
 
 namespace ledbus {
 
-static IRAM_ATTR constexpr const SPIPatternTable spi_pattern_table{};
+static DRAM_ATTR constexpr const SPIPatternTable spi_pattern_table{};
 
 } // namespace ledbus
 
@@ -44,6 +44,8 @@ SPILEDBus::SPILEDBus(spi_host_device_t spi_host, const char *name,
 
 	if (!buffer_) {
 		logger_.err(F("[%S] Unable to allocate %zu bytes for buffer"), name, MAX_TRANSFER_BYTES);
+		ok_ = false;
+		return;
 	}
 
 	spi_bus_config_t bus_config{};
@@ -87,7 +89,7 @@ SPILEDBus::SPILEDBus(spi_host_device_t spi_host, const char *name,
 		}
 	}
 
-	ok_ = host_init_ && device_ && buffer_;
+	ok_ = host_init_ && device_;
 
 	trans_.user = this;
 	trans_.tx_buffer = buffer_.get();
@@ -183,6 +185,7 @@ void SPILEDBus::start(const uint8_t *data, size_t size, bool reverse_order) {
 IRAM_ATTR void SPILEDBus::completion_handler(spi_transaction_t *trans) {
 	auto *self = reinterpret_cast<SPILEDBus*>(trans->user);
 
+	self->next_tx_start_us_ = current_time_us() + self->next_tx_delay_us_;
 	self->finish_isr();
 }
 #endif
