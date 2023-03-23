@@ -24,8 +24,8 @@
 #include <string>
 #include <vector>
 
-#include "aurcor/led_bus.h"
-#include "aurcor/led_profiles.h"
+#include "led_bus.h"
+#include "led_profiles.h"
 
 namespace aurcor {
 

@@ -18,7 +18,7 @@ clean: cleanfs
 	rm -rf .pio/*
 	rm -f src/htdocs/*.gz.h
 	+$(MAKE) -C micropython/mpy-cross clean
-	+$(MAKE) -C src/app/pio/certs -L clean
+	+$(MAKE) -C app/pio/certs -L clean
 
 upload:
 	platformio run -t upload

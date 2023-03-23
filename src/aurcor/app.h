@@ -29,7 +29,7 @@
 #include <utility>
 #include <vector>
 
-#include "../app/app.h"
+#include "app/app.h"
 #include "led_profiles.h"
 #include "refresh.h"
 
