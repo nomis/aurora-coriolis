@@ -1,0 +1,9 @@
+Processing s2_mini (framework: arduino; platform: espressif32@5.3.0; board: lolin_s2_mini)
+Total Thread-Local Storage size: 36 bytes
+RAM:   [==        ]  15.1% (used 49356 bytes from 327680 bytes)
+Flash: [========= ]  89.1% (used 1284358 bytes from 1441792 bytes)
+
+Processing s3 (framework: arduino; platform: espressif32@5.3.0; board: lolin_s3)
+Total Thread-Local Storage size: 36 bytes
+RAM:   [=         ]  14.1% (used 46356 bytes from 327680 bytes)
+Flash: [===       ]  30.2% (used 1266817 bytes from 4194304 bytes)
