@@ -1954,6 +1954,7 @@ void AurcorShell::display_banner() {
 	println(F("│ice mountains of the Hub. The central spire of Cori Celesti, home│"));
 	println(F("│of the gods, was a ten mile high column of cold coruscating fire.│"));
 	println(F("└─────────────────────────────────────────────────────────────────┘"));
+	/*          ―Terry Pratchett (Mort, 2009)                                       */
 	println();
 }
 
