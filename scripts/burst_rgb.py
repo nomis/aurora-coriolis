@@ -50,7 +50,7 @@ def generate():
 	while True:
 		if burst_idx >= burst_count:
 			for pos in range(current_pos, blank_length):
-				buffer[i] = 0
+				buffer[i] = 0, 0, 0
 
 				if i == 0:
 					return buffer
