@@ -214,7 +214,7 @@ std::string WebServer::GetURIHandler::method() {
 	return "GET";
 }
 
-int WebServer::GetURIHandler::handle_connection(Request &req) {
+MHD_Result WebServer::GetURIHandler::handle_connection(Request &req) {
 	if (function_(req)) {
 		return req.finish();
 	} else {
@@ -226,7 +226,7 @@ std::string WebServer::PostURIHandler::method() {
 	return "POST";
 }
 
-int WebServer::PostURIHandler::handle_connection(Request &req) {
+MHD_Result WebServer::PostURIHandler::handle_connection(Request &req) {
 	if (function_(req)) {
 		return req.finish();
 	} else {
@@ -238,7 +238,7 @@ std::string WebServer::StaticContentURIHandler::method() {
 	return "GET";
 }
 
-int WebServer::StaticContentURIHandler::handle_connection(Request &req) {
+MHD_Result WebServer::StaticContentURIHandler::handle_connection(Request &req) {
 	req.set_status(200);
 	req.set_type(content_type_);
 
@@ -369,7 +369,7 @@ size_t WebServer::Request::write(const uint8_t *buffer, size_t size) {
 	return size;
 }
 
-int WebServer::Request::finish() {
+MHD_Result WebServer::Request::finish() {
 	if (status_ == 0)
 		status_ = buffer_.empty() ? 204 : 200;
 
@@ -537,7 +537,7 @@ void* WebServer::log_connection(void *cls, const char *uri,
 	return new Request{connection, uri};
 }
 
-int WebServer::handle_connection(void *cls,
+MHD_Result WebServer::handle_connection(void *cls,
 		struct MHD_Connection *connection, const char *url, const char *method,
 		const char *version, const char *upload_data, size_t *upload_data_size,
 		void **con_cls) {
@@ -555,7 +555,7 @@ void WebServer::cleanup_connection(void *cls, struct MHD_Connection *connection,
 	}
 }
 
-int WebServer::handle_connection(struct MHD_Connection *connection,
+MHD_Result WebServer::handle_connection(struct MHD_Connection *connection,
 		const char *url, const char *method, const char *upload_data,
 		size_t *upload_data_size, Request **req) {
 	for (auto &uri_handler : uri_handlers_) {
