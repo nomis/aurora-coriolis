@@ -35,6 +35,7 @@
 #include "app/fs.h"
 #include "app/util.h"
 #include "aurcor/app.h"
+#include "aurcor/led_bus_format.h"
 #include "aurcor/modaurcor.h"
 #include "aurcor/preset.h"
 #include "aurcor/util.h"
@@ -76,6 +77,21 @@ void LEDBusConfig::length(size_t value) {
 
 void LEDBusConfig::length_constrained(size_t value) {
 	length_ = uint_constrain(value, MAX_LEDS, MIN_LEDS);
+}
+
+LEDBusFormat LEDBusConfig::format() const {
+	std::shared_lock data_lock{data_mutex_};
+	return format_;
+}
+
+void LEDBusConfig::format(LEDBusFormat value) {
+	std::unique_lock data_lock{data_mutex_};
+	if (format_ != value || !format_set_) {
+		format_ = value;
+		format_set_ = true;
+		data_lock.unlock();
+		save();
+	}
 }
 
 unsigned int LEDBusConfig::reset_time_us() const {
@@ -155,6 +171,8 @@ void LEDBusConfig::reset() {
 void LEDBusConfig::reset_locked() {
 	length_constrained(default_length_);
 	length_set_ = false;
+	format_ = DEFAULT_FORMAT;
+	format_set_ = false;
 	reset_time_us_ = DEFAULT_RESET_TIME_US;
 	reset_time_us_set_ = false;
 	reverse_ = false;
@@ -227,6 +245,14 @@ bool inline LEDBusConfig::load(cbor::Reader &reader) {
 
 			length_constrained(value);
 			length_set_ = true;
+		} else if (key == "format") {
+			std::string value;
+
+			if (!app::read_text(reader, value))
+				return false;
+
+			if (!LEDBusFormats::uc_id(value, format_))
+				return false;
 		} else if (key == "reset_time_us") {
 			uint64_t value;
 
@@ -297,6 +323,7 @@ void LEDBusConfig::save(cbor::Writer &writer) {
 
 	if (length_set_)
 		values++;
+	values++; // format is always saved
 	if (reset_time_us_set_)
 		values++;
 	if (reverse_)
@@ -312,6 +339,9 @@ void LEDBusConfig::save(cbor::Writer &writer) {
 		app::write_text(writer, "length");
 		writer.writeUnsignedInt(length_);
 	}
+
+	app::write_text(writer, "format");
+	app::write_text(writer, LEDBusFormats::uc_name(format_));
 
 	if (reset_time_us_set_) {
 		app::write_text(writer, "reset_time_us");

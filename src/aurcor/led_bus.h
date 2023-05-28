@@ -34,6 +34,7 @@
 
 #include "constants.h"
 #include "led_bus_config.h"
+#include "led_bus_format.h"
 #include "led_profile.h"
 #include "led_profiles.h"
 #include "util.h"
@@ -55,6 +56,8 @@ public:
 	const char *name() const { return name_; }
 	inline size_t length() const { return config_.length(); }
 	inline void length(size_t value) { config_.length(value); }
+	inline LEDBusFormat format() const { return config_.format(); }
+	inline void format(LEDBusFormat value) { config_.format(value); }
 	inline unsigned int reset_time_us() const { return config_.reset_time_us(); }
 	inline void reset_time_us(unsigned int value) { config_.reset_time_us(value); }
 	inline bool reverse() const { return config_.reverse(); }

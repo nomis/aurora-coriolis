@@ -38,6 +38,7 @@ extern "C" {
 	# include <shared/timeutils/timeutils.h>
 }
 
+# include "aurcor/led_bus_format.h"
 # include "aurcor/led_profile.h"
 # include "aurcor/led_profiles.h"
 # include "aurcor/memory_pool.h"
@@ -153,8 +154,8 @@ namespace micropython {
 
 PyModule::PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus,
 		Preset &preset) : led_buffer_(led_buffer), bus_(std::move(bus)),
-		bus_length_(bus_->length()), bus_default_fps_(bus_->default_fps()),
-		preset_(preset) {
+		bus_length_(bus_->length()), bus_format_(bus_->format()),
+		bus_default_fps_(bus_->default_fps()), preset_(preset) {
 }
 
 inline PyModule& PyModule::current() {
@@ -177,10 +178,16 @@ mp_obj_t PyModule::register_config(mp_obj_t dict) {
 mp_obj_t PyModule::config(mp_obj_t dict) {
 	bool ret = preset_.populate_config(dict);
 	size_t bus_length = bus_->length();
+	LEDBusFormat bus_format = bus_->format();
 	unsigned int bus_default_fps = bus_->default_fps();
 
 	if (bus_length != bus_length_) {
 		bus_length_ = bus_length;
+		ret = true;
+	}
+
+	if (bus_format != bus_format_) {
+		bus_format_ = bus_format;
 		ret = true;
 	}
 
@@ -477,7 +484,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		out_bytes = max_bytes;
 	}
 
-	bus_->profile(profile).transform(buffer, out_bytes);
+	bus_->profile(profile).transform(buffer, out_bytes, bus_format_);
 
 	if (wait_us > 0 && bus_written_) {
 		uint64_t start_us = bus_->last_update_us() + wait_us - TIMING_DELAY_US;
@@ -492,6 +499,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 
 	if (!config_used_) {
 		bus_length_ = bus_->length();
+		bus_format_ = bus_->format();
 		bus_default_fps_ = bus_->default_fps();
 	}
 

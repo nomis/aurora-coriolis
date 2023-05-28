@@ -123,6 +123,7 @@ MP_DECLARE_CONST_FUN_OBJ_0(aurcor_time_us_obj);
 # include <uuid/log.h>
 
 # include "led_bus.h"
+# include "led_bus_format.h"
 # include "led_profiles.h"
 
 # include <memory>
@@ -236,6 +237,7 @@ private:
 	MemoryBlock *led_buffer_;
 	std::shared_ptr<LEDBus> bus_;
 	size_t bus_length_;
+	LEDBusFormat bus_format_;
 	unsigned int bus_default_fps_;
 	Preset &preset_;
 

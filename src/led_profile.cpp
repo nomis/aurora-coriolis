@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@
 
 #include "app/fs.h"
 #include "aurcor/app.h"
+#include "aurcor/led_bus.h"
 #include "aurcor/util.h"
 
 #ifndef PSTR_ALIGN
@@ -83,8 +84,8 @@ void LEDProfile::print(uuid::console::Shell &shell, size_t limit) const {
 	shell.printfln(print_row, begin, index - 1, ratio.r, ratio.g, ratio.b);
 }
 
+template <int R_IDX,int G_IDX, int B_IDX>
 void LEDProfile::transform(uint8_t *data, size_t size) const {
-	std::shared_lock data_lock{data_mutex_};
 	index_t index = 0;
 	Ratio ratio = DEFAULT_RATIO;
 
@@ -94,11 +95,41 @@ void LEDProfile::transform(uint8_t *data, size_t size) const {
 			++it;
 		}
 
-		for (uint8_t i = 0; i < sizeof(ratio.v) && size > 0; i++) {
-			*data = *data * ratio.v[i] / UINT8_MAX;
-			data++;
-			size--;
-		}
+		const uint8_t r = data[0];
+		const uint8_t g = data[1];
+		const uint8_t b = data[2];
+
+		data[R_IDX] = r * ratio.r / UINT8_MAX;
+		data[G_IDX] = g * ratio.g / UINT8_MAX;
+		data[B_IDX] = b * ratio.b / UINT8_MAX;
+
+		data += LEDBus::BYTES_PER_LED;
+		size -= LEDBus::BYTES_PER_LED;
+	}
+}
+
+void LEDProfile::transform(uint8_t *data, size_t size, LEDBusFormat format) const {
+	std::shared_lock data_lock{data_mutex_};
+
+	size /= LEDBus::BYTES_PER_LED;
+	size *= LEDBus::BYTES_PER_LED;
+
+	/*
+	 * This is the best place to handle the bus format because each LED already
+	 * needs to be accessed separately and it can be done in advance of sending
+	 * the data to the bus.
+	 *
+	 * Generate separate transform functions for each of the formats to avoid
+	 * looking up the format again for every single LED.
+	 */
+	switch (format) {
+#define LED_BUS_FORMAT(_uc_name, _r_idx, _g_idx, _b_idx) \
+	case LEDBusFormat::_uc_name: \
+		transform<_r_idx,_g_idx,_b_idx>(data, size); \
+		break;
+
+LED_BUS_FORMATS
+#undef LED_BUS_FORMAT
 	}
 }
 

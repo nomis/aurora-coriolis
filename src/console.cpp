@@ -34,6 +34,7 @@
 #include "aurcor/app.h"
 #include "aurcor/console.h"
 #include "aurcor/micropython.h"
+#include "aurcor/led_bus_format.h"
 #include "aurcor/led_profile.h"
 #include "aurcor/preset.h"
 #include "aurcor/script_config.h"
@@ -185,6 +186,16 @@ static std::vector<std::string> bus_names_autocomplete(Shell &shell,
 		const std::string &next_argument) {
 	return to_app(shell).bus_names();
 }
+
+__attribute__((noinline))
+static std::vector<std::string> bus_formats_autocomplete(Shell &shell,
+		const std::vector<std::string> &current_arguments,
+		const std::string &next_argument) {
+	auto formats = LEDBusFormats::uc_names();
+
+	std::sort(formats.begin(), formats.end());
+	return formats;
+};
 
 __attribute__((noinline))
 static std::vector<std::string> profile_names_autocomplete(Shell &shell,
@@ -926,6 +937,11 @@ static void show_length(Shell &shell) {
 };
 
 __attribute__((noinline))
+static void show_format(Shell &shell) {
+	shell.printfln(F("Format:         %s"), LEDBusFormats::uc_name(to_shell(shell).bus()->format()));
+};
+
+__attribute__((noinline))
 static void show_reset_time(Shell &shell) {
 	shell.printfln(F("Reset time:     %u µs"), to_shell(shell).bus()->reset_time_us());
 };
@@ -1027,6 +1043,21 @@ static void length(Shell &shell, const std::vector<std::string> &arguments) {
 	show_length(shell);
 }
 
+/* [format] */
+static void format(Shell &shell, const std::vector<std::string> &arguments) {
+	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
+		auto &format_name = arguments[0];
+		LEDBusFormat format;
+
+		if (LEDBusFormats::uc_id(format_name, format)) {
+			to_shell(shell).bus()->format(format);
+		} else {
+			shell.printfln(F("Unknown format \"%s\""), format_name.c_str());
+		}
+	}
+	show_format(shell);
+}
+
 static void normal(Shell &shell, const std::vector<std::string> &arguments) {
 	to_shell(shell).bus()->reverse(false);
 	show_direction(shell);
@@ -1126,6 +1157,7 @@ static void stop(Shell &shell, const std::vector<std::string> &arguments) {
 
 static void show(Shell &shell, const std::vector<std::string> &arguments) {
 	show_length(shell);
+	show_format(shell);
 	show_reset_time(shell);
 	show_direction(shell);
 	show_default_preset(shell, to_shell(shell).bus());
@@ -1809,6 +1841,7 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus, user, {F("default")}, {F("[preset]")}, bus::default_, preset_names_autocomplete);
 	commands->add_command(context::bus, user, {F("clear")}, bus::clear);
 	commands->add_command(context::bus, admin, {F("edit")}, {F("[preset]")}, bus::edit);
+	commands->add_command(context::bus, user, {F("format")}, {F("[format]")}, bus::format, bus_formats_autocomplete);
 	commands->add_command(context::bus, user, {F("fps")}, {F("[fps]")}, bus::fps);
 	commands->add_command(context::bus, user, {F("length")}, {F("[length]")}, bus::length);
 	commands->add_command(context::bus, admin, {F("normal")}, bus::normal);

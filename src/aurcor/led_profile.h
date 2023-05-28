@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2023  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@
 #include <uuid/log.h>
 
 #include "constants.h"
+#include "led_bus_format.h"
 #include "util.h"
 
 namespace aurcor {
@@ -57,7 +58,7 @@ public:
 	~LEDProfile() = default;
 
 	void print(uuid::console::Shell &shell, size_t limit = MAX_LEDS) const;
-	void transform(uint8_t *data, size_t size) const;
+	void transform(uint8_t *data, size_t size, LEDBusFormat format) const;
 
 	std::vector<unsigned int> indexes() const;
 	Result get(unsigned int index, uint8_t &r, uint8_t &g, uint8_t &b) const;
@@ -153,6 +154,9 @@ private:
 	static Result get_ratio_config_ratio_value(qindesign::cbor::Reader &reader, uint8_t &ratio_value);
 
 	void save(qindesign::cbor::Writer &writer, index_t index, const Ratio &ratio);
+
+	template <int R_IDX,int G_IDX, int B_IDX>
+	void transform(uint8_t *data, size_t size) const;
 
 	static uuid::log::Logger logger_;
 
