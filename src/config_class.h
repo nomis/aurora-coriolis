@@ -21,11 +21,11 @@
 	MCU_APP_CONFIG_SIMPLE(std::string, "", download_url, "", "")
 
 public:
-    std::string default_bus() const;
-    void default_bus(const std::string &default_bus);
+	std::string default_bus() const;
+	void default_bus(const std::string &default_bus);
 
-    std::string download_url() const;
-    void download_url(const std::string &download_url);
+	std::string download_url() const;
+	void download_url(const std::string &download_url);
 
 private:
 	static std::string default_bus_;
