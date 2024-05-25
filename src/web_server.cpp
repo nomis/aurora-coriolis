@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2023  Simon Arlott
+ * Copyright 2023-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,12 +21,15 @@
 #include <Arduino.h>
 
 #ifdef ENV_NATIVE
+# include <arpa/inet.h>
 # include <sys/types.h>
 # include <sys/select.h>
 # include <sys/socket.h>
 # include <microhttpd.h>
 #else
+# include <arpa/inet.h>
 # include <esp_http_server.h>
+# include <sys/socket.h>
 #endif
 
 #include <cstdlib>
@@ -511,6 +514,51 @@ void WebServer::Request::add_header(const char *name, const std::string &value) 
 	resp_headers_.emplace_back(strdup(value.c_str()));
 	add_header(name, resp_headers_.back().get());
 #endif
+}
+
+std::string WebServer::Request::client_address() {
+	struct sockaddr_storage addr{};
+	char ip[INET6_ADDRSTRLEN] = { 0 };
+
+#ifdef ENV_NATIVE
+	auto info = *reinterpret_cast<struct sockaddr * const *>(
+		MHD_get_connection_info(connection_, MHD_CONNECTION_INFO_CLIENT_ADDRESS));
+
+	if (info->sa_family == AF_INET) {
+		std::memcpy(&addr, info, sizeof(struct sockaddr_in));
+	} else if (info->sa_family == AF_INET6) {
+		std::memcpy(&addr, info, sizeof(struct sockaddr_in6));
+	} else {
+		return "[unknown AF]";
+	}
+#else
+	int fd = httpd_req_to_sockfd(req_);
+	socklen_t addrlen = sizeof(addr);
+
+	if (::getpeername(fd, reinterpret_cast<struct sockaddr*>(&addr), &addrlen)) {
+		return "[unknown PN]";
+	}
+#endif
+
+	if (addr.ss_family == AF_INET) {
+		struct sockaddr_in *sa = reinterpret_cast<struct sockaddr_in*>(&addr);
+
+		if (::inet_ntop(sa->sin_family, &sa->sin_addr, ip, sizeof(ip)) == nullptr) {
+			return "[unknown V4]";
+		}
+
+		return std::string{"["} + ip + "]:" + std::to_string(ntohs(sa->sin_port));
+	} else if (addr.ss_family == AF_INET6) {
+		struct sockaddr_in6 *sa = reinterpret_cast<struct sockaddr_in6*>(&addr);
+
+		if (::inet_ntop(sa->sin6_family, &sa->sin6_addr, ip, sizeof(ip)) == nullptr) {
+			return "[unknown V6]";
+		}
+
+		return std::string{"["} + ip + "]:" + std::to_string(ntohs(sa->sin6_port));
+	} else {
+		return "[unknown AF]";
+	}
 }
 
 std::string WebServer::Request::get_header(const char *name) {
