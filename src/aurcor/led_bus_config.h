@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022-2023  Simon Arlott
+ * Copyright 2022-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@
 
 #include "constants.h"
 #include "led_bus_format.h"
+#include "led_bus_udp.h"
 
 namespace aurcor {
 
@@ -67,6 +68,12 @@ public:
 	unsigned int default_fps() const;
 	void default_fps(unsigned int value);
 
+	uint16_t udp_port() const;
+	void udp_port(uint16_t value);
+
+	unsigned int udp_queue_size() const;
+	void udp_queue_size(unsigned int value);
+
 	void reset();
 	inline void reload() { load(); }
 
@@ -74,6 +81,7 @@ protected:
 	void length_constrained(size_t value);
 	void reset_time_us_constrained(unsigned int value);
 	void default_fps_constrained(unsigned int value);
+	void udp_queue_size_constrained(unsigned int value);
 
 	bool load();
 	bool save();
@@ -96,10 +104,14 @@ private:
 	LEDBusFormat format_{DEFAULT_FORMAT};
 	uint16_t reset_time_us_{DEFAULT_RESET_TIME_US};
 	uint16_t default_fps_{DEFAULT_DEFAULT_FPS};
+	uint16_t udp_port_{0};
+	unsigned int udp_queue_size_{LEDBusUDP::DEFAULT_QUEUE_SIZE};
 	bool length_set_{false};
 	bool format_set_{false};
 	bool reset_time_us_set_{false};
 	bool default_fps_set_{false};
+	bool udp_port_set_{false};
+	bool udp_queue_size_set_{false};
 	bool reverse_{false};
 };
 

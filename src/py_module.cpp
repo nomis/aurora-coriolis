@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022-2023  Simon Arlott
+ * Copyright 2022-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -144,6 +144,10 @@ mp_obj_t aurcor_output_exp_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 
 mp_obj_t aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
 	return PyModule::current().output_leds(n_args, args, kwargs, PyModule::OutputType::RGB, true);
+}
+
+mp_obj_t aurcor_udp_receive(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	return PyModule::current().udp_receive(n_args, args, kwargs);
 }
 
 } // extern "C"
@@ -1021,6 +1025,32 @@ mp_obj_t PyModule::next_time_us(size_t n_args, const mp_obj_t *args, mp_map_t *k
 	return mp_obj_new_int_from_ll(us);
 }
 
+mp_obj_t PyModule::udp_receive(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	enum {
+		ARG_wait,
+	};
+	static const mp_arg_t allowed_args[] = {
+		{MP_QSTR_wait, MP_ARG_KW_ONLY | MP_ARG_OBJ, {u_obj: MP_ROM_NONE}},
+	};
+	mp_arg_val_t parsed_args[MP_ARRAY_SIZE(allowed_args)];
+	mp_arg_parse_all(n_args, args, kwargs, MP_ARRAY_SIZE(allowed_args),
+		allowed_args, parsed_args);
+
+	bool wait = true;
+
+	if (parsed_args[ARG_wait].u_obj != MP_ROM_NONE) {
+		if (!mp_obj_is_bool(parsed_args[ARG_wait].u_obj))
+			mp_raise_TypeError(MP_ERROR_TEXT("wait must be a bool"));
+
+		wait = mp_obj_is_true(parsed_args[ARG_wait].u_obj);
+	}
+
+	mp_obj_t packets = mp_obj_new_list(0, nullptr);
+
+	bus_->udp_receive(wait, packets);
+
+	return packets;
+}
 
 } // namespace micropython
 

@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022-2023  Simon Arlott
+ * Copyright 2022-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -962,6 +962,16 @@ static void show_default_fps(Shell &shell) {
 	shell.printfln(F("Default FPS:    %u"), to_shell(shell).bus()->default_fps());
 };
 
+__attribute__((noinline))
+static void show_udp_port(Shell &shell) {
+	shell.printfln(F("UDP port:       %u"), to_shell(shell).bus()->udp_port());
+};
+
+__attribute__((noinline))
+static void show_udp_queue_size(Shell &shell) {
+	shell.printfln(F("UDP queue size: %u"), to_shell(shell).bus()->udp_queue_size());
+};
+
 static void clear(Shell &shell, const std::vector<std::string> &arguments) {
 	auto &bus = to_shell(shell).bus();
 
@@ -1027,6 +1037,21 @@ static void edit(Shell &shell, const std::vector<std::string> &arguments) {
 	}
 }
 
+/* [format] */
+static void format(Shell &shell, const std::vector<std::string> &arguments) {
+	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
+		auto &format_name = arguments[0];
+		LEDBusFormat format;
+
+		if (LEDBusFormats::uc_id(format_name, format)) {
+			to_shell(shell).bus()->format(format);
+		} else {
+			shell.printfln(F("Unknown format \"%s\""), format_name.c_str());
+		}
+	}
+	show_format(shell);
+}
+
 /* [fps] */
 static void fps(Shell &shell, const std::vector<std::string> &arguments) {
 	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
@@ -1041,21 +1066,6 @@ static void length(Shell &shell, const std::vector<std::string> &arguments) {
 		to_shell(shell).bus()->length(std::atol(arguments[0].c_str()));
 	}
 	show_length(shell);
-}
-
-/* [format] */
-static void format(Shell &shell, const std::vector<std::string> &arguments) {
-	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
-		auto &format_name = arguments[0];
-		LEDBusFormat format;
-
-		if (LEDBusFormats::uc_id(format_name, format)) {
-			to_shell(shell).bus()->format(format);
-		} else {
-			shell.printfln(F("Unknown format \"%s\""), format_name.c_str());
-		}
-	}
-	show_format(shell);
 }
 
 static void normal(Shell &shell, const std::vector<std::string> &arguments) {
@@ -1161,6 +1171,8 @@ static void show(Shell &shell, const std::vector<std::string> &arguments) {
 	show_reset_time(shell);
 	show_direction(shell);
 	show_default_preset(shell, to_shell(shell).bus());
+	show_udp_port(shell);
+	show_udp_queue_size(shell);
 
 	auto preset = to_app(shell).edit(to_shell(shell).bus());
 
@@ -1169,6 +1181,22 @@ static void show(Shell &shell, const std::vector<std::string> &arguments) {
 		preset ? (preset->get()->modified() ? " (unsaved)" : "") : "");
 
 	show_default_fps(shell);
+}
+
+/* [port] */
+static void udp_port(Shell &shell, const std::vector<std::string> &arguments) {
+	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
+		to_shell(shell).bus()->udp_port(std::atol(arguments[0].c_str()));
+	}
+	show_udp_port(shell);
+}
+
+/* [size] */
+static void udp_queue_size(Shell &shell, const std::vector<std::string> &arguments) {
+	if (!arguments.empty() && shell.has_any_flags(CommandFlags::ADMIN)) {
+		to_shell(shell).bus()->udp_queue_size(std::atol(arguments[0].c_str()));
+	}
+	show_udp_queue_size(shell);
 }
 
 } // namespace bus
@@ -1844,6 +1872,8 @@ static inline void setup_commands(std::shared_ptr<Commands> &commands) {
 	commands->add_command(context::bus, user, {F("format")}, {F("[format]")}, bus::format, bus_formats_autocomplete);
 	commands->add_command(context::bus, user, {F("fps")}, {F("[fps]")}, bus::fps);
 	commands->add_command(context::bus, user, {F("length")}, {F("[length]")}, bus::length);
+	commands->add_command(context::bus, user, {F("udp"), F("port")}, {F("[port]")}, bus::udp_port);
+	commands->add_command(context::bus, user, {F("udp"), F("queue"), F("size")}, {F("[size]")}, bus::udp_queue_size);
 	commands->add_command(context::bus, admin, {F("normal")}, bus::normal);
 	commands->add_command(context::bus, user, {F("profile")}, {F("<profile>")}, bus::profile, profile_names_autocomplete);
 	commands->add_command(context::bus, user, {F("reset"), F("time")}, {F("[microseconds]")}, bus::reset_time, reset_times_autocomplete);

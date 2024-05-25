@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,10 @@
 
 #include <algorithm>
 #include <cstring>
+
+extern "C" {
+	#include <py/obj.h>
+}
 
 #include <uuid/log.h>
 
@@ -93,6 +97,26 @@ IRAM_ATTR void LEDBus::finish_isr() {
 	busy_ = false;
 	xSemaphoreGiveFromISR(semaphore_, &xHigherPriorityTaskWoken);
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+void LEDBus::loop() {
+	udp_.loop();
+}
+
+void LEDBus::py_start() {
+	udp_.start();
+}
+
+void LEDBus::udp_receive(bool wait, mp_obj_t packets) {
+	udp_.receive(wait, packets);
+}
+
+void LEDBus::py_interrupt() {
+	udp_.interrupt();
+}
+
+void LEDBus::py_stop() {
+	udp_.stop();
 }
 
 NullLEDBus::NullLEDBus(const char *name) : LEDBus(name, MAX_LEDS / 10) {

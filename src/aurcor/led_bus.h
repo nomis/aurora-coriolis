@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022-2023  Simon Arlott
+ * Copyright 2022-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,26 +18,33 @@
 
 #pragma once
 
-#include <Arduino.h>
+#ifndef NO_QSTR
+# include <Arduino.h>
 
-#include <freertos/semphr.h>
+# include <freertos/semphr.h>
 
-#include <algorithm>
-#include <array>
-#include <atomic>
-#include <memory>
-#include <string>
-#include <string_view>
-#include <vector>
+# include <algorithm>
+# include <array>
+# include <atomic>
+# include <memory>
+# include <string>
+# include <string_view>
+# include <vector>
 
-#include <uuid/log.h>
+extern "C" {
+	# include <py/obj.h>
+}
 
-#include "constants.h"
-#include "led_bus_config.h"
-#include "led_bus_format.h"
-#include "led_profile.h"
-#include "led_profiles.h"
-#include "util.h"
+# include <uuid/log.h>
+
+# include "constants.h"
+# include "led_bus_config.h"
+# include "led_bus_format.h"
+# include "led_bus_udp.h"
+# include "led_profile.h"
+# include "led_profiles.h"
+# include "util.h"
+#endif
 
 namespace aurcor {
 
@@ -66,6 +73,10 @@ public:
 	inline void default_preset(std::string_view value) { config_.default_preset(value); }
 	inline unsigned int default_fps() const { return config_.default_fps(); }
 	inline void default_fps(unsigned int value) { config_.default_fps(value); }
+	inline uint16_t udp_port() const { return config_.udp_port(); }
+	inline void udp_port(uint16_t value) { config_.udp_port(value); }
+	inline unsigned int udp_queue_size() const { return config_.udp_queue_size(); }
+	inline void udp_queue_size(unsigned int value) { config_.udp_queue_size(value); }
 	inline void reload_config() { config_.reload(); }
 
 	inline LEDProfile& profile(enum led_profile_id id) { return profiles_.get(id); }
@@ -78,6 +89,12 @@ public:
 	bool ready() const;
 	void write(const uint8_t *data, size_t size, bool reverse_order); /* data is in RGB order */
 	void clear();
+
+	void loop();
+	void py_start();
+	void udp_receive(bool wait, mp_obj_t packets);
+	void py_interrupt();
+	void py_stop();
 
 protected:
 	virtual void start(const uint8_t *data, size_t size, bool reverse_order) = 0;
@@ -98,6 +115,7 @@ private:
 	uint64_t last_update_us_{0};
 	mutable LEDBusConfig config_;
 	mutable LEDProfiles profiles_;
+	LEDBusUDP udp_{*this};
 };
 
 class NullLEDBus: public LEDBus, public std::enable_shared_from_this<NullLEDBus> {
