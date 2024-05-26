@@ -84,6 +84,7 @@ while True:
 		if length < 2:
 			continue
 
+		# https://github.com/Aircoookie/WLED/wiki/UDP-Realtime-Control#udp-realtime
 		if packet.data[0] == 1:
 			parse_warls(packet.data, 2, length)
 		elif packet.data[0] == 2:
