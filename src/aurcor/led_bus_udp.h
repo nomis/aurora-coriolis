@@ -46,7 +46,7 @@ public:
 	static constexpr size_t MAX_PACKET_LEN = 1472;
 	static constexpr unsigned int DEFAULT_QUEUE_SIZE = 3;
 	static constexpr unsigned int MIN_QUEUE_SIZE = 1;
-	static constexpr unsigned int MAX_QUEUE_SIZE = 10;
+	static constexpr unsigned int MAX_QUEUE_SIZE = 50;
 
 	static void setup(size_t bus_count);
 
