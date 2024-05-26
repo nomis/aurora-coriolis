@@ -555,6 +555,22 @@ std::string WebServer::Request::client_address() {
 			return "[unknown V6]";
 		}
 
+		if (sa->sin6_addr.s6_addr[0] == 0
+				&& sa->sin6_addr.s6_addr[1] == 0
+				&& sa->sin6_addr.s6_addr[2] == 0
+				&& sa->sin6_addr.s6_addr[3] == 0
+				&& sa->sin6_addr.s6_addr[4] == 0
+				&& sa->sin6_addr.s6_addr[5] == 0
+				&& sa->sin6_addr.s6_addr[6] == 0
+				&& sa->sin6_addr.s6_addr[7] == 0
+				&& sa->sin6_addr.s6_addr[8] == 0
+				&& sa->sin6_addr.s6_addr[9] == 0
+				&& sa->sin6_addr.s6_addr[10] == 0xFF
+				&& sa->sin6_addr.s6_addr[11] == 0xFF
+				&& !strncasecmp("::FFFF:", ip, 7)) {
+			std::memmove(ip, &ip[7], sizeof(ip) - 7);
+		}
+
 		return std::string{"["} + ip + "]:" + std::to_string(ntohs(sa->sin6_port));
 	} else {
 		return "[unknown AF]";
