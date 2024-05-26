@@ -200,10 +200,7 @@ void LEDBusUDP::receive(bool wait, mp_obj_t packets) {
 			MP_THREAD_GIL_EXIT();
 			cv_.wait(lock);
 			MP_THREAD_GIL_ENTER();
-
-			if (packets_.empty()) {
-				mp_handle_pending(true);
-			}
+			mp_handle_pending(true);
 		}
 
 		while (!packets_.empty()) {
