@@ -1,0 +1,4 @@
+desc: WLED UDP (HDR)
+script: wled_udp
+config:
+  profile/profile: hdr
