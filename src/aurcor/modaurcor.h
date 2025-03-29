@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022-2023  Simon Arlott
+ * Copyright 2022-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -116,6 +116,10 @@ MP_DECLARE_CONST_FUN_OBJ_0(aurcor_time_ms_obj);
 mp_obj_t aurcor_time_us(void);
 MP_DECLARE_CONST_FUN_OBJ_0(aurcor_time_us_obj);
 
+
+mp_obj_t aurcor_udp_receive(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+MP_DECLARE_CONST_FUN_OBJ_KW(aurcor_udp_receive_obj);
+
 #ifdef __cplusplus
 } // extern "C"
 
@@ -123,6 +127,7 @@ MP_DECLARE_CONST_FUN_OBJ_0(aurcor_time_us_obj);
 # include <uuid/log.h>
 
 # include "led_bus.h"
+# include "led_bus_format.h"
 # include "led_profiles.h"
 
 # include <memory>
@@ -184,6 +189,8 @@ public:
 	mp_obj_t next_time_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	mp_obj_t next_time_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 
+	mp_obj_t udp_receive(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+
 private:
 	static constexpr size_t TIMING_DELAY_US = 10;
 	static constexpr enum led_profile_id DEFAULT_PROFILE = LED_PROFILE_NORMAL;
@@ -221,6 +228,7 @@ private:
 	friend mp_obj_t ::aurcor_output_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_exp_hsv(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	friend mp_obj_t ::aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
+	friend mp_obj_t ::aurcor_udp_receive(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 	static PyModule& current();
 
 	static void append_led(OutputType type, uint8_t *buffer, size_t offset, mp_obj_t item);
@@ -236,6 +244,7 @@ private:
 	MemoryBlock *led_buffer_;
 	std::shared_ptr<LEDBus> bus_;
 	size_t bus_length_;
+	LEDBusFormat bus_format_;
 	unsigned int bus_default_fps_;
 	Preset &preset_;
 

@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2023  Simon Arlott
+ * Copyright 2023-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,9 @@
 # include <sys/select.h>
 # include <sys/socket.h>
 # include <microhttpd.h>
+# if MHD_VERSION < 0x00097002
+typedef int MHD_Result;
+# endif
 #else
 # include <esp_http_server.h>
 #endif
@@ -65,6 +68,7 @@ public:
 		size_t write(const uint8_t *buffer, size_t size) override;
 
 		const std::string_view uri() const;
+		std::string client_address();
 		std::string get_header(const char *name);
 
 		void set_status(unsigned int status);
@@ -76,7 +80,7 @@ public:
 #ifdef ENV_NATIVE
 		bool first();
 		void upload(const char *data, size_t len);
-		int finish();
+		MHD_Result finish();
 
 		struct MHD_Connection *connection_;
 		const std::string url_;
@@ -143,7 +147,7 @@ private:
 #ifdef ENV_NATIVE
 		virtual std::string method() = 0;
 		inline const std::string& uri() const { return uri_; }
-		virtual int handle_connection(Request &req) = 0;
+		virtual MHD_Result handle_connection(Request &req) = 0;
 #else
 		virtual httpd_method_t method() = 0;
 		bool server_register(httpd_handle_t server);
@@ -167,7 +171,7 @@ private:
 
 #ifdef ENV_NATIVE
 		std::string method() override;
-		int handle_connection(Request &req) override;
+		MHD_Result handle_connection(Request &req) override;
 #endif
 
 	protected:
@@ -186,7 +190,7 @@ private:
 
 #ifdef ENV_NATIVE
 		std::string method() override;
-		int handle_connection(Request &req) override;
+		MHD_Result handle_connection(Request &req) override;
 #endif
 
 	protected:
@@ -206,7 +210,7 @@ private:
 
 #ifdef ENV_NATIVE
 		std::string method() override;
-		int handle_connection(Request &req) override;
+		MHD_Result handle_connection(Request &req) override;
 #endif
 
 	protected:
@@ -230,7 +234,7 @@ private:
 	static void* log_connection(void *cls, const char *uri,
 		struct MHD_Connection *connection);
 
-	static int handle_connection(void *cls,
+	static MHD_Result handle_connection(void *cls,
 		struct MHD_Connection *connection, const char *url, const char *method,
 		const char *version, const char *upload_data, size_t *upload_data_size,
 		void **con_cls);
@@ -242,7 +246,7 @@ private:
 	static uuid::log::Logger logger_;
 
 #ifdef ENV_NATIVE
-	int handle_connection(struct MHD_Connection *connection, const char *url,
+	MHD_Result handle_connection(struct MHD_Connection *connection, const char *url,
 		const char *method, const char *upload_data, size_t *upload_data_size,
 		Request **req);
 

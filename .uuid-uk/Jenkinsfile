@@ -1,3 +1,5 @@
 @Library("uuid") _
 
-platformioApplicationPipeline()
+platformioApplicationPipeline{
+	apt_packages = ["libcurl4-gnutls-dev", "libmicrohttpd-dev"]
+}

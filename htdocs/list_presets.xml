@@ -52,16 +52,46 @@
 					}
 				</style>
 				<script type="application/javascript">
+					<![CDATA[
 					Element.prototype.documentOffsetTop = function () {
 						return this.offsetTop + (this.offsetParent ? this.offsetParent.documentOffsetTop() : 0);
 					};
-					window.onload = function() {
+
+					/* Scroll the page so that the running preset is in the middle */
+					function scrollToSelected(attempts) {
 						var selected = document.getElementById("selected");
 						if (selected) {
-							var top = selected.documentOffsetTop() - (window.innerHeight / 2);
+							var top = selected.documentOffsetTop() + (selected.offsetHeight / 2) - (window.innerHeight / 2);
+							var scrollY = window.scrollY;
+
+							if (top <= 0)
+								return;
+
 							window.scrollTo(0, top);
+							attempts++;
+
+							var attemptsText = `${attempts} attempt${attempts != 1 ? "s" : ""}`;
+
+							if (scrollY == window.scrollY) {
+								if (attempts < 8) {
+									console.log(`Scroll from ${scrollY} to ${top} failed after ${attemptsText}, retry in ${attempts * 5}ms`);
+
+									setTimeout(function() {
+										scrollToSelected(attempts);
+									}, attempts * 5);
+								} else {
+									console.log(`Scroll from ${scrollY} to ${top} failed after ${attemptsText}, giving up`);
+								}
+							} else {
+								console.log(`Scroll from ${scrollY} to ${top} successful after ${attemptsText}`);
+							}
 						}
 					};
+
+					window.onload = function() {
+						scrollToSelected(0);
+					};
+					]]>
 				</script>
 				<link rel="icon" href="data:,"/>
 			</head>

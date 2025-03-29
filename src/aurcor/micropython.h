@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022-2023  Simon Arlott
+ * Copyright 2022-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ extern "C" {
 
 /*
  * The "do { ... } while (0)" blocks ensure a stray "break" or "continue" will
- * only exit the current block. There's nothing to stop "retrun" from breaking
+ * only exit the current block. There's nothing to stop "return" from breaking
  * everything.
  */
 #define micropython_nlr_begin() \
@@ -170,6 +170,7 @@ protected:
 	virtual std::unique_ptr<aurcor::micropython::Print> modulogging_print(uuid::log::Level level);
 
 	const std::string name_;
+	std::shared_ptr<LEDBus> bus_;
 
 private:
 	static inline MicroPython& current() { return *self_; }

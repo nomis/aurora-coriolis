@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2023  Simon Arlott
+ * Copyright 2023-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,12 +21,15 @@
 #include <Arduino.h>
 
 #ifdef ENV_NATIVE
+# include <arpa/inet.h>
 # include <sys/types.h>
 # include <sys/select.h>
 # include <sys/socket.h>
 # include <microhttpd.h>
 #else
+# include <arpa/inet.h>
 # include <esp_http_server.h>
+# include <sys/socket.h>
 #endif
 
 #include <cstdlib>
@@ -214,7 +217,7 @@ std::string WebServer::GetURIHandler::method() {
 	return "GET";
 }
 
-int WebServer::GetURIHandler::handle_connection(Request &req) {
+MHD_Result WebServer::GetURIHandler::handle_connection(Request &req) {
 	if (function_(req)) {
 		return req.finish();
 	} else {
@@ -226,7 +229,7 @@ std::string WebServer::PostURIHandler::method() {
 	return "POST";
 }
 
-int WebServer::PostURIHandler::handle_connection(Request &req) {
+MHD_Result WebServer::PostURIHandler::handle_connection(Request &req) {
 	if (function_(req)) {
 		return req.finish();
 	} else {
@@ -238,7 +241,7 @@ std::string WebServer::StaticContentURIHandler::method() {
 	return "GET";
 }
 
-int WebServer::StaticContentURIHandler::handle_connection(Request &req) {
+MHD_Result WebServer::StaticContentURIHandler::handle_connection(Request &req) {
 	req.set_status(200);
 	req.set_type(content_type_);
 
@@ -369,7 +372,7 @@ size_t WebServer::Request::write(const uint8_t *buffer, size_t size) {
 	return size;
 }
 
-int WebServer::Request::finish() {
+MHD_Result WebServer::Request::finish() {
 	if (status_ == 0)
 		status_ = buffer_.empty() ? 204 : 200;
 
@@ -513,6 +516,67 @@ void WebServer::Request::add_header(const char *name, const std::string &value) 
 #endif
 }
 
+std::string WebServer::Request::client_address() {
+	struct sockaddr_storage addr{};
+	char ip[INET6_ADDRSTRLEN] = { 0 };
+
+#ifdef ENV_NATIVE
+	auto info = *reinterpret_cast<struct sockaddr * const *>(
+		MHD_get_connection_info(connection_, MHD_CONNECTION_INFO_CLIENT_ADDRESS));
+
+	if (info->sa_family == AF_INET) {
+		std::memcpy(&addr, info, sizeof(struct sockaddr_in));
+	} else if (info->sa_family == AF_INET6) {
+		std::memcpy(&addr, info, sizeof(struct sockaddr_in6));
+	} else {
+		return "[unknown AF]";
+	}
+#else
+	int fd = httpd_req_to_sockfd(req_);
+	socklen_t addrlen = sizeof(addr);
+
+	if (::getpeername(fd, reinterpret_cast<struct sockaddr*>(&addr), &addrlen)) {
+		return "[unknown PN]";
+	}
+#endif
+
+	if (addr.ss_family == AF_INET) {
+		struct sockaddr_in *sa = reinterpret_cast<struct sockaddr_in*>(&addr);
+
+		if (::inet_ntop(sa->sin_family, &sa->sin_addr, ip, sizeof(ip)) == nullptr) {
+			return "[unknown V4]";
+		}
+
+		return std::string{"["} + ip + "]:" + std::to_string(ntohs(sa->sin_port));
+	} else if (addr.ss_family == AF_INET6) {
+		struct sockaddr_in6 *sa = reinterpret_cast<struct sockaddr_in6*>(&addr);
+
+		if (::inet_ntop(sa->sin6_family, &sa->sin6_addr, ip, sizeof(ip)) == nullptr) {
+			return "[unknown V6]";
+		}
+
+		if (sa->sin6_addr.s6_addr[0] == 0
+				&& sa->sin6_addr.s6_addr[1] == 0
+				&& sa->sin6_addr.s6_addr[2] == 0
+				&& sa->sin6_addr.s6_addr[3] == 0
+				&& sa->sin6_addr.s6_addr[4] == 0
+				&& sa->sin6_addr.s6_addr[5] == 0
+				&& sa->sin6_addr.s6_addr[6] == 0
+				&& sa->sin6_addr.s6_addr[7] == 0
+				&& sa->sin6_addr.s6_addr[8] == 0
+				&& sa->sin6_addr.s6_addr[9] == 0
+				&& sa->sin6_addr.s6_addr[10] == 0xFF
+				&& sa->sin6_addr.s6_addr[11] == 0xFF
+				&& !strncasecmp("::FFFF:", ip, 7)) {
+			std::memmove(ip, &ip[7], sizeof(ip) - 7);
+		}
+
+		return std::string{"["} + ip + "]:" + std::to_string(ntohs(sa->sin6_port));
+	} else {
+		return "[unknown AF]";
+	}
+}
+
 std::string WebServer::Request::get_header(const char *name) {
 #ifdef ENV_NATIVE
 	return MHD_lookup_connection_value(connection_, MHD_HEADER_KIND, name);
@@ -537,7 +601,7 @@ void* WebServer::log_connection(void *cls, const char *uri,
 	return new Request{connection, uri};
 }
 
-int WebServer::handle_connection(void *cls,
+MHD_Result WebServer::handle_connection(void *cls,
 		struct MHD_Connection *connection, const char *url, const char *method,
 		const char *version, const char *upload_data, size_t *upload_data_size,
 		void **con_cls) {
@@ -555,7 +619,7 @@ void WebServer::cleanup_connection(void *cls, struct MHD_Connection *connection,
 	}
 }
 
-int WebServer::handle_connection(struct MHD_Connection *connection,
+MHD_Result WebServer::handle_connection(struct MHD_Connection *connection,
 		const char *url, const char *method, const char *upload_data,
 		size_t *upload_data_size, Request **req) {
 	for (auto &uri_handler : uri_handlers_) {

@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022-2023  Simon Arlott
+ * Copyright 2022-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@ extern "C" {
 	# include <shared/timeutils/timeutils.h>
 }
 
+# include "aurcor/led_bus_format.h"
 # include "aurcor/led_profile.h"
 # include "aurcor/led_profiles.h"
 # include "aurcor/memory_pool.h"
@@ -145,6 +146,10 @@ mp_obj_t aurcor_output_defaults(size_t n_args, const mp_obj_t *args, mp_map_t *k
 	return PyModule::current().output_leds(n_args, args, kwargs, PyModule::OutputType::RGB, true);
 }
 
+mp_obj_t aurcor_udp_receive(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	return PyModule::current().udp_receive(n_args, args, kwargs);
+}
+
 } // extern "C"
 
 namespace aurcor {
@@ -153,8 +158,8 @@ namespace micropython {
 
 PyModule::PyModule(MemoryBlock *led_buffer, std::shared_ptr<LEDBus> bus,
 		Preset &preset) : led_buffer_(led_buffer), bus_(std::move(bus)),
-		bus_length_(bus_->length()), bus_default_fps_(bus_->default_fps()),
-		preset_(preset) {
+		bus_length_(bus_->length()), bus_format_(bus_->format()),
+		bus_default_fps_(bus_->default_fps()), preset_(preset) {
 }
 
 inline PyModule& PyModule::current() {
@@ -177,10 +182,16 @@ mp_obj_t PyModule::register_config(mp_obj_t dict) {
 mp_obj_t PyModule::config(mp_obj_t dict) {
 	bool ret = preset_.populate_config(dict);
 	size_t bus_length = bus_->length();
+	LEDBusFormat bus_format = bus_->format();
 	unsigned int bus_default_fps = bus_->default_fps();
 
 	if (bus_length != bus_length_) {
 		bus_length_ = bus_length;
+		ret = true;
+	}
+
+	if (bus_format != bus_format_) {
+		bus_format_ = bus_format;
 		ret = true;
 	}
 
@@ -477,7 +488,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 		out_bytes = max_bytes;
 	}
 
-	bus_->profile(profile).transform(buffer, out_bytes);
+	bus_->profile(profile).transform(buffer, out_bytes, bus_format_);
 
 	if (wait_us > 0 && bus_written_) {
 		uint64_t start_us = bus_->last_update_us() + wait_us - TIMING_DELAY_US;
@@ -492,6 +503,7 @@ mp_obj_t PyModule::output_leds(size_t n_args, const mp_obj_t *args, mp_map_t *kw
 
 	if (!config_used_) {
 		bus_length_ = bus_->length();
+		bus_format_ = bus_->format();
 		bus_default_fps_ = bus_->default_fps();
 	}
 
@@ -1013,6 +1025,32 @@ mp_obj_t PyModule::next_time_us(size_t n_args, const mp_obj_t *args, mp_map_t *k
 	return mp_obj_new_int_from_ll(us);
 }
 
+mp_obj_t PyModule::udp_receive(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+	enum {
+		ARG_wait,
+	};
+	static const mp_arg_t allowed_args[] = {
+		{MP_QSTR_wait, MP_ARG_KW_ONLY | MP_ARG_OBJ, {u_obj: MP_ROM_NONE}},
+	};
+	mp_arg_val_t parsed_args[MP_ARRAY_SIZE(allowed_args)];
+	mp_arg_parse_all(n_args, args, kwargs, MP_ARRAY_SIZE(allowed_args),
+		allowed_args, parsed_args);
+
+	bool wait = true;
+
+	if (parsed_args[ARG_wait].u_obj != MP_ROM_NONE) {
+		if (!mp_obj_is_bool(parsed_args[ARG_wait].u_obj))
+			mp_raise_TypeError(MP_ERROR_TEXT("wait must be a bool"));
+
+		wait = mp_obj_is_true(parsed_args[ARG_wait].u_obj);
+	}
+
+	mp_obj_t packets = mp_obj_new_list(0, nullptr);
+
+	bus_->udp_receive(wait, packets);
+
+	return packets;
+}
 
 } // namespace micropython
 

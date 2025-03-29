@@ -21,80 +21,52 @@
 #include <Arduino.h>
 
 #ifndef ENV_NATIVE
+# include <esp_private/gdma.h>
 # include <hal/uart_ll.h>
+# include <rom/lldesc.h>
 # include <soc/uart_periph.h>
+# include <soc/uhci_struct.h>
+#endif
+
+#if CONFIG_IDF_TARGET_ESP32H3 || CONFIG_IDF_TARGET_ESP32S3
+# define UHCI_USES_GDMA 1
+# define SOC_UHCI_NUM 1
+#elif CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32H4
+# define UHCI_USES_GDMA 0
+# define SOC_UHCI_NUM 2
+#else
+# define UHCI_USES_GDMA 0
+# define SOC_UHCI_NUM 1
 #endif
 
 #include <array>
 #include <memory>
 
 #include "led_bus.h"
+#include "uart_led_bus.h"
 
 namespace aurcor {
 
-namespace ledbus {
-
-class UARTPatternTable {
-public:
-	static constexpr unsigned long WORDS_PER_BYTE = 4;
-
-	constexpr UARTPatternTable() {
-		for (size_t i = 0; i <= UINT8_MAX; i++) {
-			// The LEDs are big-endian but the UART FIFO consists of little-endian bytes and little-endian bits
-			values[i] =
-				  (data[(i >> 6) & 3]      )
-				| (data[(i >> 4) & 3] <<  8)
-				| (data[(i >> 2) & 3] << 16)
-				| (data[(i     ) & 3] << 24);
-		}
-	}
-
-	uint32_t operator[](size_t i) const {
-		return values[i];
-	}
-
-private:
-	/*
-	 * The UART runs inverted with 6-bit bytes, no parity and 1 stop bit.
-	 *
-	 * Start bit   Stop bit
-	 *      ↓          ↓
-	 * 00 = 1 000  100 0
-	 * 01 = 1 000  111 0
-	 * 10 = 1 110  100 0
-	 * 11 = 1 110  111 0
-	 *        ↑↑↑  ↑↑↑
-	 *   Little-endian data
-	 *
-	 * When idle it will be at 0.
-	 */
-	static inline constexpr std::array<uint8_t,WORDS_PER_BYTE> data{
-		0b110111, 0b000111, 0b110100, 0b000100
-	};
-
-	std::array<uint32_t,UINT8_MAX + 1> values{};
-};
-
-extern DRAM_ATTR const UARTPatternTable uart_pattern_table;
-
-} // namespace ledbus
-
 #ifndef ENV_NATIVE
-class UARTLEDBus: public ByteBufferLEDBus, public std::enable_shared_from_this<UARTLEDBus> {
+class UARTDMALEDBus: public LEDBus, public std::enable_shared_from_this<UARTDMALEDBus> {
 public:
-	UARTLEDBus(unsigned int uart_num, const char *name, uint8_t rx_pin, uint8_t tx_pin);
-	~UARTLEDBus() override;
+	UARTDMALEDBus(unsigned int uart_num, uhci_dev_t *uhci_dev, const char *name, uint8_t rx_pin, uint8_t tx_pin);
+	~UARTDMALEDBus() override;
 
-	const char *type() const override { return "UARTLEDBus"; }
+	const char *type() const override { return "UARTDMALEDBus"; }
 
 protected:
-	void transmit() override;
+	void start(const uint8_t *data, size_t size, bool reverse_order) final override;
 
 private:
 	static constexpr unsigned long TX_START_BITS = 1;
 	static constexpr uart_word_length_t CFG_UART_WORD_LENGTH = UART_DATA_6_BITS;
 	static constexpr unsigned long TX_BITS_PER_WORD = 6;
 	static constexpr unsigned long TX_WORDS_PER_BYTE = 4;
+	static constexpr size_t MAX_TX_BYTES = MAX_LEDS * BYTES_PER_LED * TX_WORDS_PER_BYTE;
+
+	static constexpr size_t MAX_DMA_LENGTH = (1 << 12) - sizeof(uint32_t);
+	static constexpr size_t NUM_DMA_DESCS = (MAX_TX_BYTES + MAX_DMA_LENGTH - 1) / MAX_DMA_LENGTH;
 
 	static constexpr uart_stop_bits_t CFG_UART_STOP_BITS = UART_STOP_BITS_1;
 	static constexpr unsigned long TX_STOP_BITS = 1;
@@ -102,10 +74,7 @@ private:
 	static constexpr unsigned long BAUD_RATE = UPDATE_RATE_HZ * 4;
 
 	static constexpr uint8_t TX_FIFO_SIZE = UART_LL_FIFO_DEF_LEN;
-	static constexpr uint8_t TX_FIFO_MIN_SPACE = ((TX_FIFO_SIZE / 2) / TX_WORDS_PER_BYTE) * TX_WORDS_PER_BYTE;
-	static constexpr uint8_t TX_FIFO_THRESHOLD = TX_FIFO_SIZE - TX_FIFO_MIN_SPACE;
-	static_assert(TX_FIFO_MIN_SPACE >= TX_WORDS_PER_BYTE,
-		"Must be enough space for at least one byte of data when the interrupt is raised");
+	static constexpr uint8_t TX_FIFO_THRESHOLD = TX_FIFO_SIZE - TX_WORDS_PER_BYTE;
 
 	static constexpr size_t TX_FIFO_MAX_US = 1000000 /
 		(BAUD_RATE / (TX_FIFO_SIZE * (TX_START_BITS + TX_BITS_PER_WORD + TX_STOP_BITS)));
@@ -115,15 +84,29 @@ private:
 	static_assert(ledbus::UARTPatternTable::WORDS_PER_BYTE == TX_WORDS_PER_BYTE,
 		"Pattern table must use the same words per byte");
 
+#if UHCI_USES_GDMA
+	static IRAM_ATTR bool completion_handler(gdma_channel_handle_t dma_chan,
+		gdma_event_data_t *event_data, void *user_data);
+#else
 	static IRAM_ATTR void interrupt_handler(void *arg);
+#endif
+
+	void cleanup();
 
 	const uart_signal_conn_t &periph_;
 	uart_dev_t &hw_;
+	uhci_dev_t &uhci_;
 	const uintptr_t uart_fifo_reg_;
 	const uintptr_t uart_status_reg_;
+#if UHCI_USES_GDMA
+	gdma_channel_handle_t tx_channel_;
+#else
+	intr_handle_t interrupt_;
+#endif
+	std::unique_ptr<lldesc_t> tx_link_;
+	std::unique_ptr<uint32_t> buffer_;
 	uint64_t next_tx_start_us_{0};
 	size_t next_tx_delay_us_{0};
-	intr_handle_t interrupt_;
 	bool ok_;
 };
 #endif

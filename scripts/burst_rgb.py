@@ -50,7 +50,7 @@ def generate():
 	while True:
 		if burst_idx >= burst_count:
 			for pos in range(current_pos, blank_length):
-				buffer[i] = 0
+				buffer[i] = 0, 0, 0
 
 				if i == 0:
 					return buffer
@@ -114,6 +114,6 @@ while True:
 
 		colours = list(map(aurcor.rgb_to_hsv_tuple, config["colours"]))
 		fade_multipliers = list([config["fade_rate1"] * (config["fade_rateN"] ** n) / aurcor.MAX_VALUE for n in range(0, fade_length)])
-		buffer = [0] * length
+		buffer = [(0, 0, 0)] * length
 
 	aurcor.output_hsv(generate())

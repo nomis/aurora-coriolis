@@ -1,0 +1,8 @@
+desc: Flame (heat)
+script: fire2012
+config:
+  colours/list_rgb:
+  - 0x000000 # Black
+  - 0xFF0000 # Red
+  - 0xFFFF00 # Yellow
+  - 0xFFFFFF # White

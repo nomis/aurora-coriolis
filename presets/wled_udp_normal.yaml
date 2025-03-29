@@ -1,0 +1,4 @@
+desc: WLED UDP
+script: wled_udp
+config:
+  profile/profile: normal

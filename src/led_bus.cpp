@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022  Simon Arlott
+ * Copyright 2022-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,10 @@
 
 #include <algorithm>
 #include <cstring>
+
+extern "C" {
+	#include <py/obj.h>
+}
 
 #include <uuid/log.h>
 
@@ -95,6 +99,26 @@ IRAM_ATTR void LEDBus::finish_isr() {
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
+void LEDBus::loop() {
+	udp_.loop();
+}
+
+void LEDBus::py_start() {
+	udp_.start();
+}
+
+void LEDBus::udp_receive(bool wait, mp_obj_t packets) {
+	udp_.receive(wait, packets);
+}
+
+void LEDBus::py_interrupt() {
+	udp_.interrupt();
+}
+
+void LEDBus::py_stop() {
+	udp_.stop();
+}
+
 NullLEDBus::NullLEDBus(const char *name) : LEDBus(name, MAX_LEDS / 10) {
 }
 
@@ -108,14 +132,18 @@ ByteBufferLEDBus::ByteBufferLEDBus(const char *name) : LEDBus(name) {
 void ByteBufferLEDBus::start(const uint8_t *data, size_t size, bool reverse_order) {
 	const size_t max_bytes = length() * BYTES_PER_LED;
 
+	size /= BYTES_PER_LED;
+	size *= BYTES_PER_LED;
 	size = std::min(max_bytes, size);
 
-	if (reverse_order) {
-		for (size_t out_bytes = size - BYTES_PER_LED, in_bytes = 0; in_bytes < size;
-				out_bytes -= BYTES_PER_LED, in_bytes += BYTES_PER_LED)
-			std::memcpy(&buffer_[out_bytes], &data[in_bytes], BYTES_PER_LED);
-	} else {
-		std::memcpy(&buffer_[0], data, size);
+	if (size > 0) {
+		if (reverse_order) {
+			for (size_t out_bytes = size - BYTES_PER_LED, in_bytes = 0; in_bytes < size;
+					out_bytes -= BYTES_PER_LED, in_bytes += BYTES_PER_LED)
+				std::memcpy(&buffer_[out_bytes], &data[in_bytes], BYTES_PER_LED);
+		} else {
+			std::memcpy(&buffer_[0], data, size);
+		}
 	}
 
 	if (size < max_bytes) {

@@ -1,0 +1,5 @@
+desc: Flame (hue fade)
+script: fire2012
+config:
+  auto/s32: 1
+  duration/s32: 30000

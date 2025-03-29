@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022-2023  Simon Arlott
+ * Copyright 2022-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -89,7 +89,7 @@ __thread MicroPython *MicroPython::self_{nullptr};
 std::shared_ptr<MemoryPool> MicroPython::heaps_ = std::make_shared<MemoryPool>(
 	MicroPython::HEAP_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 std::shared_ptr<MemoryPool> MicroPython::pystacks_ = std::make_shared<MemoryPool>(
-	MicroPython::PYSTACK_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+	MicroPython::PYSTACK_SIZE, MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
 std::shared_ptr<MemoryPool> MicroPython::ledbufs_ = std::make_shared<MemoryPool>(
 	LEDBus::MAX_BYTES, MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
 
@@ -101,7 +101,7 @@ void MicroPython::setup(size_t pool_count) {
 
 MicroPython::MicroPython(const std::string &name,
 		std::shared_ptr<LEDBus> bus, std::shared_ptr<Preset> preset)
-		: name_(name + "/" + bus->name()),
+		: name_(name + "/" + bus->name()), bus_(bus),
 		heap_(std::move(heaps_->allocate())),
 		pystack_(std::move(pystacks_->allocate())),
 		ledbuf_(std::move(ledbufs_->allocate())),
@@ -143,6 +143,8 @@ bool MicroPython::start() {
 		running_ = false;
 		return false;
 	}
+
+	bus_->py_start();
 
 	return true;
 }
@@ -236,6 +238,8 @@ void MicroPython::running_thread() {
 		logger_.trace(F("[%s] MicroPython finished"), name_.c_str());
 		self_ = nullptr;
 		running_ = false;
+
+		bus_->py_stop();
 	} catch (...) {
 		logger_.emerg(F("[%s] Exception in MicroPython thread near %s()"), name_.c_str(), where_);
 	}
@@ -282,6 +286,7 @@ void MicroPython::abort() {
 }
 
 void MicroPython::shutdown() {
+	bus_->py_stop();
 }
 
 bool MicroPython::stop() {
@@ -486,8 +491,10 @@ bool MicroPythonShell::interrupt_char(int c) {
 	AccessState access{*this};
 
 	if (running() && interrupt_char_ && *interrupt_char_ == c) {
-		if (access.enable())
+		if (access.enable()) {
 			mp_sched_keyboard_interrupt();
+			bus_->py_interrupt();
+		}
 
 		return true;
 	}
@@ -496,6 +503,7 @@ bool MicroPythonShell::interrupt_char(int c) {
 }
 
 void MicroPythonShell::shutdown() {
+	MicroPython::shutdown();
 	stdin_.stop();
 	stdout_.stop();
 }
@@ -590,11 +598,15 @@ void aurcor::MicroPython::nlr_jump_fail(void *val) {
 #if defined(ARDUINO_ARCH_ESP32)
 	if (ADDRESS_IN_IRAM0(address)
 			|| ADDRESS_IN_IRAM0_CACHE(address)
+# if defined(ARDUINO_LOLIN_S2_MINI)
 			|| ADDRESS_IN_IRAM1(address)
 			|| ADDRESS_IN_DROM0(address)
+# endif
 			|| ADDRESS_IN_DRAM0(address)
 			|| ADDRESS_IN_DRAM0_CACHE(address)
+# if defined(ARDUINO_LOLIN_S2_MINI)
 			|| ADDRESS_IN_DRAM1(address)
+# endif
 			|| (val >= heap_->begin() && val < heap_->end())
 			|| (val >= pystack_->begin() && val < pystack_->end()))
 		valid = true;

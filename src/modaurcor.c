@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022-2023  Simon Arlott
+ * Copyright 2022-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,6 +79,8 @@ MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_hsv_obj, 1, aurcor_output_hsv);
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_exp_hsv_obj, 1, aurcor_output_exp_hsv);
 MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_output_defaults_obj, 0, aurcor_output_defaults);
 
+MP_DEFINE_CONST_FUN_OBJ_KW(aurcor_udp_receive_obj, 0, aurcor_udp_receive);
+
 mp_obj_t aurcor_ticks64_ms(void) {
 	return mp_obj_new_int_from_ll(esp_timer_get_time() / 1000ULL);
 }
@@ -153,6 +155,8 @@ STATIC const mp_rom_map_elem_t aurcor_module_globals_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR_output_hsv),        MP_ROM_PTR(&aurcor_output_hsv_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_output_exp_hsv),    MP_ROM_PTR(&aurcor_output_exp_hsv_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_output_defaults),   MP_ROM_PTR(&aurcor_output_defaults_obj) },
+
+	{ MP_ROM_QSTR(MP_QSTR_udp_receive),       MP_ROM_PTR(&aurcor_udp_receive_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(aurcor_module_globals, aurcor_module_globals_table);

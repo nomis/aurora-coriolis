@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022-2023  Simon Arlott
+ * Copyright 2022-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,8 @@
 #include "app/fs.h"
 #include "app/util.h"
 #include "aurcor/app.h"
+#include "aurcor/led_bus_format.h"
+#include "aurcor/led_bus_udp.h"
 #include "aurcor/modaurcor.h"
 #include "aurcor/preset.h"
 #include "aurcor/util.h"
@@ -76,6 +78,21 @@ void LEDBusConfig::length(size_t value) {
 
 void LEDBusConfig::length_constrained(size_t value) {
 	length_ = uint_constrain(value, MAX_LEDS, MIN_LEDS);
+}
+
+LEDBusFormat LEDBusConfig::format() const {
+	std::shared_lock data_lock{data_mutex_};
+	return format_;
+}
+
+void LEDBusConfig::format(LEDBusFormat value) {
+	std::unique_lock data_lock{data_mutex_};
+	if (format_ != value || !format_set_) {
+		format_ = value;
+		format_set_ = true;
+		data_lock.unlock();
+		save();
+	}
 }
 
 unsigned int LEDBusConfig::reset_time_us() const {
@@ -144,6 +161,40 @@ void LEDBusConfig::default_fps_constrained(unsigned int value) {
 	default_fps_ = uint_constrain(value, micropython::PyModule::MAX_FPS);
 }
 
+uint16_t LEDBusConfig::udp_port() const {
+	std::shared_lock data_lock{data_mutex_};
+	return udp_port_;
+}
+
+void LEDBusConfig::udp_port(uint16_t value) {
+	std::unique_lock data_lock{data_mutex_};
+	if (udp_port_ != value || !udp_port_set_) {
+		udp_port_ = value;
+		udp_port_set_ = true;
+		data_lock.unlock();
+		save();
+	}
+}
+
+unsigned int LEDBusConfig::udp_queue_size() const {
+	std::shared_lock data_lock{data_mutex_};
+	return udp_queue_size_;
+}
+
+void LEDBusConfig::udp_queue_size(unsigned int value) {
+	std::unique_lock data_lock{data_mutex_};
+	if (udp_queue_size_ != value || !udp_queue_size_set_) {
+		udp_queue_size_constrained(value);
+		udp_queue_size_set_ = true;
+		data_lock.unlock();
+		save();
+	}
+}
+
+void LEDBusConfig::udp_queue_size_constrained(unsigned int value) {
+	udp_queue_size_ = uint_constrain(value, LEDBusUDP::MAX_QUEUE_SIZE, LEDBusUDP::MIN_QUEUE_SIZE);
+}
+
 void LEDBusConfig::reset() {
 	std::unique_lock data_lock{data_mutex_};
 
@@ -155,12 +206,18 @@ void LEDBusConfig::reset() {
 void LEDBusConfig::reset_locked() {
 	length_constrained(default_length_);
 	length_set_ = false;
+	format_ = DEFAULT_FORMAT;
+	format_set_ = false;
 	reset_time_us_ = DEFAULT_RESET_TIME_US;
 	reset_time_us_set_ = false;
 	reverse_ = false;
 	default_preset_ = "";
 	default_fps_ = DEFAULT_DEFAULT_FPS;
 	default_fps_set_ = false;
+	udp_port_ = 0;
+	udp_port_set_ = false;
+	udp_queue_size_ = LEDBusUDP::DEFAULT_QUEUE_SIZE;
+	udp_queue_size_set_ = false;
 }
 
 std::string LEDBusConfig::make_filename(const char *bus_name) {
@@ -227,6 +284,14 @@ bool inline LEDBusConfig::load(cbor::Reader &reader) {
 
 			length_constrained(value);
 			length_set_ = true;
+		} else if (key == "format") {
+			std::string value;
+
+			if (!app::read_text(reader, value))
+				return false;
+
+			if (!LEDBusFormats::uc_id(value, format_))
+				return false;
 		} else if (key == "reset_time_us") {
 			uint64_t value;
 
@@ -256,6 +321,24 @@ bool inline LEDBusConfig::load(cbor::Reader &reader) {
 
 			default_fps_constrained(value);
 			default_fps_set_ = true;
+		} else if (key == "udp_port") {
+			uint64_t value;
+
+			if (!cbor::expectUnsignedInt(reader, &value))
+				return false;
+
+			if (value <= std::numeric_limits<typeof(udp_port_)>::max()) {
+				udp_port_ = value;
+				udp_port_set_ = true;
+			}
+		} else if (key == "udp_queue_size") {
+			uint64_t value;
+
+			if (!cbor::expectUnsignedInt(reader, &value))
+				return false;
+
+			udp_queue_size_constrained(value);
+			udp_queue_size_set_ = true;
 		} else if (!reader.isWellFormed()) {
 			return false;
 		}
@@ -297,6 +380,7 @@ void LEDBusConfig::save(cbor::Writer &writer) {
 
 	if (length_set_)
 		values++;
+	values++; // format is always saved
 	if (reset_time_us_set_)
 		values++;
 	if (reverse_)
@@ -305,6 +389,10 @@ void LEDBusConfig::save(cbor::Writer &writer) {
 		values++;
 	if (default_fps_set_)
 		values++;
+	if (udp_port_set_)
+		values++;
+	if (udp_queue_size_set_)
+		values++;
 
 	writer.beginMap(values);
 
@@ -312,6 +400,9 @@ void LEDBusConfig::save(cbor::Writer &writer) {
 		app::write_text(writer, "length");
 		writer.writeUnsignedInt(length_);
 	}
+
+	app::write_text(writer, "format");
+	app::write_text(writer, LEDBusFormats::uc_name(format_));
 
 	if (reset_time_us_set_) {
 		app::write_text(writer, "reset_time_us");
@@ -331,6 +422,16 @@ void LEDBusConfig::save(cbor::Writer &writer) {
 	if (default_fps_set_) {
 		app::write_text(writer, "default_fps");
 		writer.writeUnsignedInt(default_fps_);
+	}
+
+	if (udp_port_set_) {
+		app::write_text(writer, "udp_port");
+		writer.writeUnsignedInt(udp_port_);
+	}
+
+	if (udp_queue_size_set_) {
+		app::write_text(writer, "udp_queue_size");
+		writer.writeUnsignedInt(udp_queue_size_);
 	}
 }
 

@@ -1,5 +1,5 @@
 [submodule "mcu-app"]
-	path = src/app
+	path = app
 	url = ../mcu-app
 [submodule "micropython"]
 	path = micropython

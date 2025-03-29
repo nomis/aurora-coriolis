@@ -1,6 +1,6 @@
 /*
  * aurora-coriolis - ESP32 WS281x multi-channel LED controller with MicroPython
- * Copyright 2022-2023  Simon Arlott
+ * Copyright 2022-2024  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,11 @@
  */
 
 #include "aurcor/app.h"
+
+#ifndef ENV_NATIVE
+# include <driver/spi_master.h>
+# include <soc/uhci_struct.h>
+#endif
 
 #include <algorithm>
 #include <memory>
@@ -36,6 +41,8 @@
 #include "aurcor/micropython.h"
 #include "aurcor/preset.h"
 #include "aurcor/refresh.h"
+#include "aurcor/spi_led_bus.h"
+#include "aurcor/uart_dma_led_bus.h"
 #include "aurcor/uart_led_bus.h"
 #include "aurcor/web_client.h"
 #include "aurcor/web_interface.h"
@@ -53,7 +60,22 @@ App::~App() {
 void App::init() {
 	app::App::init();
 
-#if defined(ARDUINO_LOLIN_S2_MINI)
+#if defined(ARDUINO_LOLIN_S3)
+	/*
+	 * Reserved: Power/Boot (0 3 45 46) USB (19 20) Flash/SPIRAM (26 27 28 29 30 31 32 33 34 35 36 37)
+	 * LED: 38 (mirrored by UART0 TX!?)
+	 * CH340: 43 44
+	 * Default: UART0 (RX-44 TX-43) UART1 (RX-18 TX-17)
+	 *
+	 * Usable: 1 2 4 5 6 7 8 9 10 11 12 13 14 16 17 18 21 39 40 41 42
+	 * Null: 3 45 46 47 48
+	 */
+	add(std::make_shared<UARTDMALEDBus>(1, &UHCI0, "led0", 45, 42));
+	add(std::make_shared<UARTLEDBus>(2, "led1", 46, 41));
+	//add(std::make_shared<SPILEDBus>(SPI2_HOST, "led2", 40));
+	//add(std::make_shared<SPILEDBus>(SPI3_HOST, "led3", 39));
+	add(std::make_shared<NullLEDBus>("null0"));
+#elif defined(ARDUINO_LOLIN_S2_MINI)
 	/*
 	 * Reserved: Power/Boot (0 45 46) USB (19 20) Flash/SPIRAM (26 27 28 29 30 31 32)
 	 * LED: 15
@@ -61,10 +83,12 @@ void App::init() {
 	 * Default: UART0 (RX-44 TX-43) UART1 (RX-18 TX-17)
 	 *
 	 * Usable: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 16 17 21 33 34 35 36 37 38 39 40
-	 * Null: 18 41 42 43 44
+	 * Null: 18 41 42 43 44 45 46
 	 */
-	add(std::make_shared<UARTLEDBus>(1, "led0", 41, 39));
-	add(std::make_shared<UARTLEDBus>(0, "led1", 42, 40));
+	add(std::make_shared<UARTDMALEDBus>(1, &UHCI0, "led0", 45, 39));
+	add(std::make_shared<UARTLEDBus>(0, "led1", 46, 37));
+	//add(std::make_shared<SPILEDBus>(SPI2_HOST, "led2", 35));
+	//add(std::make_shared<SPILEDBus>(SPI3_HOST, "led3", 33));
 	add(std::make_shared<NullLEDBus>("null0"));
 #else
 	add(std::make_shared<NullLEDBus>("led0"));
@@ -74,6 +98,7 @@ void App::init() {
 #endif
 
 	MicroPython::setup(buses_.size());
+	LEDBusUDP::setup(buses_.size());
 
 	for (auto &entry : buses_) {
 		auto &bus = entry.second;
@@ -165,6 +190,9 @@ void App::loop() {
 
 	if (download_ && download_->finished())
 		download_.reset();
+
+	for (auto &bus : buses_)
+		bus.second->loop();
 
 	refresh_files();
 

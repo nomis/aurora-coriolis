@@ -1,0 +1,8 @@
+desc: Flame (ice)
+script: fire2012
+config:
+  colours/list_rgb:
+  - 0x000000 # Black
+  - 0x0000FF # Blue
+  - 0x00FFFF # Cyan
+  - 0xFFFFFF # White
