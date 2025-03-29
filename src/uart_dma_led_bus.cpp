@@ -141,8 +141,8 @@ UARTDMALEDBus::UARTDMALEDBus(unsigned int uart_num, uhci_dev_t *uhci_dev,
 		uhci_.conf0.uart1_ce = 1;
 #endif
 #if SOC_UART_NUM > 2
-    } else if (uart_num == 2) {
-        uhci_.conf0.uart2_ce = 1;
+	} else if (uart_num == 2) {
+		uhci_.conf0.uart2_ce = 1;
 #endif
 	} else {
 		ok_ = false;
