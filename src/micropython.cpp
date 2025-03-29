@@ -632,7 +632,7 @@ void aurcor::MicroPython::mp_hal_end_atomic_section() {
 }
 
 extern "C" ::mp_lexer_t *mp_lexer_new_from_file(const char *filename) {
-    return mp_lexer_new(qstr_from_str(filename),
+	return mp_lexer_new(qstr_from_str(filename),
 		aurcor::micropython::Reader::from_file(
 			aurcor::MicroPython::script_filename(filename).c_str()));
 }
@@ -705,7 +705,7 @@ void aurcor::MicroPython::mp_reader_new_file(::mp_reader_t *reader, const char *
 	if (script_name.empty())
 		mp_raise_OSError(MP_ENOENT);
 
-    *reader = aurcor::micropython::Reader::from_file(path.c_str());
+	*reader = aurcor::micropython::Reader::from_file(path.c_str());
 
 	preset_->script_imported(script_name);
 

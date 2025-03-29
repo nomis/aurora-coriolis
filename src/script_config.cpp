@@ -394,10 +394,10 @@ mp_int_t ScriptConfig::convert_rgb_value(mp_obj_t value_obj) {
 template <class T>
 void ScriptConfig::convert_container_values(mp_obj_t container_obj, mp_int_t (*convert_value)(mp_obj_t value_obj), T &property, size_t total_size) {
 	mp_obj_t iterable = mp_getiter(container_obj, NULL);
-    mp_obj_t value_obj;
+	mp_obj_t value_obj;
 	auto &container = property.defaults();
 
-    while ((value_obj = mp_iternext(iterable)) != MP_OBJ_STOP_ITERATION) {
+	while ((value_obj = mp_iternext(iterable)) != MP_OBJ_STOP_ITERATION) {
 		if (total_size + property.size(false) >= MAX_DEFAULTS_SIZE)
 			mp_raise_ValueError(MP_ERROR_TEXT("maximum config size exceeded"));
 
@@ -423,7 +423,7 @@ mp_obj_t ScriptConfig::create_set(const std::set<T> &container, typename std::se
 	mp_obj_t set = mp_obj_new_set(0, nullptr);
 
 	for (container_it = container.begin(); container_it != container.end(); ++container_it) {
-        mp_obj_set_store(set, mp_obj_new_int(*container_it));
+		mp_obj_set_store(set, mp_obj_new_int(*container_it));
 	}
 
 	return set;
@@ -474,7 +474,7 @@ void ScriptConfig::register_properties(mp_obj_t dict) {
 	size_t total_size = defaults_size();
 
 	for (size_t i = 0; i < map->alloc; i++) {
-        if (!mp_map_slot_is_filled(map, i))
+		if (!mp_map_slot_is_filled(map, i))
 			continue;
 
 		auto &key_obj = map->table[i].key;

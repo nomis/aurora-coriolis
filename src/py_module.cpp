@@ -923,7 +923,7 @@ void PyModule::next_wait_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwarg
 }
 
 void PyModule::next_timeofday(struct timeval &tv, uint64_t offset_us) {
-    gettimeofday(&tv, NULL);
+	gettimeofday(&tv, NULL);
 
 	while (offset_us >= 1000000ULL) {
 		tv.tv_sec++;
@@ -976,7 +976,7 @@ mp_obj_t PyModule::next_time(size_t n_args, const mp_obj_t *args, mp_map_t *kwar
 #if !MICROPY_EPOCH_IS_1970
 	seconds = (uint32_t)seconds - TIMEUTILS_SECONDS_1970_TO_2000;
 #endif
-    return mp_obj_new_int(seconds);
+	return mp_obj_new_int(seconds);
 }
 
 mp_obj_t PyModule::next_time_ms(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
@@ -993,7 +993,7 @@ mp_obj_t PyModule::next_time_ms(size_t n_args, const mp_obj_t *args, mp_map_t *k
 #endif
 	int64_t ms = seconds * 1000LL;
 	ms += tv.tv_usec / 1000LL;
-    return mp_obj_new_int_from_ll(ms);
+	return mp_obj_new_int_from_ll(ms);
 }
 
 mp_obj_t PyModule::next_time_us(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
