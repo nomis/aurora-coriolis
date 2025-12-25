@@ -196,10 +196,10 @@ UARTDMALEDBus::UARTDMALEDBus(unsigned int uart_num, uhci_dev_t *uhci_dev,
 	}
 
 	if (&uhci_ == &UHCI0) {
-		err = gdma_connect(tx_channel_, GDMA_MAKE_TRIGGER(GDMA_TRIG_PERIPH_UART, 0));
+		err = gdma_connect(tx_channel_, GDMA_MAKE_TRIGGER(GDMA_TRIG_PERIPH_UHCI, 0));
 #if SOC_UHCI_NUM > 1
 	} else if (&uhci_ == &UHCI1) {
-		err = gdma_connect(tx_channel_, GDMA_MAKE_TRIGGER(GDMA_TRIG_PERIPH_UART, 1));
+		err = gdma_connect(tx_channel_, GDMA_MAKE_TRIGGER(GDMA_TRIG_PERIPH_UHCI, 1));
 #endif
 	}
 

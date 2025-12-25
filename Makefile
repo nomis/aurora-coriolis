@@ -6,10 +6,14 @@ MPY_CROSS_ARGS=-msmall-int-bits=31 -X emit=bytecode
 PIPENV=$(CURDIR)/pipenv
 PYTHON=$(PIPENV)/.venv/bin/python3
 
-all:
+all: | .pio
 	platformio run
 
-native:
+.pio:
+	-btrfs subvolume create .pio
+	mkdir -p .pio
+
+native: | .pio
 	platformio run -e native
 
 clean: cleanfs
@@ -20,10 +24,10 @@ clean: cleanfs
 	+$(MAKE) -C micropython/mpy-cross clean
 	+$(MAKE) -C app/pio/certs -L clean
 
-upload:
+upload: | .pio
 	platformio run -t upload
 
-uploadfs: fs
+uploadfs: fs | .pio
 	platformio run -t uploadfs
 
 htdocs: \
